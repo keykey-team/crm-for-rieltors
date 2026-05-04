@@ -1,0 +1,411 @@
+generator client {
+    provider = "prisma-client-js"
+    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+    output = "/home/ubuntu/realtor_crm/nextjs_space/node_modules/.prisma/client"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String
+  role          String    @default("agent")
+  phone         String?
+  avatar        String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  leads         Lead[]
+  deals         Deal[]
+  tasks         Task[]
+  events        Event[]
+  articles      KnowledgeArticle[]
+  automations   Automation[]       @relation("AutomationCreator")
+  templates     Template[]         @relation("TemplateCreator")
+  dealComments  DealComment[]      @relation("DealCommentAuthor")
+  activityLogs  ActivityLog[]      @relation("ActivityLogUser")
+  communications Communication[]   @relation("CommunicationUser")
+  sentMessages  ChatMessage[]      @relation("ChatSender")
+  receivedMessages ChatMessage[]   @relation("ChatReceiver")
+  distributionRules LeadDistributionRule[] @relation("DistributionAssign")
+
+  @@index([email])
+}
+
+model Lead {
+  id            String    @id @default(cuid())
+  firstName     String
+  lastName      String?
+  email         String?
+  phone         String
+  source        String    @default("manual")
+  status        String    @default("new")
+  needType      String    @default("buy")
+  budget        Float?
+  budgetMax     Float?
+  districts     String?
+  propertyType  String?
+  notes         String?
+  priority      String    @default("medium")
+  assignedToId  String?
+  assignedTo    User?     @relation(fields: [assignedToId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deals         Deal[]
+  tasks         Task[]
+  communications Communication[]
+
+  @@index([status])
+  @@index([assignedToId])
+  @@index([createdAt])
+}
+
+model Property {
+  id            String    @id @default(cuid())
+  title         String
+  type          String    @default("apartment")
+  address       String
+  district      String?
+  city          String    @default("Киев")
+  rooms         Int?
+  area          Float?
+  floor         Int?
+  totalFloors   Int?
+  price         Float
+  currency      String    @default("USD")
+  status        String    @default("active")
+  description   String?
+  photos        PropertyPhoto[]
+  units         PropertyUnit[]
+  deals         Deal[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([status])
+  @@index([type])
+  @@index([price])
+}
+
+model PropertyPhoto {
+  id                String   @id @default(cuid())
+  propertyId        String
+  property          Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  cloudStoragePath  String
+  isPublic          Boolean  @default(true)
+  order             Int      @default(0)
+  createdAt         DateTime @default(now())
+
+  @@index([propertyId])
+}
+
+model Deal {
+  id            String    @id @default(cuid())
+  title         String
+  stage         String    @default("new_lead")
+  amount        Float?
+  commission    Float?
+  leadId        String?
+  lead          Lead?     @relation(fields: [leadId], references: [id])
+  propertyId    String?
+  property      Property? @relation(fields: [propertyId], references: [id])
+  assignedToId  String?
+  assignedTo    User?     @relation(fields: [assignedToId], references: [id])
+  notes         String?
+  meetingDate   DateTime?
+  showDate      DateTime?
+  depositDate   DateTime?
+  closeDate     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  comments      DealComment[]
+  checklist     DealChecklist[]
+  customFieldValues DealCustomFieldValue[]
+
+  @@index([stage])
+  @@index([assignedToId])
+  @@index([createdAt])
+}
+
+model Task {
+  id            String    @id @default(cuid())
+  title         String
+  description   String?
+  type          String    @default("call")
+  priority      String    @default("medium")
+  status        String    @default("pending")
+  dueDate       DateTime?
+  completedAt   DateTime?
+  leadId        String?
+  lead          Lead?     @relation(fields: [leadId], references: [id])
+  assignedToId  String?
+  assignedTo    User?     @relation(fields: [assignedToId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([status])
+  @@index([dueDate])
+  @@index([assignedToId])
+}
+
+model Event {
+  id            String    @id @default(cuid())
+  title         String
+  description   String?
+  type          String    @default("meeting")
+  startDate     DateTime
+  endDate       DateTime?
+  allDay        Boolean   @default(false)
+  userId        String?
+  user          User?     @relation(fields: [userId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([startDate])
+  @@index([userId])
+}
+
+model KnowledgeArticle {
+  id            String    @id @default(cuid())
+  title         String
+  content       String
+  category      String    @default("general")
+  authorId      String?
+  author        User?     @relation(fields: [authorId], references: [id])
+  published     Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([category])
+}
+
+model Automation {
+  id            String    @id @default(cuid())
+  name          String
+  description   String?
+  trigger       String
+  triggerValue  String?
+  action        String
+  actionValue   String?
+  isActive      Boolean   @default(true)
+  lastRunAt     DateTime?
+  lastRunResult String?
+  createdById   String?
+  createdBy     User?     @relation("AutomationCreator", fields: [createdById], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Template {
+  id            String    @id @default(cuid())
+  name          String
+  type          String    @default("message")
+  category      String    @default("general")
+  content       String
+  variables     String?
+  createdById   String?
+  createdBy     User?     @relation("TemplateCreator", fields: [createdById], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([type])
+  @@index([category])
+}
+
+model DealComment {
+  id            String    @id @default(cuid())
+  dealId        String
+  deal          Deal      @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  authorId      String?
+  author        User?     @relation("DealCommentAuthor", fields: [authorId], references: [id])
+  text          String
+  createdAt     DateTime  @default(now())
+
+  @@index([dealId])
+}
+
+model DealChecklist {
+  id            String    @id @default(cuid())
+  dealId        String
+  deal          Deal      @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  title         String
+  completed     Boolean   @default(false)
+  order         Int       @default(0)
+  createdAt     DateTime  @default(now())
+
+  @@index([dealId])
+}
+
+model ActivityLog {
+  id            String    @id @default(cuid())
+  entityType    String
+  entityId      String
+  action        String
+  details       String?
+  userId        String?
+  user          User?     @relation("ActivityLogUser", fields: [userId], references: [id])
+  createdAt     DateTime  @default(now())
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ─── Шахматка: units in property complexes ───
+model PropertyUnit {
+  id            String    @id @default(cuid())
+  propertyId    String
+  property      Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  unitNumber    String
+  floor         Int
+  section       Int       @default(1)
+  rooms         Int?
+  area          Float?
+  price         Float?
+  status        String    @default("available")
+  dealId        String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([propertyId])
+  @@index([status])
+  @@unique([propertyId, unitNumber])
+}
+
+// ─── Dynamic funnel stages ───
+model FunnelStage {
+  id            String    @id @default(cuid())
+  value         String    @unique
+  label         String
+  color         String    @default("#60B5FF")
+  order         Int       @default(0)
+  isDefault     Boolean   @default(false)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([order])
+}
+
+// ─── Custom fields for deals ───
+model DealCustomField {
+  id            String    @id @default(cuid())
+  name          String
+  label         String
+  fieldType     String    @default("text")
+  options       String?
+  required      Boolean   @default(false)
+  order         Int       @default(0)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  values        DealCustomFieldValue[]
+}
+
+model DealCustomFieldValue {
+  id            String    @id @default(cuid())
+  dealId        String
+  deal          Deal      @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  fieldId       String
+  field         DealCustomField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  value         String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([dealId, fieldId])
+  @@index([dealId])
+  @@index([fieldId])
+}
+
+// ─── Communication history for leads ───
+model Communication {
+  id            String    @id @default(cuid())
+  leadId        String
+  lead          Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type          String    @default("note")
+  direction     String?
+  content       String
+  userId        String?
+  user          User?     @relation("CommunicationUser", fields: [userId], references: [id])
+  createdAt     DateTime  @default(now())
+
+  @@index([leadId])
+  @@index([createdAt])
+}
+
+// ─── Aftercare plans ───
+model AftercarePlan {
+  id            String    @id @default(cuid())
+  name          String
+  description   String?
+  isActive      Boolean   @default(true)
+  steps         AftercareStep[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model AftercareStep {
+  id            String    @id @default(cuid())
+  planId        String
+  plan          AftercarePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  dayOffset     Int
+  type          String    @default("message")
+  title         String
+  content       String?
+  order         Int       @default(0)
+  createdAt     DateTime  @default(now())
+
+  @@index([planId])
+}
+
+// ─── Dictionaries (districts, property types, etc.) ───
+model Dictionary {
+  id            String    @id @default(cuid())
+  category      String
+  value         String
+  label         String
+  order         Int       @default(0)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([category, value])
+  @@index([category])
+}
+
+// ─── Internal chats ───
+model ChatMessage {
+  id            String    @id @default(cuid())
+  senderId      String
+  sender        User      @relation("ChatSender", fields: [senderId], references: [id])
+  receiverId    String
+  receiver      User      @relation("ChatReceiver", fields: [receiverId], references: [id])
+  text          String
+  isRead        Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+
+  @@index([senderId, receiverId])
+  @@index([receiverId, isRead])
+  @@index([createdAt])
+}
+
+// ─── Lead distribution rules ───
+model LeadDistributionRule {
+  id            String    @id @default(cuid())
+  name          String
+  source        String?
+  district      String?
+  propertyType  String?
+  needType      String?
+  assignToId    String
+  assignTo      User      @relation("DistributionAssign", fields: [assignToId], references: [id])
+  priority      Int       @default(0)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([isActive])
+}
