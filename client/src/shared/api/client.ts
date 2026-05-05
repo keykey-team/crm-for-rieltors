@@ -1,10 +1,24 @@
+import { httpClient } from './httpClient';
+
 export async function apiClient<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
-  const response = await fetch(input, {
-    headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
-    ...init,
-  });
-  if (!response.ok) {
-    throw new Error(`API error: ${response.status}`);
+  const url = typeof input === 'string' ? input : input.toString();
+  const method = (init?.method ?? 'GET').toUpperCase();
+
+  if (method === 'GET') {
+    return httpClient.get<T>(url, init);
   }
-  return response.status === 204 ? (null as T) : ((await response.json()) as T);
+
+  if (method === 'POST') {
+    return httpClient.post<T>(url, init?.body, init);
+  }
+
+  if (method === 'PUT') {
+    return httpClient.put<T>(url, init?.body, init);
+  }
+
+  if (method === 'PATCH') {
+    return httpClient.patch<T>(url, init?.body, init);
+  }
+
+  return httpClient.delete<T>(url, init);
 }

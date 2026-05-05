@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Save, Key, Users, User, Shield, Plus, Edit2, Trash2, X, Workflow, Book, Upload, Target, Heart, Camera } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { toast } from 'sonner';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/app/providers';
 import { useTranslation } from '@/shared/lib/i18n/context';
 
 const ROLES_STATIC = [
@@ -26,7 +26,8 @@ type TabKey = 'profile' | 'users' | 'funnel' | 'customFields' | 'dictionaries' |
 
 export function SettingsPage() {
   const { t } = useTranslation();
-  const { data: session } = useSession() || {};
+  const { user } = useAuth();
+  const session = user ? { user } : null;
   const ROLES = ROLES_STATIC.map(r => ({ value: r.value, label: t(r.labelKey), desc: t(r.descKey) }));
   const TABS = TABS_STATIC.map(tb => ({ ...tb, label: t(tb.labelKey) }));
   const [activeTab, setActiveTab] = useState<TabKey>('profile');

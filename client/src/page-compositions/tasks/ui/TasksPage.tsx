@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, CheckSquare, Check } from 'lucide-react';
 import { TaskDialog } from '@/features/task-create';
+import { taskApi } from '@/entities/task';
 import { PRIORITIES, TASK_TYPES } from '@/shared/lib/constants';
 import { formatDate } from '@/shared/lib/format';
 import { cn } from '@/shared/lib/utils';
@@ -19,32 +20,35 @@ export function TasksPage() {
     setLoading(true);
     const params = new URLSearchParams();
     if (statusFilter) params.set('status', statusFilter);
-    const res = await fetch(`/api/tasks?${params.toString()}`);
-    const data = await res.json();
-    setTasks(Array.isArray(data) ? data : []);
-    setLoading(false);
+
+    try {
+      const data = await taskApi.getTasks(params.toString());
+      setTasks(Array.isArray(data) ? data : []);
+    } finally {
+      setLoading(false);
+    }
   }, [statusFilter]);
 
   useEffect(() => { fetchTasks(); }, [fetchTasks]);
 
   const handleSave = async (data: any) => {
     if (editTask) {
-      await fetch(`/api/tasks/${editTask.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      await taskApi.updateTask(editTask.id, data);
     } else {
-      await fetch('/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      await taskApi.createTask(data);
     }
     setDialogOpen(false); setEditTask(null); fetchTasks();
   };
 
   const toggleComplete = async (task: any) => {
     const newStatus = task?.status === 'completed' ? 'pending' : 'completed';
-    await fetch(`/api/tasks/${task?.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) });
+    await taskApi.updateTask(task?.id, { status: newStatus });
     fetchTasks();
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm(t('tasks.deleteTask'))) return;
-    await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+    await taskApi.deleteTask(id);
     fetchTasks();
   };
 
