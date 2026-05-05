@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+.env.*
+!.env.example
+*.log
+uploads/original/*
+uploads/preview/*
+!uploads/original/.gitkeep
+!uploads/preview/.gitkeep
