@@ -13,7 +13,9 @@ function getRequiredEnv(name: string): string {
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
   port: Number(process.env.PORT ?? 4000),
+
   clientUrl: process.env.CLIENT_URL ?? process.env.CORS_ORIGIN ?? 'http://localhost:3000',
+
   databaseUrl: getRequiredEnv('DATABASE_URL'),
   jwtSecret: getRequiredEnv('JWT_SECRET'),
 };

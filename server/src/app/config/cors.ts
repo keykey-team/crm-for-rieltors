@@ -1,6 +1,7 @@
 import { CorsOptions } from 'cors';
 import { env } from './env';
 
+
 const allowedOrigins = new Set([env.clientUrl, 'http://localhost:3000']);
 
 export const corsOptions: CorsOptions = {
@@ -12,5 +13,6 @@ export const corsOptions: CorsOptions = {
 
     callback(new Error(`CORS blocked for origin: ${origin}`));
   },
+
   credentials: true,
 };

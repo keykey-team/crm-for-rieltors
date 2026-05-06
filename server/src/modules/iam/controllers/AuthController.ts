@@ -8,6 +8,7 @@ import { LoginDto } from '../models/dto/LoginDto';
 import { RegisterDto } from '../models/dto/RegisterDto';
 import { env } from '../../../app/config/env';
 
+
 const AUTH_COOKIE_NAME = 'crm_token';
 
 @injectable()
@@ -41,7 +42,9 @@ export class AuthController extends BaseController {
   };
 
   logout = async (_req: Request, res: Response) => {
+
     res.clearCookie(AUTH_COOKIE_NAME, this.cookieOptions());
+
 
     return this.ok(res, { success: true });
   };
@@ -63,4 +66,5 @@ export class AuthController extends BaseController {
       path: '/',
     };
   }
+
 }
