@@ -6,6 +6,8 @@ import { UnauthorizedError } from '../../../common/errors';
 import { AuthService } from '../services/AuthService';
 import { LoginDto } from '../models/dto/LoginDto';
 import { RegisterDto } from '../models/dto/RegisterDto';
+import { env } from '../../../app/config/env';
+
 
 const AUTH_COOKIE_NAME = 'crm_token';
 
@@ -40,21 +42,29 @@ export class AuthController extends BaseController {
   };
 
   logout = async (_req: Request, res: Response) => {
-    res.clearCookie(AUTH_COOKIE_NAME, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
-    });
+
+    res.clearCookie(AUTH_COOKIE_NAME, this.cookieOptions());
+
 
     return this.ok(res, { success: true });
   };
 
   private setAuthCookie(res: Response, token: string): void {
     res.cookie(AUTH_COOKIE_NAME, token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
+      ...this.cookieOptions(),
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
   }
+
+  private cookieOptions() {
+    const isProd = env.nodeEnv === 'production';
+
+    return {
+      httpOnly: true,
+      sameSite: isProd ? ('none' as const) : ('lax' as const),
+      secure: isProd,
+      path: '/',
+    };
+  }
+
 }

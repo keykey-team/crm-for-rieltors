@@ -1,3 +1,5 @@
+import { leadApi } from '@/entities/lead';
+import { httpClient } from '@/shared/api';
 import type { LeadFilters } from '@/widgets/leads/model/types';
 
 export async function getLeads(filters: LeadFilters) {
@@ -6,40 +8,26 @@ export async function getLeads(filters: LeadFilters) {
   if (filters.status) params.set('status', filters.status);
   if (filters.source) params.set('source', filters.source);
 
-  const response = await fetch(`/api/leads?${params}`);
-  const data = await response.json();
+  const data = await leadApi.getLeads(params.toString());
   return Array.isArray(data) ? data : [];
 }
 
 export async function upsertLead(data: any, editingLeadId?: string) {
-  const url = editingLeadId ? `/api/leads/${editingLeadId}` : '/api/leads';
-  const method = editingLeadId ? 'PUT' : 'POST';
+  if (editingLeadId) {
+    return leadApi.updateLead(editingLeadId, data);
+  }
 
-  return fetch(url, {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
+  return leadApi.createLead(data);
 }
 
 export async function deleteLead(id: string) {
-  return fetch(`/api/leads/${id}`, { method: 'DELETE' });
+  return leadApi.deleteLead(id);
 }
 
 export async function updateLeadStatus(id: string, status: string) {
-  return fetch(`/api/leads/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status }),
-  });
+  return leadApi.updateLead(id, { status });
 }
 
 export async function importLeads(rows: any[]) {
-  const response = await fetch('/api/leads/import', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ leads: rows }),
-  });
-
-  return response.json();
+  return httpClient.post<{ imported: number; errors?: string[] }, { leads: any[] }>('/leads/import', { leads: rows });
 }

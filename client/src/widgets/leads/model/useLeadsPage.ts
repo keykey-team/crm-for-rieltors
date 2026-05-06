@@ -28,16 +28,15 @@ export function useLeadsPage(t: (key: string) => string) {
   }, [fetchAllLeads]);
 
   const saveLead = async (data: any) => {
-    const response = await upsertLead(data, editing?.id);
-    if (!response.ok) {
+    try {
+      await upsertLead(data, editing?.id);
+      toast.success(editing ? t('common.updated') : t('common.created'));
+      setShowDialog(false);
+      setEditing(null);
+      fetchAllLeads();
+    } catch {
       toast.error(t('common.error'));
-      return;
     }
-
-    toast.success(editing ? t('common.updated') : t('common.created'));
-    setShowDialog(false);
-    setEditing(null);
-    fetchAllLeads();
   };
 
   const removeLead = async (id: string) => {

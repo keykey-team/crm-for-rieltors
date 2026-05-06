@@ -1,8 +1,8 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useSession, signOut } from 'next-auth/react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/app/providers';
 import {
   LayoutDashboard, Users, Building, Workflow, CheckSquare,
   BarChart3, BookOpen, CalendarDays, Settings, ChevronLeft,
@@ -33,7 +33,9 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
-  const { data: session } = useSession() || {};
+  const router = useRouter();
+  const { user, logout } = useAuth();
+  const session = user ? { user } : null;
   const { t, locale, setLocale } = useTranslation();
 
   return (
@@ -120,7 +122,13 @@ export function Sidebar() {
               ))}
             </div>
           )}
-          <button type="button" aria-label="Sign out" onClick={() => signOut({ callbackUrl: '/login' })}
+          <button
+            type="button"
+            aria-label="Sign out"
+            onClick={async () => {
+              await logout();
+              router.replace('/login');
+            }}
             className={cn(
               'flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition',
               collapsed && 'justify-center px-0'

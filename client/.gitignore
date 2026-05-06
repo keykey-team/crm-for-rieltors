@@ -2,8 +2,10 @@ node_modules/
 .build/
 .next/
 .env
+.env.local
 .env.*
 !.env.example
+!.env.local.example
 *.log
 .DS_Store
 coverage/

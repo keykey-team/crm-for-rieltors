@@ -40,6 +40,12 @@ server/
    ```bash
    cp .env.example .env
    ```
+   Required variables:
+   - `PORT` (default `4000`)
+   - `CLIENT_URL` (default `http://localhost:3000`)
+   - `DATABASE_URL`
+   - `JWT_SECRET`
+
 2. Install dependencies:
    ```bash
    npm install
@@ -72,5 +78,8 @@ server/
 
 ## Notes
 
+- CORS is configured for `CLIENT_URL` and sends cookies with `credentials: true`.
 - Authentication uses signed JWT stored in HTTP-only cookie `crm_token`.
+- Cookie options use `sameSite=lax` in development and `sameSite=none` + `secure` in production.
+
 - `deals`, `properties`, `tasks`, `calendar`, `analytics`, `automation` modules have folder scaffolding and route placeholders for next phases.

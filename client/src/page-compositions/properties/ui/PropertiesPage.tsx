@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, Building, LayoutGrid, List } from 'lucide-react';
-import { PropertyCard } from '@/entities/property';
+import { PropertyCard, propertyApi } from '@/entities/property';
 import { PropertyDialog } from '@/features/property-create';
 import { ChessGrid } from '@/entities/property';
 import { PROPERTY_TYPES, PROPERTY_STATUSES } from '@/shared/lib/constants';
@@ -28,26 +28,29 @@ export function PropertiesPage() {
     if (search) params.set('search', search);
     if (typeFilter) params.set('type', typeFilter);
     if (statusFilter) params.set('status', statusFilter);
-    const res = await fetch(`/api/properties?${params.toString()}`);
-    const data = await res.json();
-    setProperties(Array.isArray(data) ? data : []);
-    setLoading(false);
+
+    try {
+      const data = await propertyApi.getProperties(params.toString());
+      setProperties(Array.isArray(data) ? data : []);
+    } finally {
+      setLoading(false);
+    }
   }, [search, typeFilter, statusFilter]);
 
   useEffect(() => { fetchProps(); }, [fetchProps]);
 
   const handleSave = async (data: any) => {
     if (editProp) {
-      await fetch(`/api/properties/${editProp.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      await propertyApi.updateProperty(editProp.id, data);
     } else {
-      await fetch('/api/properties', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      await propertyApi.createProperty(data);
     }
     setDialogOpen(false); setEditProp(null); fetchProps();
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm(t('properties.deleteProperty'))) return;
-    await fetch(`/api/properties/${id}`, { method: 'DELETE' });
+    await propertyApi.deleteProperty(id);
     fetchProps();
   };
 

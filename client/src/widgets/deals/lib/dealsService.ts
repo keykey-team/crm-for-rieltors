@@ -1,33 +1,22 @@
+import { dealApi } from '@/entities/deal';
+
 export async function getDeals() {
-  const response = await fetch('/api/deals');
-  const data = await response.json();
+  const data = await dealApi.getDeals();
   return Array.isArray(data) ? data : [];
 }
 
 export async function saveDeal(data: any, editingDealId?: string) {
   if (editingDealId) {
-    return fetch(`/api/deals/${editingDealId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
+    return dealApi.updateDeal(editingDealId, data);
   }
 
-  return fetch('/api/deals', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
+  return dealApi.createDeal(data);
 }
 
 export async function deleteDeal(id: string) {
-  return fetch(`/api/deals/${id}`, { method: 'DELETE' });
+  return dealApi.deleteDeal(id);
 }
 
 export async function updateDealStage(id: string, stage: string) {
-  return fetch(`/api/deals/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ stage }),
-  });
+  return dealApi.updateDeal(id, { stage });
 }

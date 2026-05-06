@@ -2,14 +2,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, MessageCircle, Search, User } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/app/providers';
 import { formatDateTime, getInitials } from '@/shared/lib/format';
 import { useTranslation } from '@/shared/lib/i18n/context';
 
 export function ChatPage() {
   const { t } = useTranslation();
-  const { data: session } = useSession() || {};
-  const userId = (session?.user as any)?.id;
+  const { user } = useAuth();
+  const userId = user?.id;
   const [conversations, setConversations] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
