@@ -64,14 +64,18 @@ ensure_app_root() {
 install_system_dependencies_if_requested() {
   if [[ "$INSTALL_NODEJS" == "1" ]]; then
     log "Installing Node.js 20"
+
     $SUDO apt-get update
     $SUDO apt-get install -y ca-certificates curl gnupg
+
     curl -fsSL https://deb.nodesource.com/setup_20.x | $SUDO -E bash -
+
     $SUDO apt-get install -y nodejs
   fi
 
   if [[ "$INSTALL_POSTGRES" == "1" ]]; then
     log "Installing PostgreSQL"
+
     $SUDO apt-get update
     $SUDO apt-get install -y postgresql postgresql-contrib
   fi
@@ -84,6 +88,7 @@ ensure_pm2_if_needed() {
 
   if ! command -v pm2 >/dev/null 2>&1; then
     log "Installing pm2 globally"
+
     npm install -g pm2
   fi
 }
@@ -96,27 +101,52 @@ create_local_database_if_requested() {
   require_command psql
 
   local pg_password_sql
+  local psql_as_postgres
+
   pg_password_sql="${POSTGRES_PASSWORD//\'/\'\'}"
 
+  if [[ "${EUID}" -eq 0 ]]; then
+    psql_as_postgres="runuser -u postgres -- psql"
+  else
+    psql_as_postgres="sudo -u postgres psql"
+  fi
+
   log "Ensuring PostgreSQL service is running"
+
   $SUDO systemctl enable postgresql
   $SUDO systemctl start postgresql
 
   log "Creating PostgreSQL role and database"
-  $SUDO -u postgres psql <<SQL
+
+  $psql_as_postgres <<SQL
 DO
 \$\$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${POSTGRES_USER}') THEN
-    CREATE ROLE ${POSTGRES_USER} LOGIN PASSWORD '${pg_password_sql}';
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_roles
+    WHERE rolname = '${POSTGRES_USER}'
+  ) THEN
+    CREATE ROLE ${POSTGRES_USER}
+    LOGIN
+    PASSWORD '${pg_password_sql}';
   ELSE
-    ALTER ROLE ${POSTGRES_USER} WITH LOGIN PASSWORD '${pg_password_sql}';
+    ALTER ROLE ${POSTGRES_USER}
+    WITH LOGIN PASSWORD '${pg_password_sql}';
   END IF;
 END
 \$\$;
+
 SELECT 'CREATE DATABASE ${POSTGRES_DB} OWNER ${POSTGRES_USER}'
-WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = '${POSTGRES_DB}')\gexec
-GRANT ALL PRIVILEGES ON DATABASE ${POSTGRES_DB} TO ${POSTGRES_USER};
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM pg_database
+  WHERE datname = '${POSTGRES_DB}'
+)\gexec
+
+GRANT ALL PRIVILEGES
+ON DATABASE ${POSTGRES_DB}
+TO ${POSTGRES_USER};
 SQL
 }
 
@@ -128,16 +158,20 @@ write_env_if_requested() {
   if [[ -z "$NEXTAUTH_SECRET" ]]; then
     NEXTAUTH_SECRET="$(random_secret)"
   fi
+
   if [[ -z "$AUTOMATION_SECRET" ]]; then
     AUTOMATION_SECRET="$(random_secret)"
   fi
 
   local postgres_password_url
   local database_url
+
   postgres_password_url="$(urlencode "$POSTGRES_PASSWORD")"
+
   database_url="postgresql://${POSTGRES_USER}:${postgres_password_url}@127.0.0.1:5432/${POSTGRES_DB}?schema=public"
 
   log "Writing .env"
+
   cat > "$APP_ROOT/.env" <<EOF
 DATABASE_URL="$database_url"
 NEXTAUTH_URL="$APP_PUBLIC_URL"
@@ -150,15 +184,19 @@ EOF
   if [[ -n "$AWS_REGION" ]]; then
     printf 'AWS_REGION="%s"\n' "$AWS_REGION" >> "$APP_ROOT/.env"
   fi
+
   if [[ -n "$AWS_BUCKET_NAME" ]]; then
     printf 'AWS_BUCKET_NAME="%s"\n' "$AWS_BUCKET_NAME" >> "$APP_ROOT/.env"
   fi
+
   if [[ -n "$AWS_FOLDER_PREFIX" ]]; then
     printf 'AWS_FOLDER_PREFIX="%s"\n' "$AWS_FOLDER_PREFIX" >> "$APP_ROOT/.env"
   fi
+
   if [[ -n "$AWS_ACCESS_KEY_ID" ]]; then
     printf 'AWS_ACCESS_KEY_ID="%s"\n' "$AWS_ACCESS_KEY_ID" >> "$APP_ROOT/.env"
   fi
+
   if [[ -n "$AWS_SECRET_ACCESS_KEY" ]]; then
     printf 'AWS_SECRET_ACCESS_KEY="%s"\n' "$AWS_SECRET_ACCESS_KEY" >> "$APP_ROOT/.env"
   fi
@@ -168,20 +206,25 @@ EOF
 
 install_build_and_seed() {
   log "Installing application dependencies"
-  npm install
+
+  npm install --legacy-peer-deps
 
   log "Generating Prisma client"
+
   npx prisma generate
 
   log "Applying database schema"
+
   npx prisma db push
 
   if [[ "$RUN_SEED" == "1" ]]; then
     log "Seeding database"
+
     npx prisma db seed
   fi
 
   log "Building Next.js application"
+
   npm run build
 }
 
@@ -190,14 +233,21 @@ start_with_pm2() {
   export PORT
 
   log "Starting application with pm2 on $HOSTNAME:$PORT"
+
   pm2 delete "$APP_NAME" >/dev/null 2>&1 || true
-  pm2 start npm --name "$APP_NAME" --cwd "$APP_ROOT" -- run start -- --hostname "$HOSTNAME" --port "$PORT"
+
+  pm2 start npm \
+    --name "$APP_NAME" \
+    --cwd "$APP_ROOT" \
+    -- run start -- --hostname "$HOSTNAME" --port "$PORT"
+
   pm2 save
   pm2 status "$APP_NAME"
 }
 
 print_summary() {
   log "Deployment complete"
+
   printf 'App root: %s\n' "$APP_ROOT"
   printf 'App URL: %s\n' "$APP_PUBLIC_URL"
   printf 'PM2 app name: %s\n' "$APP_NAME"
@@ -210,12 +260,14 @@ print_summary() {
 
 main() {
   install_system_dependencies_if_requested
+
   require_command node
   require_command npm
   require_command git
   require_command openssl
 
   cd "$APP_ROOT"
+
   ensure_app_root
   ensure_pm2_if_needed
   create_local_database_if_requested
