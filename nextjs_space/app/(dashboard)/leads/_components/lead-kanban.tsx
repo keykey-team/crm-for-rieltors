@@ -1,8 +1,9 @@
 'use client';
 import { useTranslation } from '@/lib/i18n/context';
+import { useRouter } from 'next/navigation';
 import { Phone, MessageSquare, Edit2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { LEAD_STATUSES } from '@/lib/constants';
+import { LEAD_STATUSES, LEAD_SOURCES } from '@/lib/constants';
 import { getInitials, formatDate } from '@/lib/format';
 
 interface Props {
@@ -16,6 +17,7 @@ interface Props {
 
 export function LeadKanban({ leads, loading, onEdit, onStatusChange, onCall, onMessage }: Props) {
   const { t } = useTranslation();
+  const router = useRouter();
   if (loading) {
     return (
       <div className="flex gap-4 overflow-x-auto pb-4">
@@ -51,7 +53,8 @@ export function LeadKanban({ leads, loading, onEdit, onStatusChange, onCall, onM
             <div className="space-y-2">
               {statusLeads.map(lead => (
                 <div key={lead.id} draggable onDragStart={e => handleDragStart(e, lead.id)}
-                  className="bg-white rounded-xl p-3 border border-border cursor-grab active:cursor-grabbing hover:shadow-md transition"
+                  onClick={() => router.push(`/leads/${lead.id}`)}
+                  className="bg-card rounded-xl p-3 border border-border cursor-pointer hover:shadow-md transition"
                   style={{ boxShadow: 'var(--shadow-sm)' }}>
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
@@ -62,6 +65,12 @@ export function LeadKanban({ leads, loading, onEdit, onStatusChange, onCall, onM
                       <p className="text-xs text-muted-foreground">{lead.phone}</p>
                     </div>
                   </div>
+                  {lead.assignedTo && (
+                    <p className="text-xs text-muted-foreground mt-1 truncate">👤 {lead.assignedTo.name ?? '—'}</p>
+                  )}
+                  {lead.source && (
+                    <p className="text-xs text-muted-foreground mt-0.5">{t(`const.leadSource.${lead.source}`) || LEAD_SOURCES.find((s: any) => s.value === lead.source)?.label || lead.source}</p>
+                  )}
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-xs text-muted-foreground">{formatDate(lead.createdAt)}</span>
                     <div className="flex gap-0.5">

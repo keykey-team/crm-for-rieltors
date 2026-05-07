@@ -25,7 +25,14 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const { id, ...data } = await req.json();
+  const body = await req.json();
+  if (body.items && Array.isArray(body.items)) {
+    for (const item of body.items) {
+      await prisma.dictionary.update({ where: { id: item.id }, data: { order: item.order } });
+    }
+    return NextResponse.json({ ok: true });
+  }
+  const { id, ...data } = body;
   const item = await prisma.dictionary.update({ where: { id }, data });
   return NextResponse.json(item);
 }

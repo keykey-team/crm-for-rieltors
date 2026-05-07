@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { getSessionUser } from '@/lib/role-guard';
+import { getSessionUser, hasRole } from '@/lib/role-guard';
 import { logActivity } from '@/lib/activity-logger';
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
@@ -16,6 +16,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       },
     });
     if (!deal) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    if (!hasRole(user.role, 'director') && deal.assignedToId !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     return NextResponse.json(deal);
   } catch (err: any) {
     return NextResponse.json({ error: err?.message ?? 'Error' }, { status: 500 });
@@ -28,6 +31,10 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const body = await req.json();
     const old = await prisma.deal.findUnique({ where: { id: params.id } });
+    if (!old) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    if (!hasRole(user.role, 'director') && old.assignedToId !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     const deal = await prisma.deal.update({
       where: { id: params.id },
       data: {
@@ -35,6 +42,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
         ...(body.stage !== undefined && { stage: body.stage }),
         ...(body.amount !== undefined && { amount: body.amount ? parseFloat(body.amount) : null }),
         ...(body.commission !== undefined && { commission: body.commission ? parseFloat(body.commission) : null }),
+        ...(body.currency !== undefined && { currency: body.currency }),
         ...(body.leadId !== undefined && { leadId: body.leadId }),
         ...(body.propertyId !== undefined && { propertyId: body.propertyId }),
         ...(body.notes !== undefined && { notes: body.notes }),
@@ -87,6 +95,10 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     const user = await getSessionUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const old = await prisma.deal.findUnique({ where: { id: params.id } });
+    if (!old) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    if (!hasRole(user.role, 'director') && old.assignedToId !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     await prisma.deal.delete({ where: { id: params.id } });
     logActivity({ entityType: 'deal', entityId: params.id, action: 'delete', details: `Видалено угоду: ${old?.title ?? ''}`, userId: user.id });
     return NextResponse.json({ success: true });

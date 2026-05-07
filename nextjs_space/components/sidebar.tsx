@@ -6,91 +6,183 @@ import { useSession, signOut } from 'next-auth/react';
 import {
   LayoutDashboard, Users, Building, Workflow, CheckSquare,
   BarChart3, BookOpen, CalendarDays, Settings, ChevronLeft,
-  ChevronRight, LogOut, Building2, Menu, X, Zap, FileText, MessageCircle, Shield, Globe
+  ChevronRight, LogOut, Building2, Menu, X, Zap, FileText, MessageCircle, Shield, Globe, Sparkles, Crown, Search, Bell
 } from 'lucide-react';
+import { NotificationBell } from '@/components/notification-bell';
 import { cn } from '@/lib/utils';
 import { useTranslation, LOCALE_LABELS, Locale } from '@/lib/i18n/context';
+import { useSidebar } from '@/lib/sidebar-context';
+import { usePlan } from '@/lib/plan-context';
+import { useBrand } from '@/lib/brand-context';
+import { hasPermission, sectionFromPath } from '@/lib/permissions';
 
-const NAV_ITEMS = [
-  { href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
-  { href: '/deals', labelKey: 'nav.deals', icon: Workflow },
-  { href: '/leads', labelKey: 'nav.leads', icon: Users },
-  { href: '/properties', labelKey: 'nav.properties', icon: Building },
-  { href: '/tasks', labelKey: 'nav.tasks', icon: CheckSquare },
-  { href: '/calendar', labelKey: 'nav.calendar', icon: CalendarDays },
-  { href: '/analytics', labelKey: 'nav.analytics', icon: BarChart3, minRole: 'director' as const },
-  { href: '/automations', labelKey: 'nav.automations', icon: Zap, minRole: 'director' as const },
-  { href: '/templates', labelKey: 'nav.templates', icon: FileText },
-  { href: '/knowledge-base', labelKey: 'nav.knowledgeBase', icon: BookOpen },
-  { href: '/chat', labelKey: 'nav.chat', icon: MessageCircle },
-  { href: '/activity-log', labelKey: 'nav.activityLog', icon: Shield, minRole: 'director' as const },
-  { href: '/settings', labelKey: 'nav.settings', icon: Settings },
+type NavItem = { href: string; labelKey: string; icon: any; minRole?: 'director' | 'admin'; feature?: string };
+type NavGroup = { groupKey?: string; items: NavItem[] };
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    items: [
+      { href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
+    ],
+  },
+  {
+    groupKey: 'nav.groupWork',
+    items: [
+      { href: '/deals', labelKey: 'nav.deals', icon: Workflow },
+      { href: '/leads', labelKey: 'nav.leads', icon: Users },
+      { href: '/properties', labelKey: 'nav.properties', icon: Building },
+      { href: '/tasks', labelKey: 'nav.tasks', icon: CheckSquare },
+      { href: '/calendar', labelKey: 'nav.calendar', icon: CalendarDays },
+    ],
+  },
+  {
+    groupKey: 'nav.groupTools',
+    items: [
+      { href: '/chat', labelKey: 'nav.chat', icon: MessageCircle, feature: 'chat' },
+      { href: '/analytics', labelKey: 'nav.analytics', icon: BarChart3, minRole: 'director', feature: 'analytics' },
+      { href: '/automations', labelKey: 'nav.automations', icon: Zap, minRole: 'director', feature: 'automations' },
+      { href: '/templates', labelKey: 'nav.templates', icon: FileText, feature: 'templates' },
+      { href: '/knowledge-base', labelKey: 'nav.knowledgeBase', icon: BookOpen, feature: 'knowledgeBase' },
+    ],
+  },
+  {
+    items: [
+      { href: '/activity-log', labelKey: 'nav.activityLog', icon: Shield, minRole: 'director', feature: 'activityLog' },
+      { href: '/capabilities', labelKey: 'nav.capabilities', icon: Sparkles },
+      { href: '/pricing', labelKey: 'nav.pricing', icon: Crown },
+      { href: '/settings', labelKey: 'nav.settings', icon: Settings },
+    ],
+  },
 ];
 
 const ROLE_HIERARCHY: Record<string, number> = { admin: 3, director: 2, agent: 1 };
 
 export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false);
+  const { collapsed, setCollapsed } = useSidebar();
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const { data: session } = useSession() || {};
   const { t, locale, setLocale } = useTranslation();
+  const { hasFeature } = usePlan();
+  const { brand, displayName } = useBrand();
+
+  // Parse custom permissions from session
+  const userPermissions = (session?.user as any)?.permissions as string | null | undefined;
 
   return (
     <>
-      {/* Mobile toggle */}
-      <button onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-xl bg-white border border-border" style={{ boxShadow: 'var(--shadow-md)' }}>
-        <Menu className="w-5 h-5" />
-      </button>
+      {/* Mobile top bar */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 h-14 flex items-center justify-between px-4 bg-background/80 backdrop-blur-xl border-b border-border/40">
+        <button onClick={() => setMobileOpen(true)} className="p-2 -ml-2 rounded-xl hover:bg-muted transition active:scale-95">
+          <Menu className="w-5 h-5" />
+        </button>
+        <Link href="/dashboard" className="flex items-center gap-2">
+          {brand.brandLogo ? (
+            <img src={brand.brandLogo} alt="logo" className="w-6 h-6 rounded-lg object-contain" />
+          ) : (
+            <Building2 className="w-5 h-5 text-primary" />
+          )}
+          <span className="font-display font-semibold text-sm">{displayName}</span>
+        </Link>
+        <NotificationBell collapsed={false} />
+      </div>
       {/* Overlay */}
-      {mobileOpen && <div className="lg:hidden fixed inset-0 bg-black/20 z-40" onClick={() => setMobileOpen(false)} />}
+      {mobileOpen && <div className="lg:hidden fixed inset-0 bg-black/30 backdrop-blur-sm z-40" onClick={() => setMobileOpen(false)} />}
       {/* Sidebar */}
       <aside className={cn(
-        'fixed top-0 left-0 h-full bg-white border-r border-border z-50 flex flex-col transition-all duration-300',
+        'fixed top-0 left-0 h-full border-r border-border/60 dark:border-border/40 z-50 flex flex-col transition-all duration-300',
+        brand.sidebarGlass ? 'glass-panel' : 'bg-background',
         collapsed ? 'w-[72px]' : 'w-[260px]',
-        mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-      )} style={{ boxShadow: 'var(--shadow-sm)' }}>
+        mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+      )}>
         {/* Header */}
-        <div className={cn('flex items-center h-16 px-4 border-b border-border', collapsed ? 'justify-center' : 'justify-between')}>
+        <div className={cn('flex items-center h-16 px-4 border-b border-border/60 dark:border-border/40', collapsed ? 'justify-center' : 'justify-between')}>
           {!collapsed && (
-            <Link href="/dashboard" className="flex items-center gap-2">
-              <Building2 className="w-7 h-7 text-primary" />
-              <span className="font-display font-bold text-lg">RealCRM</span>
+            <Link href="/dashboard" className="flex items-center gap-2 min-w-0">
+              {brand.brandLogo ? (
+                <img src={brand.brandLogo} alt="logo" className="w-7 h-7 rounded-lg object-contain flex-shrink-0" />
+              ) : (
+                <Building2 className="w-7 h-7 text-primary flex-shrink-0" />
+              )}
+              <span className="font-display font-bold text-lg truncate">{displayName}</span>
             </Link>
           )}
-          {collapsed && <Building2 className="w-7 h-7 text-primary" />}
-          <button onClick={() => { setCollapsed(!collapsed); setMobileOpen(false); }}
-            className={cn('hidden lg:flex p-1.5 rounded-lg hover:bg-muted transition', collapsed && 'mt-0')}>
-            {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-          </button>
-          <button onClick={() => setMobileOpen(false)} className="lg:hidden p-1.5 rounded-lg hover:bg-muted">
-            <X className="w-4 h-4" />
+          {collapsed && (
+            brand.brandLogo ? (
+              <img src={brand.brandLogo} alt="logo" className="w-7 h-7 rounded-lg object-contain" />
+            ) : (
+              <Building2 className="w-7 h-7 text-primary" />
+            )
+          )}
+          <div className="flex items-center gap-1">
+            <NotificationBell collapsed={collapsed} />
+            <button onClick={() => { setCollapsed(!collapsed); setMobileOpen(false); }}
+              className={cn('hidden lg:flex p-1.5 rounded-lg hover:bg-muted transition', collapsed && 'mt-0')}>
+              {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            </button>
+            <button onClick={() => setMobileOpen(false)} className="lg:hidden p-1.5 rounded-lg hover:bg-muted">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+        {/* Search */}
+        <div className="px-2 pt-3 pb-1">
+          <button onClick={() => { const e = new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }); window.dispatchEvent(e); }}
+            className={cn(
+              'w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-muted-foreground hover:bg-muted transition-colors border border-border/40 dark:border-border/30',
+              collapsed && 'justify-center px-0'
+            )}>
+            <Search className="w-4 h-4 flex-shrink-0" />
+            {!collapsed && (
+              <>
+                <span className="flex-1 text-left text-xs">{t('search.placeholder').split(',')[0]}...</span>
+                <kbd className="hidden lg:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono bg-muted rounded border border-border">⌘K</kbd>
+              </>
+            )}
           </button>
         </div>
         {/* Nav */}
-        <nav className="flex-1 py-3 px-2 space-y-1 overflow-y-auto">
-          {NAV_ITEMS.filter((item) => {
-            if (!item.minRole) return true;
+        <nav className="flex-1 py-2 px-2 overflow-y-auto">
+          {NAV_GROUPS.map((group, gi) => {
             const userRole = (session?.user as any)?.role ?? 'agent';
-            return (ROLE_HIERARCHY[userRole] ?? 1) >= (ROLE_HIERARCHY[item.minRole] ?? 1);
-          }).map((item) => {
-            const active = pathname?.startsWith(item.href);
+            const visibleItems = group.items.filter((item) => {
+              if (item.feature && !hasFeature(item.feature)) return false;
+              // Check role hierarchy
+              if (item.minRole && (ROLE_HIERARCHY[userRole] ?? 1) < (ROLE_HIERARCHY[item.minRole] ?? 1)) return false;
+              // Check custom permissions
+              const section = sectionFromPath(item.href);
+              if (!hasPermission(userRole, userPermissions, section)) return false;
+              return true;
+            });
+            if (visibleItems.length === 0) return null;
             return (
-              <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)}
-                className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
-                  active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                  collapsed && 'justify-center px-0'
-                )}>
-                <item.icon className="w-5 h-5 flex-shrink-0" />
-                {!collapsed && <span>{t(item.labelKey)}</span>}
-              </Link>
+              <div key={gi} className={cn(gi > 0 && 'mt-2 pt-2 border-t border-border/40')}>
+                {group.groupKey && !collapsed && (
+                  <p className="px-3 pt-1 pb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">{t(group.groupKey)}</p>
+                )}
+                {collapsed && gi > 0 && <div className="mx-3 mb-1" />}
+                <div className="space-y-0.5">
+                  {visibleItems.map((item) => {
+                    const active = pathname?.startsWith(item.href);
+                    return (
+                      <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)}
+                        className={cn(
+                          'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
+                          active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                          collapsed && 'justify-center px-0'
+                        )}>
+                        <item.icon className="w-5 h-5 flex-shrink-0" />
+                        {!collapsed && <span>{t(item.labelKey)}</span>}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
         </nav>
         {/* Footer */}
-        <div className={cn('p-3 border-t border-border', collapsed && 'flex flex-col items-center')}>
+        <div className={cn('p-3 border-t border-border/60 dark:border-border/40', collapsed && 'flex flex-col items-center')}>
           {!collapsed && session?.user && (
             <div className="flex items-center gap-3 px-2 py-2 mb-2">
               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">

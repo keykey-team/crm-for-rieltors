@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { getSessionUser } from '@/lib/role-guard';
+import { getSessionUser, hasRole } from '@/lib/role-guard';
 import { logActivity } from '@/lib/activity-logger';
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
@@ -10,9 +10,13 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const lead = await prisma.lead.findUnique({
       where: { id: params.id },
-      include: { assignedTo: { select: { id: true, name: true } }, deals: true, tasks: true },
+      include: { assignedTo: { select: { id: true, name: true, email: true } }, deals: true, tasks: true },
     });
     if (!lead) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    // Agents can only view their own leads
+    if (!hasRole(user.role, 'director') && lead.assignedToId !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     return NextResponse.json(lead);
   } catch (err: any) {
     return NextResponse.json({ error: err?.message ?? 'Error' }, { status: 500 });
@@ -25,6 +29,10 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const body = await req.json();
     const old = await prisma.lead.findUnique({ where: { id: params.id } });
+    if (!old) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    if (!hasRole(user.role, 'director') && old.assignedToId !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     const lead = await prisma.lead.update({
       where: { id: params.id },
       data: {
@@ -40,6 +48,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
         ...(body.notes !== undefined && { notes: body.notes }),
         ...(body.districts !== undefined && { districts: body.districts }),
         ...(body.propertyType !== undefined && { propertyType: body.propertyType }),
+        ...(body.assignedToId !== undefined && { assignedToId: body.assignedToId || null }),
       },
     });
     const action = (body.status && old?.status !== body.status) ? 'status_change' : 'update';
@@ -56,6 +65,10 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     const user = await getSessionUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const old = await prisma.lead.findUnique({ where: { id: params.id } });
+    if (!old) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    if (!hasRole(user.role, 'director') && old.assignedToId !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     await prisma.lead.delete({ where: { id: params.id } });
     logActivity({ entityType: 'lead', entityId: params.id, action: 'delete', details: `Видалено лід: ${old?.firstName ?? ''} ${old?.lastName ?? ''}`, userId: user.id });
     return NextResponse.json({ success: true });

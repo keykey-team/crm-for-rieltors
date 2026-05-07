@@ -1,6 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { Users, Workflow, Building, CheckSquare, AlertTriangle, Calendar, Clock } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Users, Workflow, Building, CheckSquare, AlertTriangle, Calendar, Clock, Check, CalendarPlus, Sparkles, LayoutDashboard } from 'lucide-react';
 import { StatsCard } from './stats-card';
 import { RecentLeads } from './recent-leads';
 import { FunnelChart } from './funnel-chart';
@@ -8,20 +8,40 @@ import { cn } from '@/lib/utils';
 import { DEAL_STAGES } from '@/lib/constants';
 import { formatDateTime } from '@/lib/format';
 import { useTranslation } from '@/lib/i18n/context';
+import { HintTooltip } from '@/components/hint-tooltip';
+import { toast } from 'sonner';
 import Link from 'next/link';
 
 export function DashboardClient() {
   const { t } = useTranslation();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
+  const fetchStats = useCallback(() => {
     fetch('/api/dashboard/stats')
       .then(r => r.json())
       .then(d => setStats(d))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { fetchStats(); }, [fetchStats]);
+
+  const completeTask = async (taskId: string) => {
+    setCompletedIds(prev => new Set(prev).add(taskId));
+    try {
+      await fetch(`/api/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'completed' }),
+      });
+      toast.success(t('tasks.completed'));
+    } catch {
+      setCompletedIds(prev => { const n = new Set(prev); n.delete(taskId); return n; });
+      toast.error(t('leads.error'));
+    }
+  };
 
   if (loading) {
     return (
@@ -38,17 +58,25 @@ export function DashboardClient() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-display font-bold">{t('dashboard.title')}</h1>
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#073B34] to-emerald-800 flex items-center justify-center shadow-sm">
+          <LayoutDashboard className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <h1 className="text-xl font-display font-bold tracking-tight"><HintTooltip text={t('hints.dashboard')} position="bottom">{t('dashboard.title')}</HintTooltip></h1>
+          <p className="text-xs text-muted-foreground mt-0.5">{t('dashboard.subtitle')}</p>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard icon={Users} label={t('dashboard.totalLeads')} value={stats?.totalLeads ?? 0}
-          sub={`${stats?.newLeads ?? 0} ${t('common.newCount')}`} color="text-blue-600" bg="bg-blue-50" />
+          sub={`${stats?.newLeads ?? 0} ${t('common.newCount')}`} color="text-[#073B34] dark:text-[#CEFD56]" bg="bg-[#073B34]/10 dark:bg-[#CEFD56]/10" gradient="bg-gradient-to-br from-[#073B34] to-[#0a5a4f]" href="/leads" />
         <StatsCard icon={Workflow} label={t('dashboard.activeDeals')} value={stats?.activeDeals ?? 0}
-          sub={`${stats?.totalDeals ?? 0} ${t('common.totalCount')}`} color="text-purple-600" bg="bg-purple-50" />
+          sub={`${stats?.totalDeals ?? 0} ${t('common.totalCount')}`} color="text-[#073B34] dark:text-[#CEFD56]" bg="bg-[#073B34]/10 dark:bg-[#CEFD56]/10" gradient="bg-gradient-to-br from-[#073B34] to-emerald-800" href="/deals" />
         <StatsCard icon={Building} label={t('dashboard.properties')} value={stats?.totalProperties ?? 0}
-          sub={t('common.inDatabase')} color="text-emerald-600" bg="bg-emerald-50" />
+          sub={t('common.inDatabase')} color="text-emerald-700 dark:text-emerald-400" bg="bg-emerald-100 dark:bg-emerald-500/15" gradient="bg-gradient-to-br from-[#0a5a4f] to-emerald-700" href="/properties" />
         <StatsCard icon={CheckSquare} label={t('dashboard.pendingTasks')} value={stats?.todayTasks ?? 0}
-          sub={`${stats?.pendingTasks ?? 0} ${t('common.waiting')}`} color="text-amber-600" bg="bg-amber-50" />
+          sub={`${stats?.pendingTasks ?? 0} ${t('common.waiting')}`} color="text-[#073B34] dark:text-[#CEFD56]" bg="bg-[#073B34]/10 dark:bg-[#CEFD56]/10" gradient="bg-gradient-to-br from-[#073B34] to-[#0d6b5e]" href="/tasks" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -57,9 +85,11 @@ export function DashboardClient() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl border border-border p-5" style={{ boxShadow: 'var(--shadow-sm)' }}>
-          <div className="flex items-center gap-2 mb-4">
-            <AlertTriangle className="w-5 h-5 text-amber-500" />
+        <div className="bg-card rounded-2xl border border-border/60 dark:border-border/40 p-6">
+          <div className="flex items-center gap-2.5 mb-5">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#073B34] to-[#0d6b5e] flex items-center justify-center">
+              <AlertTriangle className="w-4 h-4 text-white" />
+            </div>
             <h2 className="font-display font-semibold">{t('dashboard.riskDeals')}</h2>
             <span className="text-xs text-muted-foreground">{t('dashboard.riskDesc')}</span>
           </div>
@@ -94,20 +124,32 @@ export function DashboardClient() {
           )}
         </div>
 
-        <div className="bg-white rounded-xl border border-border p-5" style={{ boxShadow: 'var(--shadow-sm)' }}>
-          <div className="flex items-center gap-2 mb-4">
-            <Calendar className="w-5 h-5 text-blue-500" />
+        <div className="bg-card rounded-2xl border border-border/60 dark:border-border/40 p-6">
+          <div className="flex items-center gap-2.5 mb-5">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#073B34] to-[#0a5a4f] flex items-center justify-center">
+              <Calendar className="w-4 h-4 text-white" />
+            </div>
             <h2 className="font-display font-semibold">{t('dashboard.upcomingEvents')}</h2>
           </div>
           {(stats?.upcomingEvents ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">{t('dashboard.noUpcoming')}</p>
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center mb-3">
+                <Sparkles className="w-5 h-5 text-blue-400" />
+              </div>
+              <p className="text-sm text-muted-foreground mb-1">{t('dashboard.noUpcoming')}</p>
+              <p className="text-xs text-muted-foreground/70 mb-3">{t('dashboard.noUpcomingHint')}</p>
+              <Link href="/calendar" className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition">
+                <CalendarPlus className="w-3.5 h-3.5" />
+                {t('dashboard.addEvent')}
+              </Link>
+            </div>
           ) : (
             <div className="space-y-2">
               {stats.upcomingEvents.map((e: any) => (
                 <div key={e.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-                      <Calendar className="w-4 h-4 text-blue-600" />
+                    <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/15 flex items-center justify-center">
+                      <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
                       <p className="text-sm font-medium">{e.title}</p>
@@ -123,23 +165,32 @@ export function DashboardClient() {
       </div>
 
       {(stats?.todayTasksList ?? []).length > 0 && (
-        <div className="bg-white rounded-xl border border-border p-5" style={{ boxShadow: 'var(--shadow-sm)' }}>
-          <div className="flex items-center gap-2 mb-4">
-            <CheckSquare className="w-5 h-5 text-emerald-500" />
+        <div className="bg-card rounded-2xl border border-border/60 dark:border-border/40 p-6">
+          <div className="flex items-center gap-2.5 mb-5">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#0a5a4f] to-emerald-700 flex items-center justify-center">
+              <CheckSquare className="w-4 h-4 text-white" />
+            </div>
             <h2 className="font-display font-semibold">{t('dashboard.todayTasks')}</h2>
           </div>
           <div className="space-y-2">
-            {stats.todayTasksList.map((tk: any) => (
-              <div key={tk.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition">
-                <div>
-                  <p className="text-sm font-medium">{tk.title}</p>
-                  <p className="text-xs text-muted-foreground">
+            {stats.todayTasksList.filter((tk: any) => !completedIds.has(tk.id)).map((tk: any) => (
+              <div key={tk.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition group">
+                <button
+                  onClick={() => completeTask(tk.id)}
+                  className="w-6 h-6 min-w-[24px] rounded-full border-2 border-muted-foreground/30 flex items-center justify-center hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors"
+                  title={t('tasks.complete')}
+                >
+                  <Check className="w-3 h-3 text-muted-foreground/0 group-hover:text-emerald-500 transition-colors" />
+                </button>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{tk.title}</p>
+                  <p className="text-xs text-muted-foreground truncate">
                     {tk.lead ? `${tk.lead.firstName} ${tk.lead.lastName ?? ''}` : ''}
                   </p>
                 </div>
-                <span className={cn('text-xs px-2 py-0.5 rounded-full',
-                  tk.priority === 'high' ? 'bg-red-100 text-red-600' :
-                  tk.priority === 'medium' ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-500'
+                <span className={cn('text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
+                  tk.priority === 'high' ? 'bg-red-100 text-red-600 dark:bg-red-500/20' :
+                  tk.priority === 'medium' ? 'bg-amber-100 text-amber-600 dark:bg-amber-500/20' : 'bg-gray-100 text-gray-500 dark:bg-gray-500/20'
                 )}>{tk.priority}</span>
               </div>
             ))}

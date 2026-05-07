@@ -4,74 +4,191 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
+// GET /api/chat — list rooms for current user
+// GET /api/chat?roomId=xxx — messages in room
+// GET /api/chat?roomId=xxx&threadId=yyy — thread replies
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const userId = (session.user as any).id;
-  const otherUserId = req.nextUrl.searchParams.get('userId');
+  const roomId = req.nextUrl.searchParams.get('roomId');
+  const threadId = req.nextUrl.searchParams.get('threadId');
 
-  if (otherUserId) {
-    // Get conversation with specific user
-    const messages = await prisma.chatMessage.findMany({
-      where: {
-        OR: [
-          { senderId: userId, receiverId: otherUserId },
-          { senderId: otherUserId, receiverId: userId },
-        ],
-      },
+  // Thread replies
+  if (roomId && threadId) {
+    const replies = await prisma.chatMessage.findMany({
+      where: { roomId, threadId },
       include: {
         sender: { select: { id: true, name: true, avatar: true } },
+        mentions: { include: { user: { select: { id: true, name: true } } } },
       },
       orderBy: { createdAt: 'asc' },
       take: 100,
     });
-    // Mark as read
-    await prisma.chatMessage.updateMany({
-      where: { senderId: otherUserId, receiverId: userId, isRead: false },
-      data: { isRead: true },
+    return NextResponse.json(replies);
+  }
+
+  // Messages in room
+  if (roomId) {
+    // verify membership
+    const membership = await prisma.chatRoomMember.findUnique({
+      where: { roomId_userId: { roomId, userId } },
     });
+    if (!membership) return NextResponse.json({ error: 'Not a member' }, { status: 403 });
+
+    const messages = await prisma.chatMessage.findMany({
+      where: { roomId, threadId: null },
+      include: {
+        sender: { select: { id: true, name: true, avatar: true } },
+        mentions: { include: { user: { select: { id: true, name: true } } } },
+        _count: { select: { replies: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+      take: 200,
+    });
+
+    // Update last read
+    await prisma.chatRoomMember.update({
+      where: { roomId_userId: { roomId, userId } },
+      data: { lastReadAt: new Date() },
+    });
+
     return NextResponse.json(messages);
   }
 
-  // Get list of conversations (last message per user)
-  const users = await prisma.user.findMany({
-    where: { id: { not: userId } },
-    select: { id: true, name: true, avatar: true, role: true },
+  // List rooms
+  const memberships = await prisma.chatRoomMember.findMany({
+    where: { userId },
+    include: {
+      room: {
+        include: {
+          members: {
+            include: { user: { select: { id: true, name: true, avatar: true, role: true } } },
+          },
+        },
+      },
+    },
   });
 
-  const conversations = await Promise.all(
-    users.map(async (u: any) => {
+  const rooms = await Promise.all(
+    memberships.map(async (m) => {
       const lastMsg = await prisma.chatMessage.findFirst({
-        where: {
-          OR: [
-            { senderId: userId, receiverId: u.id },
-            { senderId: u.id, receiverId: userId },
-          ],
-        },
+        where: { roomId: m.roomId, threadId: null },
         orderBy: { createdAt: 'desc' },
+        include: { sender: { select: { id: true, name: true } } },
       });
-      const unread = await prisma.chatMessage.count({
-        where: { senderId: u.id, receiverId: userId, isRead: false },
+      const unreadCount = await prisma.chatMessage.count({
+        where: {
+          roomId: m.roomId,
+          threadId: null,
+          createdAt: { gt: m.lastReadAt },
+          senderId: { not: userId },
+        },
       });
-      return { user: u, lastMessage: lastMsg, unreadCount: unread };
+      return {
+        id: m.room.id,
+        name: m.room.name,
+        type: m.room.type,
+        members: m.room.members.map((mem) => mem.user),
+        lastMessage: lastMsg,
+        unreadCount,
+        updatedAt: lastMsg?.createdAt || m.room.createdAt,
+      };
     })
   );
 
-  return NextResponse.json(conversations.sort((a: any, b: any) => {
-    const aTime = a.lastMessage?.createdAt?.getTime?.() || 0;
-    const bTime = b.lastMessage?.createdAt?.getTime?.() || 0;
-    return bTime - aTime;
-  }));
+  rooms.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  return NextResponse.json(rooms);
 }
 
+// POST /api/chat — send message or create room
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const userId = (session.user as any).id;
-  const { receiverId, text } = await req.json();
+  const body = await req.json();
+
+  // Create group room
+  if (body.action === 'createRoom') {
+    const { name, memberIds } = body;
+    const allIds = Array.from(new Set([userId, ...(memberIds || [])]));
+    const room = await prisma.chatRoom.create({
+      data: {
+        name: name || null,
+        type: allIds.length > 2 ? 'group' : 'direct',
+        createdById: userId,
+        members: { create: allIds.map((id: string) => ({ userId: id })) },
+      },
+      include: {
+        members: { include: { user: { select: { id: true, name: true, avatar: true, role: true } } } },
+      },
+    });
+    return NextResponse.json(room);
+  }
+
+  // Send message to a room
+  const { roomId, text, threadId, mentions } = body;
+
+  // If no roomId but receiverId — find/create DM room
+  let targetRoomId = roomId;
+  if (!targetRoomId && body.receiverId) {
+    // Find existing DM room
+    const existingDm = await prisma.chatRoom.findFirst({
+      where: {
+        type: 'direct',
+        AND: [
+          { members: { some: { userId } } },
+          { members: { some: { userId: body.receiverId } } },
+        ],
+      },
+    });
+    if (existingDm) {
+      targetRoomId = existingDm.id;
+    } else {
+      const newRoom = await prisma.chatRoom.create({
+        data: {
+          type: 'direct',
+          createdById: userId,
+          members: { create: [{ userId }, { userId: body.receiverId }] },
+        },
+      });
+      targetRoomId = newRoom.id;
+    }
+  }
+
+  if (!targetRoomId || !text?.trim()) {
+    return NextResponse.json({ error: 'Missing roomId or text' }, { status: 400 });
+  }
+
+  // For DM backward compat, figure out receiverId
+  const roomMembers = await prisma.chatRoomMember.findMany({ where: { roomId: targetRoomId } });
+  const otherMember = roomMembers.find((m) => m.userId !== userId);
+  const receiverId = body.receiverId || otherMember?.userId || userId;
+
   const msg = await prisma.chatMessage.create({
-    data: { senderId: userId, receiverId, text },
-    include: { sender: { select: { id: true, name: true, avatar: true } } },
+    data: {
+      senderId: userId,
+      receiverId,
+      text: text.trim(),
+      roomId: targetRoomId,
+      threadId: threadId || null,
+    },
+    include: {
+      sender: { select: { id: true, name: true, avatar: true } },
+      _count: { select: { replies: true } },
+    },
   });
+
+  // Create mentions
+  if (mentions && Array.isArray(mentions) && mentions.length > 0) {
+    await prisma.chatMention.createMany({
+      data: mentions.map((uid: string) => ({ messageId: msg.id, userId: uid })),
+      skipDuplicates: true,
+    });
+  }
+
+  // Update room timestamp
+  await prisma.chatRoom.update({ where: { id: targetRoomId }, data: { updatedAt: new Date() } });
+
   return NextResponse.json(msg);
 }

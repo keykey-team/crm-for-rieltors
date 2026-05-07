@@ -3,21 +3,29 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getSessionUser, ownershipFilter, hasRole } from '@/lib/role-guard';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const user = await getSessionUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const of = ownershipFilter(user);
+    const { searchParams } = new URL(req.url);
+    const from = searchParams.get('from');
+    const to = searchParams.get('to');
+
+    const dateFilter: any = {};
+    if (from) dateFilter.gte = new Date(from);
+    if (to) dateFilter.lte = new Date(to);
+    const hasDate = Object.keys(dateFilter).length > 0;
 
     const [leads, deals, tasks, users] = await Promise.all([
-      prisma.lead.findMany({ where: of, select: { id: true, source: true, status: true, createdAt: true, assignedToId: true } }),
+      prisma.lead.findMany({ where: { ...of, ...(hasDate ? { createdAt: dateFilter } : {}) }, select: { id: true, source: true, status: true, createdAt: true, assignedToId: true } }),
       prisma.deal.findMany({
-        where: of,
+        where: { ...of, ...(hasDate ? { createdAt: dateFilter } : {}) },
         select: { id: true, stage: true, amount: true, commission: true, createdAt: true, updatedAt: true, assignedToId: true },
       }),
       prisma.task.findMany({
-        where: of,
+        where: { ...of, ...(hasDate ? { createdAt: dateFilter } : {}) },
         select: { id: true, status: true, type: true, assignedToId: true, createdAt: true, completedAt: true },
       }),
       prisma.user.findMany({ select: { id: true, name: true, email: true } }),

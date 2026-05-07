@@ -19,8 +19,9 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
         ...(body.name !== undefined && { name: body.name }),
         ...(body.role !== undefined && { role: body.role }),
         ...(body.phone !== undefined && { phone: body.phone }),
+        ...(body.permissions !== undefined && { permissions: body.permissions }),
       },
-      select: { id: true, name: true, email: true, role: true, phone: true, createdAt: true },
+      select: { id: true, name: true, email: true, role: true, phone: true, permissions: true, createdAt: true },
     });
     return NextResponse.json(user);
   } catch (err: any) {

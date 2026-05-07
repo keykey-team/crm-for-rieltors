@@ -1,17 +1,25 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { HintTooltip } from '@/components/hint-tooltip';
 import { Plus, Workflow } from 'lucide-react';
 import { DEAL_STAGES } from '@/lib/constants';
 import { FunnelBoard } from './funnel-board';
 import { DealDialog } from './deal-dialog';
 import { useTranslation } from '@/lib/i18n/context';
+import { confirmAction } from '@/lib/confirm-action';
 
 export function DealsClient() {
   const { t } = useTranslation();
+  const searchParams = useSearchParams();
   const [deals, setDeals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDeal, setEditDeal] = useState<any>(null);
+
+  useEffect(() => {
+    if (searchParams.get('create') === '1') { setEditDeal(null); setDialogOpen(true); }
+  }, [searchParams]);
 
   const fetchDeals = useCallback(async () => {
     setLoading(true);
@@ -41,7 +49,8 @@ export function DealsClient() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm(t('deals.deleteDeal'))) return;
+    const ok = await confirmAction(t('deals.deleteDeal'), { confirm: t('common.delete'), cancel: t('common.cancel') });
+    if (!ok) return;
     await fetch(`/api/deals/${id}`, { method: 'DELETE' });
     fetchDeals();
   };
@@ -49,15 +58,20 @@ export function DealsClient() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-display font-bold tracking-tight flex items-center gap-2">
-            <Workflow className="w-6 h-6 text-primary" /> {t('deals.dealFunnel')}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">{t('deals.subtitle')}</p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#073B34] to-emerald-800 flex items-center justify-center shadow-sm">
+            <Workflow className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-display font-bold tracking-tight">
+              <HintTooltip text={t('hints.deals')} position="bottom">{t('deals.dealFunnel')}</HintTooltip>
+            </h1>
+            <p className="text-xs text-muted-foreground mt-0.5">{t('deals.subtitle')}</p>
+          </div>
         </div>
         <button onClick={() => { setEditDeal(null); setDialogOpen(true); }}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition">
-          <Plus className="w-4 h-4" /> {t('deals.addDeal')}
+          className="flex items-center gap-2 px-3 sm:px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:opacity-90 transition shadow-sm active:scale-95">
+          <Plus className="w-4 h-4" /> <span className="hidden sm:inline">{t('deals.addDeal')}</span>
         </button>
       </div>
       <FunnelBoard deals={deals} loading={loading} onStageChange={handleStageChange}

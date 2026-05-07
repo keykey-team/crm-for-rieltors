@@ -1,11 +1,21 @@
 'use client';
 
+import { useSidebar } from '@/lib/sidebar-context';
+import { TelegramAssistant } from '@/components/telegram-assistant';
+import { cn } from '@/lib/utils';
+
 export function SidebarWrapper({ children }: { children: React.ReactNode }) {
+  const { collapsed } = useSidebar();
+
   return (
-    <main className="lg:ml-[260px] transition-all duration-300 min-h-screen">
-      <div className="p-4 md:p-6 lg:p-8 pt-20 lg:pt-8 max-w-[1400px]">
+    <main className={cn(
+      'main-content transition-all duration-300 min-h-screen bg-background',
+      collapsed ? 'lg:ml-[72px]' : 'lg:ml-[260px]'
+    )}>
+      <div className="p-4 md:p-6 lg:p-8 pt-[72px] lg:pt-8">
         {children}
       </div>
+      <TelegramAssistant />
     </main>
   );
 }

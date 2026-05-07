@@ -10,7 +10,7 @@ export async function GET() {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const users = await prisma.user.findMany({
-      select: { id: true, name: true, email: true, role: true, phone: true, createdAt: true },
+      select: { id: true, name: true, email: true, role: true, phone: true, permissions: true, createdAt: true },
       orderBy: { createdAt: 'desc' },
     });
     return NextResponse.json(users);
@@ -36,8 +36,9 @@ export async function POST(req: Request) {
         password: hashedPw,
         role: body.role ?? 'agent',
         phone: body.phone ?? null,
+        permissions: body.permissions ?? null,
       },
-      select: { id: true, name: true, email: true, role: true, phone: true, createdAt: true },
+      select: { id: true, name: true, email: true, role: true, phone: true, permissions: true, createdAt: true },
     });
     return NextResponse.json(user);
   } catch (err: any) {

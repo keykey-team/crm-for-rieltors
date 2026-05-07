@@ -3,7 +3,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { Zap, Plus, Edit2, Trash2, ToggleLeft, ToggleRight, ArrowRight, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { confirmAction } from '@/lib/confirm-action';
 import { useTranslation } from '@/lib/i18n/context';
+import { HintTooltip } from '@/components/hint-tooltip';
 
 export function AutomationsClient() {
   const { t } = useTranslation();
@@ -56,7 +58,8 @@ export function AutomationsClient() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm(t('automations.deleteAutomation'))) return;
+    const ok = await confirmAction(t('automations.deleteAutomation'), { confirm: t('common.delete'), cancel: t('common.cancel') });
+    if (!ok) return;
     await fetch(`/api/automations/${id}`, { method: 'DELETE' });
     toast.success(t('common.deleted')); fetchData();
   };
@@ -64,13 +67,18 @@ export function AutomationsClient() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-display font-bold">{t('automations.title')}</h1>
-          <p className="text-muted-foreground text-sm mt-1">{t('automations.subtitle')}</p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#073B34] to-emerald-800 flex items-center justify-center shadow-sm">
+            <Zap className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-display font-bold tracking-tight"><HintTooltip text={t('hints.automations')} position="bottom">{t('automations.title')}</HintTooltip></h1>
+            <p className="text-xs text-muted-foreground mt-0.5">{t('automations.subtitle')}</p>
+          </div>
         </div>
         <button onClick={() => { setEditing(null); setShowDialog(true); }}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition">
-          <Plus className="w-4 h-4" /> {t('automations.newRule')}
+          className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition active:scale-95">
+          <Plus className="w-4 h-4" /> <span className="hidden sm:inline">{t('automations.newRule')}</span>
         </button>
       </div>
 
@@ -84,7 +92,7 @@ export function AutomationsClient() {
       ) : (
         <div className="space-y-3">
           {automations.map(a => (
-            <div key={a.id} className={cn('bg-white rounded-xl p-4 border border-border transition', !a.isActive && 'opacity-60')}
+            <div key={a.id} className={cn('bg-card rounded-xl p-4 border border-border transition', !a.isActive && 'opacity-60')}
               style={{ boxShadow: 'var(--shadow-sm)' }}>
               <div className="flex items-center justify-between">
                 <div className="flex-1">
@@ -100,7 +108,7 @@ export function AutomationsClient() {
                       {TRIGGERS.find(tr => tr.value === a.trigger)?.label ?? a.trigger}
                     </span>
                     <ArrowRight className="w-3 h-3" />
-                    <span className="bg-purple-50 text-purple-600 px-2 py-0.5 rounded-md">
+                    <span className="bg-[#073B34]/10 text-[#073B34] dark:bg-emerald-900/30 dark:text-emerald-400 px-2 py-0.5 rounded-md">
                       {ACTIONS.find(ac => ac.value === a.action)?.label ?? a.action}
                     </span>
                   </div>
@@ -151,7 +159,7 @@ function AutomationDialog({ automation, onSave, onClose, t, triggers, actions }:
 
   return (
     <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()} style={{ boxShadow: 'var(--shadow-lg)' }}>
+      <div className="bg-card rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()} style={{ boxShadow: 'var(--shadow-lg)' }}>
         <div className="flex items-center justify-between p-5 border-b border-border">
           <h2 className="text-lg font-display font-bold">{automation ? t('automations.editAutomation') : t('automations.newAutomation')}</h2>
           <button onClick={onClose} className="p-1 hover:bg-muted rounded-lg"><X className="w-5 h-5" /></button>

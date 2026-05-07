@@ -16,7 +16,7 @@ export async function GET(req: Request) {
       include: {
         lead: { select: { id: true, firstName: true, lastName: true, phone: true } },
         property: { select: { id: true, title: true, address: true } },
-        assignedTo: { select: { id: true, name: true } },
+        assignedTo: { select: { id: true, name: true, avatar: true } },
       },
     });
     return NextResponse.json(deals);
@@ -36,6 +36,7 @@ export async function POST(req: Request) {
         stage: body.stage ?? 'new_lead',
         amount: body.amount ? parseFloat(body.amount) : null,
         commission: body.commission ? parseFloat(body.commission) : null,
+        currency: body.currency ?? 'USD',
         leadId: body.leadId ?? null,
         propertyId: body.propertyId ?? null,
         assignedToId: body.assignedToId ?? user.id,

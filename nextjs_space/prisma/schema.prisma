@@ -1,7 +1,7 @@
 generator client {
     provider = "prisma-client-js"
     binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
-  output = "../node_modules/.prisma/client"
+    output = "/home/ubuntu/realtor_crm/nextjs_space/node_modules/.prisma/client"
 }
 
 datasource db {
@@ -15,6 +15,17 @@ model User {
   email         String    @unique
   password      String
   role          String    @default("agent")
+  accountType   String    @default("agent")
+  plan          String    @default("free")
+  brandName     String?
+  brandLogo     String?
+  primaryColor  String?
+  themeMode     String?   @default("light")
+  sidebarGlass  Boolean?  @default(false)
+  sidebarOpacity Float?   @default(1)
+  gradientBg    Boolean?  @default(false)
+  calendarToken String?
+  permissions   String?
   phone         String?
   avatar        String?
   createdAt     DateTime  @default(now())
@@ -31,6 +42,8 @@ model User {
   communications Communication[]   @relation("CommunicationUser")
   sentMessages  ChatMessage[]      @relation("ChatSender")
   receivedMessages ChatMessage[]   @relation("ChatReceiver")
+  chatRooms     ChatRoomMember[]   @relation("ChatRoomMembership")
+  mentionedIn   ChatMention[]      @relation("MentionedUser")
   distributionRules LeadDistributionRule[] @relation("DistributionAssign")
 
   @@index([email])
@@ -108,6 +121,7 @@ model Deal {
   stage         String    @default("new_lead")
   amount        Float?
   commission    Float?
+  currency      String    @default("USD")
   leadId        String?
   lead          Lead?     @relation(fields: [leadId], references: [id])
   propertyId    String?
@@ -341,6 +355,7 @@ model AftercarePlan {
   id            String    @id @default(cuid())
   name          String
   description   String?
+  order         Int       @default(0)
   isActive      Boolean   @default(true)
   steps         AftercareStep[]
   createdAt     DateTime  @default(now())
@@ -385,11 +400,57 @@ model ChatMessage {
   receiver      User      @relation("ChatReceiver", fields: [receiverId], references: [id])
   text          String
   isRead        Boolean   @default(false)
+  roomId        String?
+  room          ChatRoom? @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  threadId      String?
+  thread        ChatMessage?  @relation("ThreadReplies", fields: [threadId], references: [id], onDelete: SetNull)
+  replies       ChatMessage[] @relation("ThreadReplies")
+  mentions      ChatMention[] @relation("MessageMentions")
   createdAt     DateTime  @default(now())
 
   @@index([senderId, receiverId])
   @@index([receiverId, isRead])
   @@index([createdAt])
+  @@index([roomId])
+  @@index([threadId])
+}
+
+model ChatRoom {
+  id            String    @id @default(cuid())
+  name          String?
+  type          String    @default("direct") // direct | group
+  createdById   String?
+  members       ChatRoomMember[]
+  messages      ChatMessage[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([type])
+}
+
+model ChatRoomMember {
+  id            String    @id @default(cuid())
+  roomId        String
+  room          ChatRoom  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User      @relation("ChatRoomMembership", fields: [userId], references: [id])
+  lastReadAt    DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+
+  @@unique([roomId, userId])
+  @@index([userId])
+}
+
+model ChatMention {
+  id            String    @id @default(cuid())
+  messageId     String
+  message       ChatMessage @relation("MessageMentions", fields: [messageId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User      @relation("MentionedUser", fields: [userId], references: [id])
+  createdAt     DateTime  @default(now())
+
+  @@index([userId])
+  @@index([messageId])
 }
 
 // ─── Lead distribution rules ───

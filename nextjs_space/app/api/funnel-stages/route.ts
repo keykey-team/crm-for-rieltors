@@ -35,11 +35,18 @@ export async function PUT(req: NextRequest) {
   return NextResponse.json(stage);
 }
 
+const PROTECTED_STAGE_VALUES = ['new_lead', 'closed', 'cancelled', 'rejected'];
+
 export async function DELETE(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const id = req.nextUrl.searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+  const stage = await prisma.funnelStage.findUnique({ where: { id } });
+  if (!stage) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (PROTECTED_STAGE_VALUES.includes(stage.value)) {
+    return NextResponse.json({ error: 'Cannot delete system stage' }, { status: 403 });
+  }
   await prisma.funnelStage.update({ where: { id }, data: { isActive: false } });
   return NextResponse.json({ ok: true });
 }

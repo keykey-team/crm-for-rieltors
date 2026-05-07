@@ -1,16 +1,28 @@
 export const DEAL_STAGES = [
-  { value: 'new_lead', label: 'Новий лід', color: '#60B5FF' },
-  { value: 'contacted', label: 'Контакт встановлено', color: '#80D8C3' },
-  { value: 'meeting_scheduled', label: 'Зустріч призначено', color: '#A19AD3' },
-  { value: 'meeting_done', label: 'Зустріч проведено', color: '#72BF78' },
-  { value: 'showing', label: 'Покази', color: '#FF9149' },
-  { value: 'negotiation', label: 'Переговори', color: '#FF90BB' },
-  { value: 'deposit', label: 'Завдаток', color: '#FF9898' },
-  { value: 'documents', label: 'Документи', color: '#FFD166' },
-  { value: 'closed', label: 'Угода завершена', color: '#06D6A0' },
-  { value: 'aftercare', label: 'Aftercare', color: '#118AB2' },
-  { value: 'rejected', label: 'Відмова', color: '#EF476F' },
+  { value: 'new_lead', label: 'Новий лід', color: '#5AC8FA' },
+  { value: 'contacted', label: 'Контакт встановлено', color: '#34C759' },
+  { value: 'meeting_scheduled', label: 'Зустріч призначено', color: '#AF52DE' },
+  { value: 'meeting_done', label: 'Зустріч проведено', color: '#30D158' },
+  { value: 'showing', label: 'Покази', color: '#FF9F0A' },
+  { value: 'negotiation', label: 'Переговори', color: '#FF6482' },
+  { value: 'deposit', label: 'Завдаток', color: '#FF453A' },
+  { value: 'documents', label: 'Документи', color: '#FFD60A' },
+  { value: 'closed', label: 'Угода завершена', color: '#30D158' },
+  { value: 'aftercare', label: 'Aftercare', color: '#64D2FF' },
+  { value: 'cancelled', label: 'Скасовано', color: '#8E8E93' },
+  { value: 'rejected', label: 'Відмова', color: '#FF453A' },
 ];
+
+/** Stages that cannot be deleted by the user */
+export const PROTECTED_STAGES = ['new_lead', 'closed', 'cancelled', 'rejected'] as const;
+
+/** Visual groups for funnel stages */
+export const STAGE_GROUPS = [
+  { key: 'incoming', labelKey: 'settings.stageGroupIncoming', stages: ['new_lead'] },
+  { key: 'active', labelKey: 'settings.stageGroupActive', stages: ['contacted', 'meeting_scheduled', 'meeting_done', 'showing'] },
+  { key: 'closing', labelKey: 'settings.stageGroupClosing', stages: ['negotiation', 'deposit', 'documents'] },
+  { key: 'result', labelKey: 'settings.stageGroupResult', stages: ['closed', 'aftercare', 'cancelled', 'rejected'] },
+] as const;
 
 export const LEAD_SOURCES = [
   { value: 'manual', label: 'Вручну' },

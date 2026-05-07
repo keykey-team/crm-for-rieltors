@@ -1,10 +1,11 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Phone, MessageSquare, Mail, Plus, Send, Clock, Workflow, FileText, User } from 'lucide-react';
+import { Phone, MessageSquare, Mail, Plus, Send, Clock, Workflow, FileText, User } from 'lucide-react';
+import { Breadcrumbs } from '@/components/breadcrumbs';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { LEAD_STATUSES } from '@/lib/constants';
+import { LEAD_STATUSES, LEAD_SOURCES } from '@/lib/constants';
 import { formatDate, formatDateTime, getInitials } from '@/lib/format';
 import { toast } from 'sonner';
 import { useTranslation } from '@/lib/i18n/context';
@@ -72,13 +73,14 @@ export function LeadDetailClient({ leadId }: { leadId: string }) {
 
   return (
     <div>
-      <Link href="/leads" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4">
-        <ArrowLeft className="w-4 h-4" /> {t('common.back')}
-      </Link>
+      <Breadcrumbs items={[
+        { label: t('leads.title'), href: '/leads' },
+        { label: lead ? `${lead.firstName} ${lead.lastName ?? ''}`.trim() : '...' },
+      ]} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1 space-y-4">
-          <div className="bg-white rounded-xl border border-border p-5" style={{ boxShadow: 'var(--shadow-sm)' }}>
+          <div className="bg-card rounded-xl border border-border p-5" style={{ boxShadow: 'var(--shadow-sm)' }}>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary text-lg font-bold">
                 {getInitials(`${lead.firstName} ${lead.lastName ?? ''}`)}
@@ -93,6 +95,10 @@ export function LeadDetailClient({ leadId }: { leadId: string }) {
             <div className="space-y-3 text-sm">
               <div className="flex items-center gap-2"><Phone className="w-4 h-4 text-muted-foreground" /><span>{lead.phone}</span></div>
               {lead.email && <div className="flex items-center gap-2"><Mail className="w-4 h-4 text-muted-foreground" /><span>{lead.email}</span></div>}
+              {lead.assignedTo && <div className="flex items-center gap-2"><User className="w-4 h-4 text-muted-foreground" /><span className="text-muted-foreground">{t('common.manager')}:</span><span className="font-medium">{lead.assignedTo.name ?? lead.assignedTo.email ?? '—'}</span></div>}
+              {lead.source && <div className="flex items-center gap-2"><span className="text-muted-foreground">{t('common.source')}:</span><span>{t(`const.leadSource.${lead.source}`) || LEAD_SOURCES.find(s => s.value === lead.source)?.label || lead.source}</span></div>}
+              {lead.needType && <div className="flex items-center gap-2"><span className="text-muted-foreground">{t('common.needType')}:</span><span>{t(`const.needType.${lead.needType}`) || lead.needType}</span></div>}
+              {lead.priority && <div className="flex items-center gap-2"><span className="text-muted-foreground">{t('common.priority')}:</span><span>{t(`const.priority.${lead.priority}`) || lead.priority}</span></div>}
               {lead.budget && <div className="flex items-center gap-2"><span className="text-muted-foreground">{t('leads.budget')}:</span><span className="font-mono font-bold">${lead.budget?.toLocaleString()}</span></div>}
               {lead.districts && <div className="flex items-center gap-2"><span className="text-muted-foreground">{t('leads.districtLabel')}:</span><span>{lead.districts}</span></div>}
               {lead.propertyType && <div className="flex items-center gap-2"><span className="text-muted-foreground">{t('leads.typeLabel')}:</span><span>{t(`const.propertyType.${lead.propertyType}`) || lead.propertyType}</span></div>}
@@ -107,12 +113,12 @@ export function LeadDetailClient({ leadId }: { leadId: string }) {
           </button>
 
           {lead.deals?.length > 0 && (
-            <div className="bg-white rounded-xl border border-border p-4" style={{ boxShadow: 'var(--shadow-sm)' }}>
+            <div className="bg-card rounded-xl border border-border p-4" style={{ boxShadow: 'var(--shadow-sm)' }}>
               <h3 className="text-sm font-semibold mb-2">{t('leads.relatedDeals')}</h3>
               {lead.deals.map((d: any) => (
                 <Link key={d.id} href={`/deals/${d.id}`} className="block p-2 hover:bg-muted/50 rounded-lg transition text-sm">
                   <span className="font-medium">{d.title}</span>
-                  <span className="text-xs text-muted-foreground ml-2">{t(`const.dealStage.${d.stage}`) || d.stage}</span>
+                  <span className="text-xs text-muted-foreground ml-2">{(() => { const _t = t(`const.dealStage.${d.stage}`); return _t && !_t.startsWith('const.') ? _t : d.stage; })()}</span>
                 </Link>
               ))}
             </div>
@@ -120,7 +126,7 @@ export function LeadDetailClient({ leadId }: { leadId: string }) {
         </div>
 
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl border border-border" style={{ boxShadow: 'var(--shadow-sm)' }}>
+          <div className="bg-card rounded-xl border border-border" style={{ boxShadow: 'var(--shadow-sm)' }}>
             <div className="p-5 border-b border-border">
               <h2 className="font-semibold text-lg">{t('leads.commHistory')}</h2>
             </div>

@@ -23,9 +23,11 @@ export async function GET(req: Request) {
     }
     if (status) where.status = status;
     if (source) where.source = source;
+    const managerId = searchParams.get('managerId') ?? '';
+    if (managerId) where.assignedToId = managerId;
     const leads = await prisma.lead.findMany({
       where, orderBy: { createdAt: 'desc' }, take: 100,
-      include: { assignedTo: { select: { id: true, name: true } } },
+      include: { assignedTo: { select: { id: true, name: true, avatar: true } } },
     });
     return NextResponse.json(leads);
   } catch (err: any) {
@@ -39,7 +41,7 @@ export async function POST(req: Request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const body = await req.json();
     // ─── Auto-distribution: pick agent from LeadDistributionRule ───
-    let resolvedAssignee = body.assignedToId ?? null;
+    let resolvedAssignee = body.assignedToId || null;
     if (!resolvedAssignee) {
       try {
         const rules = await prisma.leadDistributionRule.findMany({

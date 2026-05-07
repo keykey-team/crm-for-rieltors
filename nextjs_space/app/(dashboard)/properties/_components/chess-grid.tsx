@@ -5,20 +5,29 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { formatPrice } from '@/lib/format';
 import { useTranslation } from '@/lib/i18n/context';
+import { confirmAction } from '@/lib/confirm-action';
 
-/* ─── Room type colors (Flatris-style: each room count has unique color) ─── */
-const ROOM_COLORS: Record<number, { bg: string; text: string; solid: string }> = {
-  0: { bg: 'bg-violet-400', text: 'text-white', solid: '#8B5CF6' },
-  1: { bg: 'bg-sky-400', text: 'text-white', solid: '#38BDF8' },
-  2: { bg: 'bg-emerald-400', text: 'text-white', solid: '#34D399' },
-  3: { bg: 'bg-amber-400', text: 'text-white', solid: '#FBBF24' },
-  4: { bg: 'bg-rose-400', text: 'text-white', solid: '#FB7185' },
-  5: { bg: 'bg-teal-400', text: 'text-white', solid: '#2DD4BF' },
+/* ─── Room type colors ─── */
+const ROOM_COLORS: Record<number, { label: string; gradient: string; solid: string }> = {
+  0: { label: 'Studio', gradient: 'from-[#073B34] to-emerald-700', solid: '#073B34' },
+  1: { label: '1', gradient: 'from-sky-400 to-sky-600', solid: '#38BDF8' },
+  2: { label: '2', gradient: 'from-emerald-400 to-emerald-600', solid: '#34D399' },
+  3: { label: '3', gradient: 'from-amber-400 to-amber-600', solid: '#FBBF24' },
+  4: { label: '4', gradient: 'from-rose-400 to-rose-600', solid: '#FB7185' },
+  5: { label: '5+', gradient: 'from-teal-400 to-teal-600', solid: '#2DD4BF' },
 };
 
 const getRoomColor = (rooms: number | null) => {
   const r = rooms ?? 1;
   return ROOM_COLORS[Math.min(r, 5)] || ROOM_COLORS[1];
+};
+
+/* ─── Status config ─── */
+const STATUS_STYLES: Record<string, { gradient: string; solid: string; ring: string; bgTint: string }> = {
+  available: { gradient: 'from-emerald-400 to-green-500', solid: '#22C55E', ring: 'ring-emerald-500', bgTint: 'bg-emerald-500' },
+  reserved: { gradient: 'from-amber-400 to-orange-500', solid: '#F59E0B', ring: 'ring-amber-500', bgTint: 'bg-amber-500' },
+  sold: { gradient: 'from-rose-400 to-red-500', solid: '#EF4444', ring: 'ring-red-500', bgTint: 'bg-red-500' },
+  unavailable: { gradient: 'from-gray-300 to-gray-400', solid: '#9CA3AF', ring: 'ring-gray-400', bgTint: 'bg-gray-400' },
 };
 
 interface Unit {
@@ -44,10 +53,10 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
   const { t } = useTranslation();
 
   const UNIT_STATUSES = useMemo(() => [
-    { value: 'available', label: t('chess.unitStatus.available'), color: '#22C55E', bg: 'bg-emerald-500', bgLight: 'bg-emerald-50', ring: 'ring-emerald-500' },
-    { value: 'reserved', label: t('chess.unitStatus.reserved'), color: '#F59E0B', bg: 'bg-amber-500', bgLight: 'bg-amber-50', ring: 'ring-amber-500' },
-    { value: 'sold', label: t('chess.unitStatus.sold'), color: '#EF4444', bg: 'bg-red-500', bgLight: 'bg-red-50', ring: 'ring-red-500' },
-    { value: 'unavailable', label: t('chess.unitStatus.unavailable'), color: '#9CA3AF', bg: 'bg-gray-400', bgLight: 'bg-gray-50', ring: 'ring-gray-400' },
+    { value: 'available', label: t('chess.unitStatus.available') },
+    { value: 'reserved', label: t('chess.unitStatus.reserved') },
+    { value: 'sold', label: t('chess.unitStatus.sold') },
+    { value: 'unavailable', label: t('chess.unitStatus.unavailable') },
   ], [t]);
 
   const ROOM_LABELS: Record<number, string> = useMemo(() => ({
@@ -60,7 +69,6 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [showBulkAdd, setShowBulkAdd] = useState(false);
-  const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [roomsFilter, setRoomsFilter] = useState<number | ''>('');
 
@@ -103,9 +111,7 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
     const sold = units.filter(u => u.status === 'sold').length;
     const minPrice = units.filter(u => u.price && u.status === 'available').reduce((min, u) => u.price! < min ? u.price! : min, Infinity);
     const maxPrice = units.filter(u => u.price && u.status === 'available').reduce((max, u) => u.price! > max ? u.price! : max, 0);
-    const minArea = units.filter(u => u.area).reduce((min, u) => u.area! < min ? u.area! : min, Infinity);
-    const maxArea = units.filter(u => u.area).reduce((max, u) => u.area! > max ? u.area! : max, 0);
-    return { total, available, reserved, sold, minPrice: minPrice === Infinity ? 0 : minPrice, maxPrice, minArea: minArea === Infinity ? 0 : minArea, maxArea };
+    return { total, available, reserved, sold, minPrice: minPrice === Infinity ? 0 : minPrice, maxPrice };
   }, [units]);
 
   const addUnit = async () => {
@@ -144,15 +150,9 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
     if (selectedUnit?.id === unitId) setSelectedUnit(prev => prev ? { ...prev, status } : null);
   };
 
-  const updateUnit = async (unitId: string, data: Partial<Unit>) => {
-    await fetch('/api/property-units', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: unitId, ...data }) });
-    fetchUnits(); setEditingUnit(null);
-    if (selectedUnit?.id === unitId) setSelectedUnit(prev => prev ? { ...prev, ...data } : null);
-    toast.success(t('common.updated'));
-  };
-
   const deleteUnit = async (unitId: string) => {
-    if (!confirm(t('chess.deleteConfirm'))) return;
+    const ok = await confirmAction(t('chess.deleteConfirm'));
+    if (!ok) return;
     await fetch(`/api/property-units?id=${unitId}`, { method: 'DELETE' });
     if (selectedUnit?.id === unitId) setSelectedUnit(null);
     fetchUnits(); toast.success(t('common.deleted'));
@@ -163,21 +163,27 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex" onClick={onClose}>
       <div className="flex w-full h-full" onClick={e => e.stopPropagation()}>
 
-        {/* ═══════ LEFT PANEL: Filters & Stats ═══════ */}
-        <div className="w-64 bg-white border-r border-border flex flex-col shrink-0 overflow-y-auto">
-          <div className="p-4 border-b border-border">
-            <div className="flex items-center gap-2 mb-1">
-              <Grid3X3 className="w-5 h-5 text-primary" />
-              <h2 className="font-display font-bold text-base truncate">{propertyTitle || t('chess.title')}</h2>
+        {/* ═══════ LEFT PANEL ═══════ */}
+        <div className="w-72 bg-card border-r border-border/60 dark:border-border/40 flex flex-col shrink-0 overflow-y-auto">
+          {/* Header */}
+          <div className="p-5 border-b border-border/60 dark:border-border/40">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#073B34] to-emerald-800 flex items-center justify-center shadow-sm">
+                <Grid3X3 className="w-4.5 h-4.5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="font-display font-bold text-sm truncate">{propertyTitle || t('chess.title')}</h2>
+                <p className="text-[11px] text-muted-foreground">{filteredUnits.length} {t('chess.units')}</p>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">{t('chess.found')}: {filteredUnits.length} {t('chess.units')}</p>
           </div>
 
-          <div className="p-4 border-b border-border">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">{t('chess.roominess')}</p>
+          {/* Room filter */}
+          <div className="p-4 border-b border-border/60 dark:border-border/40">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-3">{t('chess.roominess')}</p>
             <div className="grid grid-cols-3 gap-1.5">
               {Object.entries(ROOM_LABELS).map(([r, label]) => {
                 const rc = getRoomColor(+r);
@@ -185,10 +191,13 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
                 return (
                   <button key={r} type="button"
                     onClick={() => setRoomsFilter(isActive ? '' : +r)}
-                    className={cn('flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold transition-all',
-                      isActive ? 'ring-2 ring-offset-1 shadow-sm' : 'opacity-70 hover:opacity-100')}
-                    style={{ backgroundColor: rc.solid + (isActive ? '' : '30'), color: isActive ? '#fff' : rc.solid,
-                      ...(isActive ? { ringColor: rc.solid } : {}) }}>
+                    className={cn(
+                      'flex items-center justify-center gap-1 px-2 py-2 rounded-xl text-xs font-semibold transition-all',
+                      isActive
+                        ? 'text-white shadow-sm scale-[1.02]'
+                        : 'bg-muted/50 dark:bg-muted/30 text-muted-foreground hover:bg-muted'
+                    )}
+                    style={isActive ? { background: `linear-gradient(135deg, ${rc.solid}DD, ${rc.solid})` } : {}}>
                     {label}
                   </button>
                 );
@@ -196,98 +205,96 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
             </div>
           </div>
 
-          <div className="p-4 border-b border-border">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">{t('common.status')}</p>
-            <div className="space-y-1.5">
+          {/* Status filter */}
+          <div className="p-4 border-b border-border/60 dark:border-border/40">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-3">{t('common.status')}</p>
+            <div className="space-y-1">
               {UNIT_STATUSES.map(s => {
                 const count = units.filter(u => u.status === s.value).length;
                 const isActive = statusFilter === s.value;
+                const ss = STATUS_STYLES[s.value] || STATUS_STYLES.available;
                 return (
                   <button key={s.value} type="button" onClick={() => setStatusFilter(isActive ? '' : s.value)}
-                    className={cn('flex items-center gap-2 w-full px-3 py-2 rounded-xl text-sm transition',
-                      isActive ? 'bg-gray-100 font-medium' : 'hover:bg-gray-50')}>
-                    <div className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: s.color }} />
-                    <span className="flex-1 text-left">{s.label}</span>
-                    <span className={cn('text-xs px-1.5 py-0.5 rounded-full',
-                      isActive ? 'bg-primary/10 text-primary font-bold' : 'bg-gray-100 text-muted-foreground')}>{count}</span>
+                    className={cn('flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-sm transition-all',
+                      isActive ? 'bg-muted font-medium' : 'hover:bg-muted/50')}>
+                    <div className={cn('w-3 h-3 rounded-full shrink-0')} style={{ backgroundColor: ss.solid }} />
+                    <span className="flex-1 text-left text-sm">{s.label}</span>
+                    <span className={cn('text-xs tabular-nums font-medium px-2 py-0.5 rounded-full',
+                      isActive ? 'bg-primary/10 text-primary' : 'bg-muted/80 dark:bg-muted text-muted-foreground')}>{count}</span>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          <div className="p-4 border-b border-border space-y-3">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('chess.stats')}</p>
+          {/* Stats */}
+          <div className="p-4 border-b border-border/60 dark:border-border/40">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-3">{t('chess.stats')}</p>
             <div className="grid grid-cols-2 gap-2">
-              <div className="bg-emerald-50 rounded-xl p-2.5 text-center">
-                <p className="text-lg font-bold text-emerald-600">{stats.available}</p>
-                <p className="text-[10px] text-emerald-600/70">{t('chess.available')}</p>
-              </div>
-              <div className="bg-amber-50 rounded-xl p-2.5 text-center">
-                <p className="text-lg font-bold text-amber-600">{stats.reserved}</p>
-                <p className="text-[10px] text-amber-600/70">{t('chess.reserved')}</p>
-              </div>
-              <div className="bg-red-50 rounded-xl p-2.5 text-center">
-                <p className="text-lg font-bold text-red-500">{stats.sold}</p>
-                <p className="text-[10px] text-red-500/70">{t('chess.sold')}</p>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-2.5 text-center">
-                <p className="text-lg font-bold text-gray-600">{stats.total}</p>
-                <p className="text-[10px] text-gray-500">{t('chess.total')}</p>
-              </div>
+              {[
+                { value: stats.available, label: t('chess.available'), color: 'emerald' },
+                { value: stats.reserved, label: t('chess.reserved'), color: 'amber' },
+                { value: stats.sold, label: t('chess.sold'), color: 'red' },
+                { value: stats.total, label: t('chess.total'), color: 'gray' },
+              ].map((item, i) => (
+                <div key={i} className={cn('rounded-xl p-3 text-center',
+                  `bg-${item.color}-500/10 dark:bg-${item.color}-500/15`)}>
+                  <p className={cn('text-lg font-bold tabular-nums', `text-${item.color}-600 dark:text-${item.color}-400`)}>{item.value}</p>
+                  <p className={cn('text-[10px] font-medium', `text-${item.color}-600/70 dark:text-${item.color}-400/70`)}>{item.label}</p>
+                </div>
+              ))}
             </div>
             {stats.minPrice > 0 && (
-              <div className="text-xs text-muted-foreground">
-                <div className="flex justify-between"><span>{t('chess.priceFrom')}</span><span className="font-medium text-foreground">{formatPrice(stats.minPrice)}</span></div>
-                <div className="flex justify-between mt-0.5"><span>{t('chess.priceTo')}</span><span className="font-medium text-foreground">{formatPrice(stats.maxPrice)}</span></div>
-              </div>
-            )}
-            {stats.minArea > 0 && (
-              <div className="text-xs text-muted-foreground">
-                <div className="flex justify-between"><span>{t('chess.areaFrom')}</span><span className="font-medium text-foreground">{stats.minArea} {t('chess.pricePerM2')}</span></div>
-                <div className="flex justify-between mt-0.5"><span>{t('chess.areaTo')}</span><span className="font-medium text-foreground">{stats.maxArea} {t('chess.pricePerM2')}</span></div>
+              <div className="mt-3 p-3 bg-muted/50 dark:bg-muted/30 rounded-xl text-xs space-y-1">
+                <div className="flex justify-between"><span className="text-muted-foreground">{t('chess.priceFrom')}</span><span className="font-mono font-semibold">{formatPrice(stats.minPrice)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">{t('chess.priceTo')}</span><span className="font-mono font-semibold">{formatPrice(stats.maxPrice)}</span></div>
               </div>
             )}
           </div>
 
+          {/* Actions */}
           <div className="p-4 mt-auto space-y-2">
             <button type="button" onClick={() => { setShowAdd(true); setShowBulkAdd(false); }}
-              className="flex items-center gap-2 w-full px-3 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition">
+              className="flex items-center justify-center gap-2 w-full px-3 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:opacity-90 transition shadow-sm">
               <Plus className="w-4 h-4" /> {t('chess.addUnit')}
             </button>
             <button type="button" onClick={() => { setShowBulkAdd(true); setShowAdd(false); }}
-              className="flex items-center gap-2 w-full px-3 py-2.5 bg-primary/10 text-primary rounded-xl text-sm font-medium hover:bg-primary/20 transition">
+              className="flex items-center justify-center gap-2 w-full px-3 py-2.5 bg-primary/10 text-primary rounded-xl text-sm font-semibold hover:bg-primary/15 transition">
               <Layers className="w-4 h-4" /> {t('chess.bulkFill')}
             </button>
           </div>
         </div>
 
-        {/* ═══════ CENTER: Chess Grid ═══════ */}
-        <div className="flex-1 flex flex-col bg-gray-50/80 overflow-hidden">
-          <div className="h-14 bg-white border-b border-border flex items-center justify-between px-5 shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-4">
-                {UNIT_STATUSES.map(s => (
+        {/* ═══════ CENTER: Grid ═══════ */}
+        <div className="flex-1 flex flex-col bg-background overflow-hidden">
+          {/* Top bar */}
+          <div className="bg-card/80 backdrop-blur-sm border-b border-border/60 dark:border-border/40 flex items-center justify-between px-5 py-3 shrink-0">
+            <div className="flex items-center gap-4 flex-wrap">
+              {/* Legend */}
+              {UNIT_STATUSES.map(s => {
+                const ss = STATUS_STYLES[s.value] || STATUS_STYLES.available;
+                return (
                   <div key={s.value} className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: s.color }} />
-                    <span className="text-xs text-muted-foreground">{s.label}</span>
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: ss.solid }} />
+                    <span className="text-[11px] text-muted-foreground">{s.label}</span>
                   </div>
-                ))}
-                <div className="w-px h-4 bg-border mx-1" />
-                {Object.entries(ROOM_LABELS).map(([r, label]) => (
-                  <div key={r} className="flex items-center gap-1">
-                    <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: getRoomColor(+r).solid }} />
-                    <span className="text-xs text-muted-foreground">{label}</span>
-                  </div>
-                ))}
-              </div>
+                );
+              })}
+              <div className="w-px h-4 bg-border/60" />
+              {Object.entries(ROOM_LABELS).slice(0, 4).map(([r, label]) => (
+                <div key={r} className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: getRoomColor(+r).solid + '40' }} />
+                  <span className="text-[11px] text-muted-foreground">{label}</span>
+                </div>
+              ))}
             </div>
             <button type="button" onClick={onClose} className="p-2 hover:bg-muted rounded-xl transition" aria-label="Close">
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          <div className="flex-1 overflow-auto p-5">
+          {/* Grid */}
+          <div className="flex-1 overflow-auto p-6">
             {loading ? (
               <div className="h-full flex items-center justify-center text-muted-foreground">
                 <div className="animate-pulse text-center">
@@ -298,74 +305,90 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
             ) : units.length === 0 ? (
               <div className="h-full flex items-center justify-center">
                 <div className="text-center">
-                  <Grid3X3 className="w-16 h-16 mx-auto mb-4 text-muted-foreground/20" />
-                  <h3 className="text-lg font-semibold mb-2">{t('chess.empty')}</h3>
-                  <p className="text-sm text-muted-foreground mb-4">{t('chess.emptyHint')}</p>
+                  <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-[#073B34]/10 to-emerald-800/10 flex items-center justify-center mx-auto mb-4">
+                    <Grid3X3 className="w-10 h-10 text-[#073B34] dark:text-emerald-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-1">{t('chess.empty')}</h3>
+                  <p className="text-sm text-muted-foreground mb-5">{t('chess.emptyHint')}</p>
                   <button type="button" onClick={() => setShowBulkAdd(true)}
-                    className="px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90">
+                    className="px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:opacity-90 shadow-sm">
                     <Layers className="w-4 h-4 inline mr-2" />{t('chess.bulkFill')}
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="flex gap-6 min-w-fit">
+              <div className="flex gap-8 min-w-fit">
                 {sections.map(section => (
                   <div key={section} className="shrink-0">
-                    <div className="text-center mb-3">
-                      <span className="inline-block px-4 py-1.5 bg-primary/10 text-primary text-sm font-bold rounded-full">
+                    <div className="text-center mb-4">
+                      <span className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-primary/10 text-primary text-xs font-bold rounded-full">
+                        <Layers className="w-3 h-3" />
                         {t('chess.sectionLabel')} {section}
                       </span>
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       {floors.map(floor => {
                         const cellUnits = getUnitsForCell(section, floor);
-                        if (cellUnits.length === 0 && filteredUnits.filter(u => u.section === section).length > 0) {
+                        if (cellUnits.length === 0) {
                           const allFloorUnits = units.filter(u => u.section === section && u.floor === floor);
                           if (allFloorUnits.length === 0) return null;
-                          return (
-                            <div key={floor} className="flex items-center gap-1.5">
-                              <span className="text-[11px] font-mono text-muted-foreground w-7 text-right shrink-0">{floor}</span>
-                              <div className="flex gap-1">
-                                {allFloorUnits.map(u => (
-                                  <div key={u.id} className="w-12 h-12 rounded-lg bg-gray-100 border border-dashed border-gray-200" />
-                                ))}
+                          if (filteredUnits.filter(u => u.section === section).length > 0) {
+                            return (
+                              <div key={floor} className="flex items-center gap-2">
+                                <span className="text-[11px] font-mono text-muted-foreground/60 w-7 text-right shrink-0">{floor}</span>
+                                <div className="flex gap-1.5">
+                                  {allFloorUnits.map(u => (
+                                    <div key={u.id} className="w-[52px] h-[52px] rounded-xl bg-muted/30 border border-dashed border-border/40" />
+                                  ))}
+                                </div>
                               </div>
-                            </div>
-                          );
+                            );
+                          }
+                          return null;
                         }
-                        if (cellUnits.length === 0) return null;
                         return (
-                          <div key={floor} className="flex items-center gap-1.5">
+                          <div key={floor} className="flex items-center gap-2">
                             <span className="text-[11px] font-mono text-muted-foreground w-7 text-right shrink-0">{floor}</span>
-                            <div className="flex gap-1">
+                            <div className="flex gap-1.5">
                               {cellUnits.map(unit => {
-                                const st = UNIT_STATUSES.find(s => s.value === unit.status) || UNIT_STATUSES[0];
+                                const ss = STATUS_STYLES[unit.status] || STATUS_STYLES.available;
                                 const rc = getRoomColor(unit.rooms);
                                 const isSelected = selectedUnit?.id === unit.id;
-                                const isSold = unit.status === 'sold';
-                                const isReserved = unit.status === 'reserved';
-                                const isUnavail = unit.status === 'unavailable';
-                                const dimmed = isSold || isUnavail;
+                                const isFaded = unit.status === 'sold' || unit.status === 'unavailable';
                                 return (
                                   <button key={unit.id} type="button"
                                     onClick={() => setSelectedUnit(unit)}
                                     className={cn(
-                                      'relative w-12 h-12 rounded-lg flex flex-col items-center justify-center text-[11px] font-bold transition-all duration-150',
-                                      'hover:scale-110 hover:z-10 hover:shadow-lg cursor-pointer',
-                                      isSelected && 'ring-2 ring-primary ring-offset-2 scale-110 z-10 shadow-lg',
-                                      dimmed && 'opacity-50',
+                                      'relative w-[52px] h-[52px] rounded-xl flex flex-col items-center justify-center transition-all duration-200',
+                                      'hover:scale-110 hover:z-10 cursor-pointer group/cell',
+                                      isSelected && 'ring-2 ring-primary ring-offset-2 ring-offset-background scale-110 z-10',
+                                      isFaded && 'opacity-60',
                                     )}
-                                    style={{ backgroundColor: rc.solid, color: '#fff' }}
+                                    style={{
+                                      backgroundColor: `${ss.solid}18`,
+                                      border: `1.5px solid ${ss.solid}${isFaded ? '40' : '60'}`,
+                                    }}
                                     aria-label={`${t('chess.unitLabel')} ${unit.unitNumber}`}
                                   >
-                                    <span className="leading-none">{unit.unitNumber}</span>
-                                    <span className="text-[9px] opacity-80 leading-none mt-0.5">
+                                    {/* Unit number */}
+                                    <span className="text-[11px] font-bold leading-none text-foreground">{unit.unitNumber}</span>
+                                    {/* Room badge */}
+                                    <span className="text-[8px] font-bold leading-none mt-1 px-1.5 py-0.5 rounded-md"
+                                      style={{ backgroundColor: rc.solid + '20', color: rc.solid }}>
                                       {unit.rooms != null ? ROOM_LABELS[Math.min(unit.rooms, 5)] : ''}
                                     </span>
-                                    {(isReserved || isSold || isUnavail) && (
-                                      <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white"
-                                        style={{ backgroundColor: st.color }} />
+                                    {/* Area */}
+                                    {unit.area && (
+                                      <span className="text-[7px] text-muted-foreground leading-none mt-0.5">{unit.area}м²</span>
                                     )}
+                                    {/* Status dot */}
+                                    <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-background shadow-sm"
+                                      style={{ backgroundColor: ss.solid }} />
+                                    {/* Hover tooltip */}
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-popover/95 dark:bg-popover border border-border/60 rounded-xl text-[10px] whitespace-nowrap opacity-0 group-hover/cell:opacity-100 pointer-events-none transition-opacity z-20 shadow-lg backdrop-blur-sm">
+                                      <p className="font-semibold text-foreground">№{unit.unitNumber}</p>
+                                      {unit.price && <p className="text-primary font-mono font-bold">{formatPrice(unit.price)}</p>}
+                                    </div>
                                   </button>
                                 );
                               })}
@@ -382,47 +405,47 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
 
           {/* ─── Add unit modal ─── */}
           {showAdd && (
-            <div className="absolute inset-0 bg-black/20 z-30 flex items-center justify-center" onClick={() => setShowAdd(false)}>
-              <div className="bg-white rounded-2xl p-5 w-full max-w-md shadow-xl" onClick={e => e.stopPropagation()}>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-display font-bold">{t('chess.addUnit')}</h3>
-                  <button type="button" onClick={() => setShowAdd(false)} className="p-1 hover:bg-muted rounded-lg"><X className="w-4 h-4" /></button>
+            <div className="absolute inset-0 bg-black/30 backdrop-blur-sm z-30 flex items-center justify-center" onClick={() => setShowAdd(false)}>
+              <div className="bg-card rounded-2xl border border-border/60 dark:border-border/40 p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="font-display font-bold text-base">{t('chess.addUnit')}</h3>
+                  <button type="button" onClick={() => setShowAdd(false)} className="p-1.5 hover:bg-muted rounded-xl transition"><X className="w-4 h-4" /></button>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-muted-foreground">{t('common.number')} *</label>
+                    <label className="text-xs font-medium text-muted-foreground">{t('common.number')} *</label>
                     <input value={newUnit.unitNumber} onChange={e => setNewUnit({...newUnit, unitNumber: e.target.value})}
-                      className="w-full px-3 py-2 border border-border rounded-xl text-sm mt-1" placeholder="101" />
+                      className="w-full px-3 py-2.5 border border-border/60 dark:border-border/40 rounded-xl text-sm mt-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="101" />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground">{t('common.floor')}</label>
+                    <label className="text-xs font-medium text-muted-foreground">{t('common.floor')}</label>
                     <input type="number" value={newUnit.floor || ''} onChange={e => setNewUnit({...newUnit, floor: +e.target.value})}
-                      className="w-full px-3 py-2 border border-border rounded-xl text-sm mt-1" />
+                      className="w-full px-3 py-2.5 border border-border/60 dark:border-border/40 rounded-xl text-sm mt-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground">{t('common.section')}</label>
+                    <label className="text-xs font-medium text-muted-foreground">{t('common.section')}</label>
                     <input type="number" value={newUnit.section || ''} onChange={e => setNewUnit({...newUnit, section: +e.target.value})}
-                      className="w-full px-3 py-2 border border-border rounded-xl text-sm mt-1" />
+                      className="w-full px-3 py-2.5 border border-border/60 dark:border-border/40 rounded-xl text-sm mt-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground">{t('common.rooms')}</label>
+                    <label className="text-xs font-medium text-muted-foreground">{t('common.rooms')}</label>
                     <select value={newUnit.rooms} onChange={e => setNewUnit({...newUnit, rooms: +e.target.value})}
-                      className="w-full px-3 py-2 border border-border rounded-xl text-sm mt-1">
+                      className="w-full px-3 py-2.5 border border-border/60 dark:border-border/40 rounded-xl text-sm mt-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20">
                       {Object.entries(ROOM_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground">{t('common.area')} ({t('chess.pricePerM2')})</label>
+                    <label className="text-xs font-medium text-muted-foreground">{t('common.area')} ({t('chess.pricePerM2')})</label>
                     <input type="number" value={newUnit.area || ''} onChange={e => setNewUnit({...newUnit, area: +e.target.value})}
-                      className="w-full px-3 py-2 border border-border rounded-xl text-sm mt-1" />
+                      className="w-full px-3 py-2.5 border border-border/60 dark:border-border/40 rounded-xl text-sm mt-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground">{t('common.price')} ($)</label>
+                    <label className="text-xs font-medium text-muted-foreground">{t('common.price')} ($)</label>
                     <input type="number" value={newUnit.price || ''} onChange={e => setNewUnit({...newUnit, price: +e.target.value})}
-                      className="w-full px-3 py-2 border border-border rounded-xl text-sm mt-1" />
+                      className="w-full px-3 py-2.5 border border-border/60 dark:border-border/40 rounded-xl text-sm mt-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
                   </div>
                 </div>
-                <button type="button" onClick={addUnit} className="w-full mt-4 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90">
+                <button type="button" onClick={addUnit} className="w-full mt-5 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:opacity-90 transition shadow-sm">
                   {t('common.add')}
                 </button>
               </div>
@@ -431,50 +454,52 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
 
           {/* ─── Bulk add modal ─── */}
           {showBulkAdd && (
-            <div className="absolute inset-0 bg-black/20 z-30 flex items-center justify-center" onClick={() => setShowBulkAdd(false)}>
-              <div className="bg-white rounded-2xl p-5 w-full max-w-md shadow-xl" onClick={e => e.stopPropagation()}>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-display font-bold">{t('chess.bulkTitle')}</h3>
-                  <button type="button" onClick={() => setShowBulkAdd(false)} className="p-1 hover:bg-muted rounded-lg"><X className="w-4 h-4" /></button>
+            <div className="absolute inset-0 bg-black/30 backdrop-blur-sm z-30 flex items-center justify-center" onClick={() => setShowBulkAdd(false)}>
+              <div className="bg-card rounded-2xl border border-border/60 dark:border-border/40 p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="font-display font-bold text-base">{t('chess.bulkTitle')}</h3>
+                  <button type="button" onClick={() => setShowBulkAdd(false)} className="p-1.5 hover:bg-muted rounded-xl transition"><X className="w-4 h-4" /></button>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-muted-foreground">{t('chess.sectionsCount')}</label>
+                    <label className="text-xs font-medium text-muted-foreground">{t('chess.sectionsCount')}</label>
                     <input type="number" min={1} value={bulkSections} onChange={e => setBulkSections(+e.target.value)}
-                      className="w-full px-3 py-2 border border-border rounded-xl text-sm mt-1" />
+                      className="w-full px-3 py-2.5 border border-border/60 dark:border-border/40 rounded-xl text-sm mt-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground">{t('chess.unitsPerFloor')}</label>
+                    <label className="text-xs font-medium text-muted-foreground">{t('chess.unitsPerFloor')}</label>
                     <input type="number" min={1} value={bulkUnitsPerFloor} onChange={e => setBulkUnitsPerFloor(+e.target.value)}
-                      className="w-full px-3 py-2 border border-border rounded-xl text-sm mt-1" />
+                      className="w-full px-3 py-2.5 border border-border/60 dark:border-border/40 rounded-xl text-sm mt-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground">{t('chess.floorFrom')}</label>
+                    <label className="text-xs font-medium text-muted-foreground">{t('chess.floorFrom')}</label>
                     <input type="number" min={1} value={bulkFloorFrom} onChange={e => setBulkFloorFrom(+e.target.value)}
-                      className="w-full px-3 py-2 border border-border rounded-xl text-sm mt-1" />
+                      className="w-full px-3 py-2.5 border border-border/60 dark:border-border/40 rounded-xl text-sm mt-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground">{t('chess.floorTo')}</label>
+                    <label className="text-xs font-medium text-muted-foreground">{t('chess.floorTo')}</label>
                     <input type="number" min={1} value={bulkFloorTo} onChange={e => setBulkFloorTo(+e.target.value)}
-                      className="w-full px-3 py-2 border border-border rounded-xl text-sm mt-1" />
+                      className="w-full px-3 py-2.5 border border-border/60 dark:border-border/40 rounded-xl text-sm mt-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground">{t('chess.defaultRooms')}</label>
+                    <label className="text-xs font-medium text-muted-foreground">{t('chess.defaultRooms')}</label>
                     <select value={bulkRooms} onChange={e => setBulkRooms(+e.target.value)}
-                      className="w-full px-3 py-2 border border-border rounded-xl text-sm mt-1">
+                      className="w-full px-3 py-2.5 border border-border/60 dark:border-border/40 rounded-xl text-sm mt-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20">
                       {Object.entries(ROOM_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground">{t('common.area')} ({t('chess.pricePerM2')})</label>
+                    <label className="text-xs font-medium text-muted-foreground">{t('common.area')} ({t('chess.pricePerM2')})</label>
                     <input type="number" value={bulkArea || ''} onChange={e => setBulkArea(+e.target.value)}
-                      className="w-full px-3 py-2 border border-border rounded-xl text-sm mt-1" />
+                      className="w-full px-3 py-2.5 border border-border/60 dark:border-border/40 rounded-xl text-sm mt-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-3">
-                  {t('chess.willCreate')}: <b>{bulkSections * (bulkFloorTo - bulkFloorFrom + 1) * bulkUnitsPerFloor}</b> {t('chess.unitsCount')}
-                </p>
-                <button type="button" onClick={bulkAdd} className="w-full mt-3 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90">
+                <div className="mt-4 p-3 bg-primary/5 rounded-xl text-center">
+                  <p className="text-xs text-muted-foreground">
+                    {t('chess.willCreate')}: <span className="font-bold text-primary">{bulkSections * (bulkFloorTo - bulkFloorFrom + 1) * bulkUnitsPerFloor}</span> {t('chess.unitsCount')}
+                  </p>
+                </div>
+                <button type="button" onClick={bulkAdd} className="w-full mt-4 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:opacity-90 transition shadow-sm">
                   {t('common.create')}
                 </button>
               </div>
@@ -484,86 +509,96 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
 
         {/* ═══════ RIGHT PANEL: Unit Details ═══════ */}
         <div className={cn(
-          'w-80 bg-white border-l border-border flex flex-col shrink-0 transition-all overflow-y-auto',
-          !selectedUnit && 'w-0 border-l-0'
+          'bg-card border-l border-border/60 dark:border-border/40 flex flex-col shrink-0 transition-all duration-300 overflow-hidden',
+          selectedUnit ? 'w-80' : 'w-0 border-l-0'
         )}>
-          {selectedUnit && (
-            <>
-              <div className="p-4 border-b border-border">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground">{t('chess.apartment')}</p>
-                    <h3 className="text-xl font-display font-bold">№ {selectedUnit.unitNumber}</h3>
+          {selectedUnit && (() => {
+            const ss = STATUS_STYLES[selectedUnit.status] || STATUS_STYLES.available;
+            const unitStatus = UNIT_STATUSES.find(s => s.value === selectedUnit.status);
+            return (
+              <>
+                <div className="p-5 border-b border-border/60 dark:border-border/40">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">{t('chess.apartment')}</p>
+                      <h3 className="text-2xl font-display font-bold mt-0.5">№ {selectedUnit.unitNumber}</h3>
+                    </div>
+                    <button type="button" onClick={() => setSelectedUnit(null)} className="p-1.5 hover:bg-muted rounded-xl transition">
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
-                  <button type="button" onClick={() => setSelectedUnit(null)} className="p-1.5 hover:bg-muted rounded-lg">
-                    <X className="w-4 h-4" />
+                </div>
+
+                {/* Price card */}
+                <div className="p-5 border-b border-border/60 dark:border-border/40">
+                  {selectedUnit.price ? (
+                    <div className="bg-gradient-to-br from-primary/10 to-emerald-800/5 rounded-2xl p-5 text-center">
+                      <p className="text-2xl font-bold text-primary font-mono">{formatPrice(selectedUnit.price)}</p>
+                      {selectedUnit.area ? (
+                        <p className="text-xs text-muted-foreground mt-1">{formatPrice(Math.round(selectedUnit.price / selectedUnit.area))}/{t('chess.pricePerM2')}</p>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="bg-muted/50 dark:bg-muted/30 rounded-2xl p-5 text-center text-muted-foreground text-sm">{t('common.priceNotSet')}</div>
+                  )}
+                </div>
+
+                {/* Properties */}
+                <div className="p-5 border-b border-border/60 dark:border-border/40">
+                  <div className="space-y-3">
+                    {[
+                      { label: t('common.floor'), value: selectedUnit.floor },
+                      { label: t('common.section'), value: selectedUnit.section },
+                      { label: t('common.rooms'), value: selectedUnit.rooms != null ? ROOM_LABELS[Math.min(selectedUnit.rooms, 5)] || selectedUnit.rooms : '—' },
+                      { label: t('common.area'), value: selectedUnit.area ? `${selectedUnit.area} ${t('chess.pricePerM2')}` : '—' },
+                    ].map((row, i) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">{row.label}</span>
+                        <span className="text-sm font-semibold">{row.value}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">{t('common.status')}</span>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+                        style={{ backgroundColor: ss.solid + '15', color: ss.solid }}>
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: ss.solid }} />
+                        {unitStatus?.label || selectedUnit.status}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status change */}
+                <div className="p-5 border-b border-border/60 dark:border-border/40">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-3">{t('chess.changeStatus')}</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {UNIT_STATUSES.map(s => {
+                      const sSS = STATUS_STYLES[s.value] || STATUS_STYLES.available;
+                      const isActive = selectedUnit.status === s.value;
+                      return (
+                        <button key={s.value} type="button"
+                          onClick={() => updateStatus(selectedUnit.id, s.value)}
+                          className={cn('flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all',
+                            isActive ? 'ring-2 ring-offset-2 ring-offset-background text-white shadow-sm' : 'bg-muted/50 dark:bg-muted/30 hover:bg-muted')}
+                          style={isActive ? { backgroundColor: sSS.solid, ['--tw-ring-color' as any]: sSS.solid } : { color: sSS.solid }}>
+                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: isActive ? '#fff' : sSS.solid }} />
+                          {s.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Delete */}
+                <div className="p-5 mt-auto">
+                  <button type="button" onClick={() => deleteUnit(selectedUnit.id)}
+                    className="flex items-center justify-center gap-2 w-full px-3 py-2.5 text-destructive bg-destructive/10 hover:bg-destructive/15 rounded-xl text-sm font-semibold transition">
+                    <Trash2 className="w-4 h-4" /> {t('chess.deleteUnit')}
                   </button>
                 </div>
-              </div>
-
-              <div className="p-4 border-b border-border">
-                {selectedUnit.price ? (
-                  <div className="bg-primary/10 rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-primary">{formatPrice(selectedUnit.price)}</p>
-                    {selectedUnit.area ? (
-                      <p className="text-xs text-muted-foreground mt-1">{formatPrice(Math.round(selectedUnit.price / selectedUnit.area))}/{t('chess.pricePerM2')}</p>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div className="bg-gray-50 rounded-xl p-4 text-center text-muted-foreground text-sm">{t('common.priceNotSet')}</div>
-                )}
-              </div>
-
-              <div className="p-4 border-b border-border">
-                <table className="w-full text-sm">
-                  <tbody className="divide-y divide-border">
-                    <tr><td className="py-2 text-muted-foreground">{t('common.floor')}</td><td className="py-2 text-right font-medium">{selectedUnit.floor}</td></tr>
-                    <tr><td className="py-2 text-muted-foreground">{t('common.section')}</td><td className="py-2 text-right font-medium">{selectedUnit.section}</td></tr>
-                    <tr><td className="py-2 text-muted-foreground">{t('common.rooms')}</td><td className="py-2 text-right font-medium">{selectedUnit.rooms != null ? ROOM_LABELS[Math.min(selectedUnit.rooms, 5)] || selectedUnit.rooms : '—'}</td></tr>
-                    <tr><td className="py-2 text-muted-foreground">{t('common.area')}</td><td className="py-2 text-right font-medium">{selectedUnit.area ? `${selectedUnit.area} ${t('chess.pricePerM2')}` : '—'}</td></tr>
-                    <tr>
-                      <td className="py-2 text-muted-foreground">{t('common.status')}</td>
-                      <td className="py-2 text-right">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
-                          style={{ backgroundColor: (UNIT_STATUSES.find(s => s.value === selectedUnit.status)?.color || '#999') + '20',
-                            color: UNIT_STATUSES.find(s => s.value === selectedUnit.status)?.color || '#999' }}>
-                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: UNIT_STATUSES.find(s => s.value === selectedUnit.status)?.color }} />
-                          {UNIT_STATUSES.find(s => s.value === selectedUnit.status)?.label || selectedUnit.status}
-                        </span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="p-4 border-b border-border">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">{t('chess.changeStatus')}</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {UNIT_STATUSES.map(s => (
-                    <button key={s.value} type="button"
-                      onClick={() => updateStatus(selectedUnit.id, s.value)}
-                      className={cn('flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition',
-                        selectedUnit.status === s.value ? 'ring-2 ring-offset-1' : 'hover:bg-gray-50')}
-                      style={{
-                        backgroundColor: selectedUnit.status === s.value ? s.color + '20' : undefined,
-                        color: s.color,
-                        ...(selectedUnit.status === s.value ? { '--tw-ring-color': s.color } as any : {})
-                      }}>
-                      <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: s.color }} />
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="p-4 mt-auto space-y-2">
-                <button type="button" onClick={() => deleteUnit(selectedUnit.id)}
-                  className="flex items-center justify-center gap-2 w-full px-3 py-2.5 bg-red-50 text-red-600 rounded-xl text-sm font-medium hover:bg-red-100 transition">
-                  <Trash2 className="w-4 h-4" /> {t('chess.deleteUnit')}
-                </button>
-              </div>
-            </>
-          )}
+              </>
+            );
+          })()}
         </div>
       </div>
     </div>

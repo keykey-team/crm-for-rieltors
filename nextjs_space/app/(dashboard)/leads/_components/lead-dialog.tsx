@@ -1,6 +1,6 @@
 'use client';
 import { useTranslation } from '@/lib/i18n/context';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { LEAD_SOURCES, LEAD_STATUSES, PRIORITIES } from '@/lib/constants';
 
@@ -12,6 +12,7 @@ interface Props {
 
 export function LeadDialog({ lead, onSave, onClose }: Props) {
   const { t } = useTranslation();
+  const [users, setUsers] = useState<any[]>([]);
   const [form, setForm] = useState({
     firstName: lead?.firstName ?? '',
     lastName: lead?.lastName ?? '',
@@ -25,8 +26,15 @@ export function LeadDialog({ lead, onSave, onClose }: Props) {
     notes: lead?.notes ?? '',
     districts: lead?.districts ?? '',
     propertyType: lead?.propertyType ?? '',
+    assignedToId: lead?.assignedToId ?? '',
   });
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/users').then(r => r.json()).then(data => {
+      if (Array.isArray(data)) setUsers(data);
+    }).catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +47,7 @@ export function LeadDialog({ lead, onSave, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" style={{ boxShadow: 'var(--shadow-lg)' }} onClick={(e) => e.stopPropagation()}>
+      <div className="bg-card rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" style={{ boxShadow: 'var(--shadow-lg)' }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 border-b border-border">
           <h2 className="font-display font-bold text-lg">{lead ? t('leads.dialog.editLead') : t('leads.dialog.newLead')}</h2>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-muted"><X className="w-4 h-4" /></button>
@@ -91,6 +99,14 @@ export function LeadDialog({ lead, onSave, onClose }: Props) {
                 {PRIORITIES.map((p: any) => <option key={p.value} value={p.value}>{t(`const.priority.${p.value}`) || p.label}</option>)}
               </select>
             </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">{t('common.manager')}</label>
+            <select value={form.assignedToId} onChange={(e) => upd('assignedToId', e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm">
+              <option value="">{t('leads.autoAssign')}</option>
+              {users.map((u: any) => <option key={u.id} value={u.id}>{u.name ?? u.email} ({t(`role.${u.role}`) || u.role})</option>)}
+            </select>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>

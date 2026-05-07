@@ -1,0 +1,14 @@
+node_modules/
+.next/
+.build/
+.deploy/
+.logs/
+.project_instructions.md
+nextjs_space/node_modules
+nextjs_space/.next
+nextjs_space/.build
+nextjs_space/yarn.lock
+nextjs_space/package.json
+*.log
+.DS_Store
+.env
