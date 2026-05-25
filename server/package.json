@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/app/server.js",
     "prisma:generate": "prisma generate",
-    "db:push": "prisma db push"
+    "db:push": "prisma db push",
+    "seed:super-admin": "tsx src/scripts/ensure-super-admin.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.0.0",

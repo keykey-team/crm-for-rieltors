@@ -4,9 +4,9 @@ services:
     container_name: crm-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: crm
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-crm}
     ports:
       - "5432:5432"
     volumes:
@@ -28,20 +28,23 @@ services:
         condition: service_healthy
     environment:
       PORT: 4000
-      NODE_ENV: development
-      CLIENT_URL: http://localhost:3000
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/crm?schema=public
-      JWT_SECRET: change-me-local-secret
-      AWS_REGION: us-east-1
-      AWS_BUCKET_NAME: ""
-      AWS_FOLDER_PREFIX: ""
+      NODE_ENV: ${NODE_ENV:-development}
+      CLIENT_URL: ${CLIENT_URL:-http://localhost:3000}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-crm}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-change-me-local-secret}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_BUCKET_NAME: ${AWS_BUCKET_NAME:-}
+      AWS_FOLDER_PREFIX: ${AWS_FOLDER_PREFIX:-}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-superadmin@local.crm}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-SuperAdmin123!}
+      SUPER_ADMIN_NAME: ${SUPER_ADMIN_NAME:-Super Admin}
     ports:
       - "4000:4000"
     volumes:
       - ./server/src:/app/src
       - ./server/prisma:/app/prisma
       - ./server/tsconfig.json:/app/tsconfig.json
-    command: sh -c "npx prisma generate && npx prisma db push && npm run dev"
+    command: sh -c "npx prisma generate && npx prisma db push && npm run seed:super-admin && npm run dev"
 
 volumes:
   crm_postgres_data:

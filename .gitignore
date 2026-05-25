@@ -6,3 +6,4 @@ node_modules/
 yarn.lock
 package.json
 !server/package.json
+!client/package.json

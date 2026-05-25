@@ -27,7 +27,8 @@ function setSessionCookie(res: Response, token: string): void {
 router.post('/login', async (req, res) => {
   const result = await login(req.body ?? {});
   setSessionCookie(res, result.token);
-  res.json(result.user);
+  const includeToken = req.get('x-return-session-token') === 'true';
+  res.json(includeToken ? { ...result.user, backendToken: result.token } : result.user);
 });
 
 router.post('/signup', async (req, res) => {
