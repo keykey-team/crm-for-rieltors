@@ -182,18 +182,12 @@ export function LeadTable({ leads, loading, onEdit, onDelete, onCall, onMessage,
                     </div>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">{formatDate(lead.createdAt)}</td>
-                  <td className="px-4 py-3 relative" onClick={e => e.stopPropagation()}>
-                    {/* Default actions — always visible */}
-                    <div className="flex items-center justify-end gap-1 group-hover/row:opacity-0 transition-opacity">
-                      <Link href={`/leads/${lead.id}`} className="p-1.5 hover:bg-primary/10 rounded-lg transition">
+                  <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center justify-end gap-1">
+                      <Link href={`/leads/${lead.id}`} title={t('common.open')}
+                        className="h-8 w-8 bg-card border border-border rounded-lg flex items-center justify-center hover:bg-primary/10 transition shadow-sm">
                         <ExternalLink className="w-3.5 h-3.5 text-primary" />
                       </Link>
-                      <button onClick={() => onEdit(lead)} className="p-1.5 hover:bg-muted rounded-lg transition">
-                        <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
-                      </button>
-                    </div>
-                    {/* Hover overlay — icon-only quick actions */}
-                    <div className="absolute inset-y-0 right-0 flex items-center justify-end gap-1 pr-2 opacity-0 group-hover/row:opacity-100 transition-opacity pointer-events-none group-hover/row:pointer-events-auto">
                       {onCall && lead.phone && (
                         <button onClick={() => onCall(lead.phone)} title={t('leads.quickCall')}
                           className="h-8 w-8 bg-emerald-500 text-white rounded-lg flex items-center justify-center hover:bg-emerald-600 transition shadow-sm">
@@ -206,11 +200,11 @@ export function LeadTable({ leads, loading, onEdit, onDelete, onCall, onMessage,
                           <MessageSquare className="w-3.5 h-3.5" />
                         </button>
                       )}
-                      <button onClick={() => onEdit(lead)}
+                      <button onClick={() => onEdit(lead)} title={t('common.edit')}
                         className="h-8 w-8 bg-card border border-border rounded-lg flex items-center justify-center hover:bg-muted transition shadow-sm">
                         <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
                       </button>
-                      <button onClick={() => onDelete(lead.id)}
+                      <button onClick={() => onDelete(lead.id)} title={t('common.delete')}
                         className="h-8 w-8 bg-card border border-border rounded-lg flex items-center justify-center hover:bg-destructive/10 transition shadow-sm">
                         <Trash2 className="w-3.5 h-3.5 text-destructive" />
                       </button>

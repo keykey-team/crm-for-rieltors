@@ -656,9 +656,11 @@ export function SettingsClient() {
                   <input value={newStage.label} onChange={e => setNewStage({...newStage, label: e.target.value, value: e.target.value.toLowerCase().replace(/[^a-zA-Zа-яА-Я0-9]/g, '_')})}
                     className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder={t('settings.newStage')} />
                 </div>
-                <div className="w-16">
+                <div className="w-12">
                   <label className="text-xs font-medium mb-1 block text-muted-foreground">{t('settings.stageColor')}</label>
-                  <input type="color" value={newStage.color} onChange={e => setNewStage({...newStage, color: e.target.value})} className="w-full h-9 rounded-xl border border-border cursor-pointer" />
+                  <div className="w-10 h-10 p-1 rounded-xl border border-border bg-muted/30 shadow-sm">
+                    <input type="color" value={newStage.color} onChange={e => setNewStage({...newStage, color: e.target.value})} className="w-full h-full rounded-lg border-0 bg-transparent cursor-pointer" />
+                  </div>
                 </div>
                 <button onClick={addStage} className="px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition active:scale-95">
                   <Plus className="w-4 h-4" />
@@ -697,16 +699,16 @@ export function SettingsClient() {
               ))}
             </div>
             <div className="space-y-2">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="flex gap-2 items-center">
                 <input value={newField.label} onChange={e => setNewField({...newField, label: e.target.value, name: e.target.value.toLowerCase().replace(/[^a-zA-Z0-9]/g, '_')})}
-                  placeholder={t('settings.fieldName')} className="px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                  placeholder={t('settings.fieldName')} className="flex-1 px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
                 <select value={newField.fieldType} onChange={e => setNewField({...newField, fieldType: e.target.value})}
                   className="px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
                   <option value="text">{t('settings.fieldText')}</option><option value="number">{t('settings.fieldNumber')}</option><option value="date">{t('settings.fieldDate')}</option>
                   <option value="select">{t('settings.fieldSelect')}</option><option value="checkbox">{t('settings.fieldCheckbox')}</option>
                 </select>
-                <button onClick={addCustomField} className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition flex items-center justify-center gap-2">
-                  <Plus className="w-4 h-4" /> {t('common.add')}
+                <button onClick={addCustomField} className="px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition active:scale-95">
+                  <Plus className="w-4 h-4" />
                 </button>
               </div>
               {newField.fieldType === 'select' && (

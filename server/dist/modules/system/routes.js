@@ -598,62 +598,215 @@ router.delete("/aftercare-plans/:id", async (req, res) => {
     await prisma_1.prisma.aftercarePlan.delete({ where: { id: req.params.id } });
     res.json({ ok: true });
 });
+function toChatRoomDto(room, me) {
+    const members = (room.members ?? []).map((m) => m.user);
+    const lastMessage = room.messages?.[0]
+        ? {
+            text: room.messages[0].text,
+            sender: room.messages[0].sender
+                ? { name: room.messages[0].sender.name ?? null }
+                : null,
+        }
+        : null;
+    const unreadCount = (room.messages ?? []).filter((msg) => msg.senderId !== me).length;
+    return {
+        id: room.id,
+        type: room.type,
+        name: room.name,
+        members,
+        lastMessage,
+        unreadCount,
+    };
+}
 router.get("/chat", async (req, res) => {
     const me = req.user?.id;
     if (!me)
         return res.status(401).json({ error: "Unauthorized" });
-    const other = typeof req.query.userId === "string" ? req.query.userId : "";
-    if (other) {
+    const roomId = typeof req.query.roomId === "string" ? req.query.roomId : "";
+    const threadId = typeof req.query.threadId === "string" ? req.query.threadId : "";
+    const directUserId = typeof req.query.userId === "string" ? req.query.userId : "";
+    if (roomId) {
+        const membership = await prisma_1.prisma.chatRoomMember.findUnique({
+            where: { roomId_userId: { roomId, userId: me } },
+        });
+        if (!membership)
+            return res.status(403).json({ error: "Not a member" });
+        const where = { roomId };
+        if (threadId)
+            where.threadId = threadId;
+        else
+            where.threadId = null;
         const messages = await prisma_1.prisma.chatMessage.findMany({
-            where: {
-                OR: [
-                    { senderId: me, receiverId: other },
-                    { senderId: other, receiverId: me },
-                ],
-            },
+            where,
             orderBy: { createdAt: "asc" },
-            take: 200,
+            take: 300,
+            include: {
+                sender: { select: { id: true, name: true, avatar: true } },
+                _count: { select: { replies: true } },
+            },
+        });
+        await prisma_1.prisma.chatRoomMember.update({
+            where: { roomId_userId: { roomId, userId: me } },
+            data: { lastReadAt: new Date() },
         });
         await prisma_1.prisma.chatMessage.updateMany({
-            where: { senderId: other, receiverId: me, isRead: false },
+            where: { roomId, senderId: { not: me }, isRead: false },
             data: { isRead: true },
         });
         return res.json(messages);
     }
-    const users = await prisma_1.prisma.user.findMany({
-        where: { id: { not: me } },
-        select: { id: true, name: true, role: true },
-    });
-    const conversations = await Promise.all(users.map(async (u) => {
-        const lastMessage = await prisma_1.prisma.chatMessage.findFirst({
+    if (directUserId) {
+        const existing = await prisma_1.prisma.chatRoom.findFirst({
             where: {
-                OR: [
-                    { senderId: me, receiverId: u.id },
-                    { senderId: u.id, receiverId: me },
-                ],
+                type: "direct",
+                members: { some: { userId: me } },
+                AND: [{ members: { some: { userId: directUserId } } }],
             },
-            orderBy: { createdAt: "desc" },
+            include: {
+                members: {
+                    include: {
+                        user: { select: { id: true, name: true, avatar: true, role: true } },
+                    },
+                },
+                messages: {
+                    take: 1,
+                    orderBy: { createdAt: "desc" },
+                    include: { sender: { select: { name: true } } },
+                },
+            },
         });
-        const unreadCount = await prisma_1.prisma.chatMessage.count({
-            where: { senderId: u.id, receiverId: me, isRead: false },
-        });
-        return { user: u, lastMessage, unreadCount };
-    }));
-    res.json(conversations.filter((c) => c.lastMessage || c.unreadCount > 0));
+        return res.json(existing ? [toChatRoomDto(existing, me)] : []);
+    }
+    const rooms = await prisma_1.prisma.chatRoom.findMany({
+        where: { members: { some: { userId: me } } },
+        orderBy: { updatedAt: "desc" },
+        include: {
+            members: {
+                include: {
+                    user: { select: { id: true, name: true, avatar: true, role: true } },
+                },
+            },
+            messages: {
+                take: 1,
+                orderBy: { createdAt: "desc" },
+                include: { sender: { select: { name: true } } },
+            },
+        },
+    });
+    const memberships = await prisma_1.prisma.chatRoomMember.findMany({
+        where: { userId: me, roomId: { in: rooms.map((r) => r.id) } },
+        select: { roomId: true, lastReadAt: true },
+    });
+    const readMap = new Map(memberships.map((m) => [m.roomId, m.lastReadAt]));
+    const unreadCounts = await Promise.all(rooms.map((room) => prisma_1.prisma.chatMessage.count({
+        where: {
+            roomId: room.id,
+            senderId: { not: me },
+            createdAt: { gt: readMap.get(room.id) ?? new Date(0) },
+        },
+    })));
+    const payload = rooms.map((room, idx) => {
+        const dto = toChatRoomDto(room, me);
+        return { ...dto, unreadCount: unreadCounts[idx] ?? 0 };
+    });
+    res.json(payload);
 });
 router.post("/chat", async (req, res) => {
     const me = req.user?.id;
     if (!me)
         return res.status(401).json({ error: "Unauthorized" });
-    const receiverId = req.body?.receiverId;
+    const action = req.body?.action;
+    if (action === "createRoom") {
+        const memberIds = Array.isArray(req.body?.memberIds)
+            ? req.body.memberIds
+            : [];
+        const name = req.body?.name !== undefined ? String(req.body.name || "") : undefined;
+        const uniqMemberIds = Array.from(new Set([me, ...memberIds])).filter(Boolean);
+        if (uniqMemberIds.length < 2) {
+            return res.status(400).json({ error: "At least 2 members required" });
+        }
+        if (!name && uniqMemberIds.length === 2) {
+            const otherId = uniqMemberIds.find((id) => id !== me);
+            const existingDirect = await prisma_1.prisma.chatRoom.findFirst({
+                where: {
+                    type: "direct",
+                    members: { some: { userId: me } },
+                    AND: [{ members: { some: { userId: otherId } } }],
+                },
+                include: {
+                    members: {
+                        include: {
+                            user: {
+                                select: { id: true, name: true, avatar: true, role: true },
+                            },
+                        },
+                    },
+                },
+            });
+            if (existingDirect)
+                return res.status(200).json(existingDirect);
+        }
+        const roomType = name || uniqMemberIds.length > 2 ? "group" : "direct";
+        const room = await prisma_1.prisma.chatRoom.create({
+            data: {
+                name: name || null,
+                type: roomType,
+                createdById: me,
+                members: {
+                    create: uniqMemberIds.map((userId) => ({ userId })),
+                },
+            },
+            include: {
+                members: {
+                    include: {
+                        user: { select: { id: true, name: true, avatar: true, role: true } },
+                    },
+                },
+            },
+        });
+        return res.status(201).json(room);
+    }
+    const roomId = req.body?.roomId;
     const text = req.body?.text;
-    if (!receiverId || !text?.trim())
-        return res.status(400).json({ error: "Missing receiverId or text" });
-    res
-        .status(201)
-        .json(await prisma_1.prisma.chatMessage.create({
-        data: { senderId: me, receiverId, text: text.trim() },
-    }));
+    const mentions = Array.isArray(req.body?.mentions)
+        ? req.body.mentions
+        : [];
+    const threadId = req.body?.threadId;
+    if (!roomId || !text?.trim()) {
+        return res.status(400).json({ error: "Missing roomId or text" });
+    }
+    const membership = await prisma_1.prisma.chatRoomMember.findUnique({
+        where: { roomId_userId: { roomId, userId: me } },
+    });
+    if (!membership)
+        return res.status(403).json({ error: "Not a member" });
+    const roomMembers = await prisma_1.prisma.chatRoomMember.findMany({
+        where: { roomId },
+        select: { userId: true },
+    });
+    const otherMember = roomMembers.find((m) => m.userId !== me)?.userId ?? me;
+    const message = await prisma_1.prisma.chatMessage.create({
+        data: {
+            roomId,
+            senderId: me,
+            receiverId: otherMember,
+            text: text.trim(),
+            threadId: threadId || null,
+            mentions: mentions.length
+                ? {
+                    create: mentions
+                        .filter((uid) => roomMembers.some((m) => m.userId === uid))
+                        .map((uid) => ({ userId: uid })),
+                }
+                : undefined,
+        },
+        include: {
+            sender: { select: { id: true, name: true, avatar: true } },
+            _count: { select: { replies: true } },
+        },
+    });
+    await prisma_1.prisma.chatRoom.update({ where: { id: roomId }, data: { updatedAt: new Date() } });
+    res.status(201).json(message);
 });
 router.get("/property-units", async (req, res) => {
     const propertyId = typeof req.query.propertyId === "string" ? req.query.propertyId : "";
