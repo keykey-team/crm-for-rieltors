@@ -1,7 +1,5 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.errorHandler = errorHandler;
-function errorHandler(err, _req, res, _next) {
-    const status = err?.status ?? 500;
-    res.status(status).json({ error: err?.message ?? 'Internal server error' });
-}
+exports.errorHandler = void 0;
+var error_handler_1 = require("../infrastructure/http/error-handler");
+Object.defineProperty(exports, "errorHandler", { enumerable: true, get: function () { return error_handler_1.errorHandler; } });

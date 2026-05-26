@@ -1,12 +1,5 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.routes = void 0;
-const express_1 = require("express");
-const routes_1 = require("../modules/iam/routes");
-const routes_2 = require("../modules/system/routes");
-const apiRouter = (0, express_1.Router)();
-apiRouter.get('/health', (_req, res) => res.status(200).json({ status: 'ok' }));
-apiRouter.use('/auth', routes_1.iamRoutes);
-apiRouter.use('/iam', routes_1.iamRoutes);
-apiRouter.use(routes_2.systemRoutes);
-exports.routes = apiRouter;
+var routes_1 = require("../presentation/http/routes");
+Object.defineProperty(exports, "routes", { enumerable: true, get: function () { return routes_1.routes; } });

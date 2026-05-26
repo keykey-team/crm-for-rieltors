@@ -7,7 +7,19 @@ import { routes } from './routes';
 
 const app = express();
 
-app.use(cors({ origin: env.clientUrl, credentials: true }));
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || env.clientUrls.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`CORS origin not allowed: ${origin}`));
+    },
+    credentials: true,
+  }),
+);
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 app.use('/api', routes);

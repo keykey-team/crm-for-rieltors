@@ -1,0 +1,18 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.dealRoutes = void 0;
+const async_handler_1 = require("../../../common/infrastructure/http/async-handler");
+const deal_service_1 = require("../services/deal.service");
+const router = (0, async_handler_1.createAsyncRouter)();
+router.post('/leads/:id/create-deal', async (req, res) => res.status(201).json(await (0, deal_service_1.convertLeadToDeal)(req.params.id, req.body ?? {}, req.user?.id)));
+router.get('/deals/:id/comments', async (req, res) => res.json(await (0, deal_service_1.listDealComments)(req.params.id)));
+router.post('/deals/:id/comments', async (req, res) => res.status(201).json(await (0, deal_service_1.addDealComment)(req.params.id, req.body?.text, req.user?.id)));
+router.get('/deals/:id/checklist', async (req, res) => res.json(await (0, deal_service_1.listDealChecklist)(req.params.id)));
+router.post('/deals/:id/checklist', async (req, res) => res.status(201).json(await (0, deal_service_1.addDealChecklistItem)(req.params.id, req.body ?? {})));
+router.put('/deals/:id/checklist', async (req, res) => res.json(await (0, deal_service_1.changeDealChecklistItem)(req.body ?? {})));
+router.get('/deals', async (req, res) => res.json(await (0, deal_service_1.listDeals)(req.user?.id, req.user?.role)));
+router.post('/deals', async (req, res) => res.status(201).json(await (0, deal_service_1.addDeal)(req.body ?? {}, req.user?.id)));
+router.get('/deals/:id', async (req, res) => res.json(await (0, deal_service_1.getDeal)(req.params.id)));
+router.put('/deals/:id', async (req, res) => res.json(await (0, deal_service_1.changeDeal)(req.params.id, req.body ?? {})));
+router.delete('/deals/:id', async (req, res) => res.json(await (0, deal_service_1.removeDeal)(req.params.id)));
+exports.dealRoutes = router;

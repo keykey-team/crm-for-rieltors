@@ -1,0 +1,17 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.pipelineSettingsRoutes = void 0;
+const async_handler_1 = require("../../../common/infrastructure/http/async-handler");
+const pipeline_settings_service_1 = require("../services/pipeline-settings.service");
+const router = (0, async_handler_1.createAsyncRouter)();
+router.get('/funnel-stages', async (_req, res) => res.json(await (0, pipeline_settings_service_1.listFunnelStages)()));
+router.post('/funnel-stages', async (req, res) => res.status(201).json(await (0, pipeline_settings_service_1.addFunnelStage)(req.body ?? {})));
+router.put('/funnel-stages', async (req, res) => res.json(await (0, pipeline_settings_service_1.changeFunnelStages)(req.body ?? {})));
+router.delete('/funnel-stages', async (req, res) => res.json(await (0, pipeline_settings_service_1.removeFunnelStage)(req.query.id)));
+router.get('/deal-custom-fields', async (_req, res) => res.json(await (0, pipeline_settings_service_1.listDealCustomFields)()));
+router.post('/deal-custom-fields', async (req, res) => res.status(201).json(await (0, pipeline_settings_service_1.addDealCustomField)(req.body ?? {})));
+router.put('/deal-custom-fields', async (req, res) => res.json(await (0, pipeline_settings_service_1.changeDealCustomFields)(req.body ?? {})));
+router.delete('/deal-custom-fields', async (req, res) => res.json(await (0, pipeline_settings_service_1.removeDealCustomField)(req.query.id)));
+router.get('/deals/custom-field-values', async (req, res) => res.json(await (0, pipeline_settings_service_1.listDealCustomFieldValues)(req.query.dealId)));
+router.post('/deals/custom-field-values', async (req, res) => res.json(await (0, pipeline_settings_service_1.saveDealCustomFieldValue)(req.body ?? {})));
+exports.pipelineSettingsRoutes = router;

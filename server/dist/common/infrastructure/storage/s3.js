@@ -5,7 +5,7 @@ exports.getFileUrl = getFileUrl;
 exports.deleteFile = deleteFile;
 const client_s3_1 = require("@aws-sdk/client-s3");
 const s3_request_presigner_1 = require("@aws-sdk/s3-request-presigner");
-const env_1 = require("../../../app/config/env");
+const env_1 = require("../../../configuration/env");
 const s3 = new client_s3_1.S3Client({});
 function ensureBucketConfigured() {
     if (!env_1.env.awsBucketName)
