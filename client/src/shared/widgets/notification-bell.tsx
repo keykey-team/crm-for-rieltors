@@ -14,6 +14,12 @@ interface Notification {
   actor?: string;
 }
 
+interface NotificationData {
+  notifications: Notification[];
+  overdue: number;
+  newLeadsToday: number;
+}
+
 const TYPE_ICONS: Record<string, { icon: any; color: string }> = {
   overdue_task: { icon: AlertTriangle, color: 'text-destructive' },
   create: { icon: Users, color: 'text-blue-500' },
@@ -25,12 +31,29 @@ const TYPE_ICONS: Record<string, { icon: any; color: string }> = {
 export function NotificationBell({ collapsed }: { collapsed?: boolean }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const [data, setData] = useState<{ notifications: Notification[]; overdue: number; newLeadsToday: number } | null>(null);
+  const [data, setData] = useState<NotificationData | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const [seen, setSeen] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    const load = () => fetch('/api/notifications').then(r => r.json()).then(setData).catch(() => {});
+    const load = async () => {
+      try {
+        const res = await fetch('/api/notifications');
+        if (!res.ok) {
+          setData(null);
+          return;
+        }
+
+        const payload = await res.json();
+        setData({
+          notifications: Array.isArray(payload?.notifications) ? payload.notifications : [],
+          overdue: Number(payload?.overdue ?? 0),
+          newLeadsToday: Number(payload?.newLeadsToday ?? 0),
+        });
+      } catch {
+        setData(null);
+      }
+    };
     load();
     const interval = setInterval(load, 60000);
     return () => clearInterval(interval);
@@ -44,13 +67,14 @@ export function NotificationBell({ collapsed }: { collapsed?: boolean }) {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  const unseen = data ? data.notifications.filter(n => !seen.has(n.id)).length : 0;
+  const notifications = data?.notifications ?? [];
+  const unseen = notifications.filter(n => !seen.has(n.id)).length;
   const badge = (data?.overdue ?? 0) + unseen;
 
   const handleOpen = () => {
     setOpen(v => !v);
     if (!open && data) {
-      setSeen(new Set(data.notifications.map(n => n.id)));
+      setSeen(new Set(notifications.map(n => n.id)));
     }
   };
 
@@ -97,10 +121,10 @@ export function NotificationBell({ collapsed }: { collapsed?: boolean }) {
             </div>
           </div>
           <div className="max-h-[320px] overflow-y-auto">
-            {(!data || data.notifications.length === 0) ? (
+            {notifications.length === 0 ? (
               <div className="py-8 text-center text-sm text-muted-foreground">{t('notif.empty')}</div>
             ) : (
-              data.notifications.slice(0, 15).map(n => {
+              notifications.slice(0, 15).map(n => {
                 const typeInfo = TYPE_ICONS[n.type] || { icon: Clock, color: 'text-muted-foreground' };
                 const Icon = typeInfo.icon;
                 return (

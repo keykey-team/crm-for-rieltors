@@ -1,6 +1,1 @@
-import { NextFunction, Request, Response } from 'express';
-
-export function errorHandler(err: any, _req: Request, res: Response, _next: NextFunction): void {
-  const status = err?.status ?? 500;
-  res.status(status).json({ error: err?.message ?? 'Internal server error' });
-}
+export { errorHandler } from '../infrastructure/http/error-handler';

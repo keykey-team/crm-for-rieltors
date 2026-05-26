@@ -15,7 +15,10 @@ export const authOptions: NextAuthOptions = {
           const apiBase = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
           const res = await fetch(`${apiBase}/api/iam/login`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'x-return-session-token': 'true',
+            },
             body: JSON.stringify({ email: credentials.email, password: credentials.password }),
           });
           if (!res.ok) return null;
@@ -28,6 +31,7 @@ export const authOptions: NextAuthOptions = {
             accountType: user.accountType,
             plan: user.plan,
             permissions: user.permissions,
+            backendToken: user.backendToken,
           };
         } catch {
           return null;
@@ -44,6 +48,7 @@ export const authOptions: NextAuthOptions = {
         token.accountType = user.accountType;
         token.plan = user.plan;
         token.permissions = user.permissions ?? null;
+        token.backendToken = user.backendToken ?? null;
       }
       if (trigger === 'update' || trigger === 'signIn') return token;
       return token;
