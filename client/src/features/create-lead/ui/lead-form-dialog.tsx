@@ -41,102 +41,135 @@ export function LeadFormDialog({ lead, onSave, onClose }: Props) {
         </div>
         <form onSubmit={submit} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <input
-              value={form.firstName}
-              onChange={(e) => upd("firstName", e.target.value)}
-              required
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
-            />
-            <input
-              value={form.lastName}
-              onChange={(e) => upd("lastName", e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
-            />
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">{t("common.name")} *</span>
+              <input
+                value={form.firstName}
+                onChange={(e) => upd("firstName", e.target.value)}
+                required
+                className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">{t("common.lastName")}</span>
+              <input
+                value={form.lastName}
+                onChange={(e) => upd("lastName", e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
+              />
+            </label>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <input
-              value={form.phone}
-              onChange={(e) => upd("phone", e.target.value)}
-              required
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
-            />
-            <input
-              type="email"
-              value={form.email}
-              onChange={(e) => upd("email", e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
-            />
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">{t("common.phone")} *</span>
+              <input
+                value={form.phone}
+                onChange={(e) => upd("phone", e.target.value)}
+                required
+                className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">{t("common.email")}</span>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => upd("email", e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
+              />
+            </label>
           </div>
           <div className="grid grid-cols-3 gap-4">
-            <select
-              value={form.source ?? "manual"}
-              onChange={(e) => upd("source", e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
-            >
-              {LEAD_SOURCES.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {t(`const.leadSource.${s.value}`) || s.label}
-                </option>
-              ))}
-            </select>
-            <select
-              value={form.status ?? "new"}
-              onChange={(e) => upd("status", e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
-            >
-              {LEAD_STATUSES.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {t(`const.leadStatus.${s.value}`) || s.label}
-                </option>
-              ))}
-            </select>
-            <select
-              value={form.priority ?? "medium"}
-              onChange={(e) => upd("priority", e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
-            >
-              {PRIORITIES.map((p) => (
-                <option key={p.value} value={p.value}>
-                  {t(`const.priority.${p.value}`) || p.label}
-                </option>
-              ))}
-            </select>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">{t("leads.source")}</span>
+              <select
+                value={form.source ?? "manual"}
+                onChange={(e) => upd("source", e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
+              >
+                {LEAD_SOURCES.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {t(`const.leadSource.${s.value}`) || s.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">{t("common.status")}</span>
+              <select
+                value={form.status ?? "new"}
+                onChange={(e) => upd("status", e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
+              >
+                {LEAD_STATUSES.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {t(`const.leadStatus.${s.value}`) || s.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">{t("common.priority")}</span>
+              <select
+                value={form.priority ?? "medium"}
+                onChange={(e) => upd("priority", e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
+              >
+                {PRIORITIES.map((p) => (
+                  <option key={p.value} value={p.value}>
+                    {t(`const.priority.${p.value}`) || p.label}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
-          <select
-            value={form.assignedToId ?? ""}
-            onChange={(e) => upd("assignedToId", e.target.value)}
-            className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
-          >
-            <option value="">{t("leads.autoAssign")}</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name ?? u.email}
-              </option>
-            ))}
-          </select>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-muted-foreground">{t("leads.assignedTo") || "Відповідальний"}</span>
+            <select
+              value={form.assignedToId ?? ""}
+              onChange={(e) => upd("assignedToId", e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
+            >
+              <option value="">{t("leads.autoAssign")}</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name ?? u.email}
+                </option>
+              ))}
+            </select>
+          </label>
           <div className="grid grid-cols-2 gap-4">
-            <select
-              value={form.needType ?? "buy"}
-              onChange={(e) => upd("needType", e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
-            >
-              <option value="buy">{t("leads.dialog.needBuy")}</option>
-              <option value="sell">{t("leads.dialog.needSell")}</option>
-              <option value="rent">{t("leads.dialog.needRent")}</option>
-            </select>
-            <input
-              type="number"
-              value={form.budget}
-              onChange={(e) => upd("budget", e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
-            />
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">{t("leads.dialog.needType") || "Тип потреби"}</span>
+              <select
+                value={form.needType ?? "buy"}
+                onChange={(e) => upd("needType", e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
+              >
+                <option value="buy">{t("leads.dialog.needBuy")}</option>
+                <option value="sell">{t("leads.dialog.needSell")}</option>
+                <option value="rent">{t("leads.dialog.needRent")}</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">{t("common.budget")}</span>
+              <input
+                type="number"
+                value={form.budget}
+                onChange={(e) => upd("budget", e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
+              />
+            </label>
           </div>
-          <textarea
-            rows={3}
-            value={form.notes}
-            onChange={(e) => upd("notes", e.target.value)}
-            className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm resize-none"
-          />
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-muted-foreground">{t("common.notes")}</span>
+            <textarea
+              rows={3}
+              value={form.notes}
+              onChange={(e) => upd("notes", e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm resize-none"
+            />
+          </label>
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"

@@ -7,7 +7,7 @@ export interface SignupPayload {
 
 export async function signup(payload: SignupPayload): Promise<{ ok: true } | { ok: false; error: string }> {
   const apiBase = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
-  const res = await fetch(`${apiBase}/api/auth/signup`, {
+  const res = await fetch(`${apiBase}/api/iam/signup`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },

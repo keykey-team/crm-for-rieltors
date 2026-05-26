@@ -7,5 +7,6 @@ const routes_2 = require("../modules/system/routes");
 const apiRouter = (0, express_1.Router)();
 apiRouter.get('/health', (_req, res) => res.status(200).json({ status: 'ok' }));
 apiRouter.use('/auth', routes_1.iamRoutes);
+apiRouter.use('/iam', routes_1.iamRoutes);
 apiRouter.use(routes_2.systemRoutes);
 exports.routes = apiRouter;
