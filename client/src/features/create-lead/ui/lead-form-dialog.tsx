@@ -20,7 +20,12 @@ interface Props {
 
 export function LeadFormDialog({ lead, onSave, onClose }: Props) {
   const { t } = useTranslation();
-  const { users, saving, form, upd, submit, errors } = useLeadForm(lead, onSave);
+  const { users, saving, form, upd, submit, errors, submitError, resetForm } = useLeadForm(lead, onSave);
+
+  const handleCancel = () => {
+    resetForm();
+    onClose();
+  };
 
   return (
     <div
@@ -41,9 +46,14 @@ export function LeadFormDialog({ lead, onSave, onClose }: Props) {
           </button>
         </div>
         <form onSubmit={submit} className="p-6 space-y-4">
+          {submitError && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {submitError}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground">{t("common.name")} *</span>
+              <span className="text-xs font-medium text-muted-foreground">{t("leads.form.firstName")} *</span>
               <input
                 value={form.firstName}
                 onChange={(e) => upd("firstName", e.target.value)}
@@ -52,7 +62,7 @@ export function LeadFormDialog({ lead, onSave, onClose }: Props) {
               {errors.firstName && <p className="text-xs text-destructive">{errors.firstName}</p>}
             </div>
             <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground">{t("common.lastName")}</span>
+              <span className="text-xs font-medium text-muted-foreground">{t("leads.form.lastName")}</span>
               <input
                 value={form.lastName}
                 onChange={(e) => upd("lastName", e.target.value)}
@@ -62,7 +72,7 @@ export function LeadFormDialog({ lead, onSave, onClose }: Props) {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground">{t("common.phone")} *</span>
+              <span className="text-xs font-medium text-muted-foreground">{t("leads.form.phone")} *</span>
               <PhoneInput
                 value={form.phone}
                 onChange={(v) => upd("phone", v)}
@@ -71,11 +81,12 @@ export function LeadFormDialog({ lead, onSave, onClose }: Props) {
               {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground">{t("common.email")}</span>
+              <span className="text-xs font-medium text-muted-foreground">{t("leads.form.email")}</span>
               <input
                 type="email"
                 value={form.email}
                 onChange={(e) => upd("email", e.target.value)}
+                autoComplete="email"
                 className={`w-full px-3 py-2.5 rounded-xl border bg-muted/30 text-sm ${errors.email ? 'border-destructive/60' : 'border-border'}`}
               />
               {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
@@ -126,13 +137,13 @@ export function LeadFormDialog({ lead, onSave, onClose }: Props) {
             </label>
           </div>
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-muted-foreground">{t("leads.assignedTo") || "Відповідальний"}</span>
+            <span className="text-xs font-medium text-muted-foreground">{t("leads.form.assignedManager")}</span>
             <select
               value={form.assignedToId ?? ""}
               onChange={(e) => upd("assignedToId", e.target.value)}
               className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
             >
-              <option value="">{t("leads.autoAssign")}</option>
+              <option value="">{t("leads.form.autoAssign")}</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.name ?? u.email}
@@ -142,7 +153,7 @@ export function LeadFormDialog({ lead, onSave, onClose }: Props) {
           </label>
           <div className="grid grid-cols-2 gap-4">
             <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground">{t("leads.dialog.needType") || "Тип потреби"}</span>
+              <span className="text-xs font-medium text-muted-foreground">{t("leads.form.needType")}</span>
               <select
                 value={form.needType ?? "buy"}
                 onChange={(e) => upd("needType", e.target.value)}
@@ -154,7 +165,7 @@ export function LeadFormDialog({ lead, onSave, onClose }: Props) {
               </select>
             </label>
             <div className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground">{t("common.budget")}</span>
+              <span className="text-xs font-medium text-muted-foreground">{t("leads.form.budget")}</span>
               <input
                 type="number"
                 value={form.budget}
@@ -165,7 +176,7 @@ export function LeadFormDialog({ lead, onSave, onClose }: Props) {
             </div>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-muted-foreground">{t("common.notes")}</span>
+            <span className="text-xs font-medium text-muted-foreground">{t("leads.form.notes")}</span>
             <textarea
               rows={3}
               value={form.notes}
@@ -177,7 +188,7 @@ export function LeadFormDialog({ lead, onSave, onClose }: Props) {
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleCancel}
               className="px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-muted transition"
             >
               {t("common.cancel")}

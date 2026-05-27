@@ -71,8 +71,8 @@ export function useLeadsPage() {
       setShowDialog(false);
       setEditing(null);
       fetchLeads();
-    } catch {
-      toast.error(t('common.error'));
+    } catch (error) {
+      throw (error instanceof Error && error.message ? error : new Error(t('common.errorSave')));
     }
   };
 

@@ -11,10 +11,28 @@ import {
   cuid,
 } from '../../../common/validation/common';
 
-const LEAD_SOURCES = ['website', 'referral', 'social', 'call', 'email', 'other'] as const;
-const LEAD_STATUSES = ['new', 'contacted', 'qualified', 'lost', 'converted'] as const;
+const LEAD_SOURCES = ['manual', 'telegram', 'instagram', 'olx', 'dom_ria', 'website', 'referral', 'social', 'call', 'email', 'other'] as const;
+const LEAD_STATUSES = ['new', 'active', 'warm', 'cold', 'lost', 'contacted', 'qualified', 'converted'] as const;
 const NEED_TYPES = ['buy', 'rent', 'sell', 'invest', 'other'] as const;
 const PRIORITIES = ['low', 'medium', 'high'] as const;
+
+function emptyStringToUndefined(value: unknown) {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value === 'string' && !value.trim()) return undefined;
+  return value;
+}
+
+const leadBudgetInput = z.preprocess((value) => {
+  const normalized = emptyStringToUndefined(value);
+  if (normalized === undefined) return undefined;
+  if (typeof normalized === 'string') {
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : normalized;
+  }
+  return normalized;
+}, optionalPositiveDecimal);
+
+const leadAssignedToId = z.preprocess(emptyStringToUndefined, optionalCuid);
 
 const leadBase = {
   firstName: shortText(100),
@@ -25,11 +43,11 @@ const leadBase = {
   status: z.enum(LEAD_STATUSES).optional(),
   needType: z.enum(NEED_TYPES).optional(),
   priority: z.enum(PRIORITIES).optional(),
-  budget: optionalPositiveDecimal,
+  budget: leadBudgetInput,
   notes: noteText(),
-  districts: z.array(z.string().trim().max(100)).max(20).optional(),
+  districts: optionalText(250),
   propertyType: optionalText(80),
-  assignedToId: optionalCuid,
+  assignedToId: leadAssignedToId,
 };
 
 export const createLeadSchema = z.object(leadBase).strict();

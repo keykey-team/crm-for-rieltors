@@ -7,10 +7,17 @@ import { routes } from './routes';
 
 const app = express();
 
+function isAllowedOrigin(origin: string | undefined): boolean {
+  if (!origin) return true;
+  if (env.clientUrls.includes(origin)) return true;
+
+  return env.nodeEnv === 'development' && /^https:\/\/[a-z0-9-]+\.ngrok-free\.app$/i.test(origin);
+}
+
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || env.clientUrls.includes(origin)) {
+      if (isAllowedOrigin(origin)) {
         callback(null, true);
         return;
       }
