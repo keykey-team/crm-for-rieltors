@@ -11,6 +11,7 @@ export const CRM_SECTIONS = [
   { key: 'properties', labelKey: 'nav.properties' },
   { key: 'tasks', labelKey: 'nav.tasks' },
   { key: 'calendar', labelKey: 'nav.calendar' },
+  { key: 'showings', labelKey: 'nav.showings' },
   { key: 'chat', labelKey: 'nav.chat' },
   { key: 'analytics', labelKey: 'nav.analytics' },
   { key: 'automations', labelKey: 'nav.automations' },

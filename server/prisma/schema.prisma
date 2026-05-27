@@ -42,6 +42,7 @@ model User {
   events            Event[]
   articles          KnowledgeArticle[]
   leads             Lead[]
+  agentShowings     Showing[]              @relation("ShowingAgent")
   distributionRules LeadDistributionRule[] @relation("DistributionAssign")
   tasks             Task[]
   templates         Template[]             @relation("TemplateCreator")
@@ -74,6 +75,7 @@ model Lead {
   deals          Deal[]
   assignedTo     User?           @relation(fields: [assignedToId], references: [id])
   tasks          Task[]
+  showings       Showing[]
 
   @@index([status])
   @@index([assignedToId])
@@ -100,6 +102,7 @@ model Property {
   updatedAt   DateTime        @updatedAt
   deals       Deal[]
   photos      PropertyPhoto[]
+  showings    Showing[]
   units       PropertyUnit[]
 
   @@index([status])
@@ -144,6 +147,7 @@ model Deal {
   checklist         DealChecklist[]
   comments          DealComment[]
   customFieldValues DealCustomFieldValue[]
+  showings          Showing[]
 
   @@index([stage])
   @@index([funnelId])
@@ -170,6 +174,34 @@ model Task {
   @@index([status])
   @@index([dueDate])
   @@index([assignedToId])
+}
+
+model Showing {
+  id           String   @id @default(cuid())
+  dealId       String?
+  propertyId   String
+  leadId       String?
+  agentId      String?
+  scheduledAt  DateTime
+  durationMin  Int      @default(30)
+  status       String   @default("scheduled")
+  feedback     String?
+  clientRating Int?
+  agentNotes   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  deal     Deal?    @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  lead     Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  agent    User?    @relation("ShowingAgent", fields: [agentId], references: [id])
+
+  @@index([dealId])
+  @@index([propertyId])
+  @@index([leadId])
+  @@index([agentId])
+  @@index([scheduledAt])
+  @@index([status])
 }
 
 model Event {
