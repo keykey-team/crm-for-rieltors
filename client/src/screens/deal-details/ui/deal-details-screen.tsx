@@ -72,7 +72,7 @@ export function DealDetailClient({ dealId }: { dealId: string }) {
   const [newLeadForm, setNewLeadForm] = useState({ firstName: '', lastName: '', phone: '', email: '' });
   const [creatingLead, setCreatingLead] = useState(false);
   const [showNewPropForm, setShowNewPropForm] = useState(false);
-  const [newPropForm, setNewPropForm] = useState({ title: '', address: '' });
+  const [newPropForm, setNewPropForm] = useState({ title: '', address: '', price: '' });
   const [creatingProp, setCreatingProp] = useState(false);
 
   // Fetch leads & properties for pickers
@@ -116,21 +116,35 @@ export function DealDetailClient({ dealId }: { dealId: string }) {
   };
 
   const createPropertyAndAssign = async () => {
-    if (!newPropForm.title.trim()) return;
+    const title = newPropForm.title.trim();
+    const address = newPropForm.address.trim();
+    const price = Number(newPropForm.price);
+
+    if (!title || !address || !newPropForm.price.trim()) {
+      toast.error(t('settings.fillFields'));
+      return;
+    }
+
+    if (!Number.isFinite(price) || price <= 0) {
+      toast.error(t('common.priceNotSet'));
+      return;
+    }
+
     setCreatingProp(true);
     try {
       const prop = await createProperty({
-        title: newPropForm.title.trim(),
-        address: newPropForm.address.trim() || undefined,
+        title,
+        address,
+        price,
       });
       if (prop?.id) {
         await updateDealField('propertyId', prop.id);
         refreshPickerData();
         setShowPropertyPicker(false);
         setShowNewPropForm(false);
-        setNewPropForm({ title: '', address: '' });
+        setNewPropForm({ title: '', address: '', price: '' });
       } else { toast.error(t('common.error')); }
-    } catch { toast.error(t('common.error')); }
+    } catch (error) { toast.error(error instanceof Error && error.message ? error.message : t('common.errorSave')); }
     finally { setCreatingProp(false); }
   };
 
@@ -512,7 +526,16 @@ export function DealDetailClient({ dealId }: { dealId: string }) {
                   <input
                     value={newPropForm.address}
                     onChange={e => setNewPropForm(f => ({ ...f, address: e.target.value }))}
-                    placeholder={t('common.address')}
+                    placeholder={`${t('common.address')} *`}
+                    className="w-full px-2.5 py-1.5 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={newPropForm.price}
+                    onChange={e => setNewPropForm(f => ({ ...f, price: e.target.value }))}
+                    placeholder={`${t('common.price')} *`}
                     className="w-full px-2.5 py-1.5 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                   <div className="flex gap-2 pt-1">
@@ -522,7 +545,7 @@ export function DealDetailClient({ dealId }: { dealId: string }) {
                     >{t('common.cancel')}</button>
                     <button
                       onClick={createPropertyAndAssign}
-                      disabled={creatingProp || !newPropForm.title.trim()}
+                      disabled={creatingProp || !newPropForm.title.trim() || !newPropForm.address.trim() || !newPropForm.price.trim()}
                       className="flex-1 px-3 py-1.5 text-sm rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
                     >{creatingProp ? t('common.saving') : t('common.create')}</button>
                   </div>

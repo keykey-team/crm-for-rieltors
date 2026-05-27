@@ -19,7 +19,8 @@ export function PropertyDialog({ property, onSave, onClose }: { property: Proper
   });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const upd = (k: string, v: string) => { setForm((p) => ({ ...p, [k]: v })); setErrors((p) => ({ ...p, [k]: '' })); };
+  const [submitError, setSubmitError] = useState('');
+  const upd = (k: string, v: string) => { setForm((p) => ({ ...p, [k]: v })); setErrors((p) => ({ ...p, [k]: '' })); setSubmitError(''); };
 
   const toNum = (v: string) => (v !== '' ? Number(v) : undefined);
 
@@ -35,8 +36,14 @@ export function PropertyDialog({ property, onSave, onClose }: { property: Proper
     if (!validation.ok) { setErrors(validation.errors); return; }
     setErrors({});
     setSaving(true);
-    await onSave(form);
-    setSaving(false);
+    setSubmitError('');
+    try {
+      await onSave(form);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : t('common.errorSave'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -47,6 +54,11 @@ export function PropertyDialog({ property, onSave, onClose }: { property: Proper
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-muted"><X className="w-4 h-4" /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {submitError ? (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {submitError}
+            </div>
+          ) : null}
           <div>
             <label className="text-sm font-medium mb-1 block">{t('common.title')} *</label>
             <input value={form.title} onChange={(e) => upd('title', e.target.value)}
