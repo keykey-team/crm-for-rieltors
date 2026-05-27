@@ -12,6 +12,7 @@ import {
 
 const PROPERTY_TYPES = ['apartment', 'house', 'commercial', 'land', 'garage', 'other'] as const;
 const PROPERTY_STATUSES = ['active', 'available', 'reserved', 'sold', 'rented', 'inactive'] as const;
+const PROPERTY_DEAL_TYPES = ['sale', 'rent'] as const;
 const CURRENCIES = ['UAH', 'USD', 'EUR'] as const;
 const UNIT_STATUSES = ['available', 'reserved', 'sold'] as const;
 
@@ -50,6 +51,15 @@ const propertyRequiredDecimal = z.preprocess((value) => {
   return normalized;
 }, positiveDecimal);
 
+const propertyDealTypes = z.preprocess((value) => {
+  if (value === null || value === undefined) return undefined;
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+  }
+  if (typeof value === 'string' && value.trim()) return [value.trim()];
+  return value;
+}, z.array(z.enum(PROPERTY_DEAL_TYPES)).min(1).optional());
+
 // ── Property ──────────────────────────────────────────────────────────────────
 
 const propertyBase = {
@@ -65,6 +75,7 @@ const propertyBase = {
   totalFloors: propertyOptionalInt,
   price: propertyRequiredDecimal,
   currency: z.enum(CURRENCIES).optional(),
+  dealTypes: propertyDealTypes,
   description: z.string().trim().max(3000).optional(),
 };
 

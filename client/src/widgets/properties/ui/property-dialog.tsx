@@ -2,7 +2,7 @@
 import { useTranslation } from '@/shared/lib/i18n/context';
 import { useCallback, useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-import { PROPERTY_TYPES, PROPERTY_STATUSES } from '@/shared/lib/constants';
+import { PROPERTY_DEAL_TYPES, PROPERTY_TYPES, PROPERTY_STATUSES } from '@/shared/lib/constants';
 import { useFormDraft } from '@/shared/hooks/use-form-draft';
 import type { Property, PropertyUpsertInput } from '@/entities/property';
 import { parseForm, propertySchema } from '@/shared/lib/validation';
@@ -13,6 +13,7 @@ type PropertyFormState = {
   title: string;
   type: string;
   address: string;
+  dealTypes: string[];
   district: string;
   city: string;
   rooms: string;
@@ -30,6 +31,7 @@ function createEmptyForm(property: Property | null): PropertyFormState {
     title: property?.title ?? '',
     type: property?.type ?? 'apartment',
     address: property?.address ?? '',
+    dealTypes: property?.dealTypes?.length ? property.dealTypes : ['sale'],
     district: property?.district ?? '',
     city: property?.city ?? 'Київ',
     rooms: property?.rooms?.toString() ?? '',
@@ -55,7 +57,7 @@ export function PropertyDialog({ property, onSave, onClose }: { property: Proper
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState('');
-  const upd = (k: keyof PropertyFormState, v: string) => { setForm((p) => ({ ...p, [k]: v })); setErrors((p) => ({ ...p, [k]: '' })); setSubmitError(''); };
+  const upd = <K extends keyof PropertyFormState>(k: K, v: PropertyFormState[K]) => { setForm((p) => ({ ...p, [k]: v })); setErrors((p) => ({ ...p, [k]: '' })); setSubmitError(''); };
 
   useEffect(() => {
     setErrors({});
@@ -77,6 +79,7 @@ export function PropertyDialog({ property, onSave, onClose }: { property: Proper
       title: form.title,
       address: form.address,
       price: toNum(form.price),
+      dealTypes: form.dealTypes,
       floor: toNum(form.floor),
       totalFloors: toNum(form.totalFloors),
     });
@@ -128,6 +131,25 @@ export function PropertyDialog({ property, onSave, onClose }: { property: Proper
                 {PROPERTY_STATUSES.map((ps: any) => <option key={ps.value} value={ps.value}>{t(`const.propertyStatus.${ps.value}`) || ps.label}</option>)}
               </select>
             </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">{t('properties.dealType')}</label>
+            <div className="flex flex-wrap gap-2">
+              {PROPERTY_DEAL_TYPES.map((item) => {
+                const active = form.dealTypes.includes(item.value);
+                return (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => upd('dealTypes', active ? form.dealTypes.filter((value) => value !== item.value) : [...form.dealTypes, item.value])}
+                    className={`px-3 py-2 rounded-xl text-sm border transition ${active ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-muted/20 text-muted-foreground hover:text-foreground'}`}
+                  >
+                    {item.value === 'sale' ? t('leads.dialog.needSell') : t('leads.dialog.needRent')}
+                  </button>
+                );
+              })}
+            </div>
+            {errors.dealTypes && <p className="text-xs text-destructive mt-1">{errors.dealTypes}</p>}
           </div>
           <div>
             <label className="text-sm font-medium mb-1 block">{t('common.address')} *</label>

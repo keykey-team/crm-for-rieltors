@@ -3,12 +3,14 @@
 import { X, Search, User, Building, ChevronDown, Plus } from 'lucide-react';
 
 import { useTranslation } from '@/shared/lib/i18n/context';
+import { PROPERTY_DEAL_TYPES } from '@/shared/lib/constants';
 import { PhoneInput } from '@/shared/ui/phone-input';
 import type { Deal, DealUpsertInput } from '@/entities/deal';
 import { useDealForm } from '@/features/create-deal/model/use-deal-form';
 
 export function DealFormDialog({ deal, onSave, onClose }: { deal: Deal | null; onSave: (d: DealUpsertInput) => void | Promise<void>; onClose: () => void }) {
   const { t } = useTranslation();
+  const getDealTypeLabel = (value: string) => value === 'sale' ? t('leads.dialog.needSell') : value === 'rent' ? t('leads.dialog.needRent') : value;
   const {
     stages,
     users,
@@ -142,7 +144,7 @@ export function DealFormDialog({ deal, onSave, onClose }: { deal: Deal | null; o
             <label className="mb-1.5 block text-xs text-muted-foreground">{t('deals.dialog.selectProperty')}</label>
             <div className="relative">
             <button type="button" onClick={() => { setPropOpen(!propOpen); setLeadOpen(false); setShowNewLeadForm(false); }} className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm text-left">
-              {selectedProp ? <span className="flex items-center gap-2 truncate"><Building className="w-3.5 h-3.5 text-muted-foreground" />{selectedProp.title}</span> : <span className="text-muted-foreground">{t('deals.dialog.selectProperty')}</span>}
+              {selectedProp ? <span className="flex items-center gap-2 truncate"><Building className="w-3.5 h-3.5 text-muted-foreground" />{selectedProp.title}{selectedProp.dealTypes?.length ? ` • ${selectedProp.dealTypes.map(getDealTypeLabel).join(', ')}` : ''}</span> : <span className="text-muted-foreground">{t('deals.dialog.selectProperty')}</span>}
               <ChevronDown className="w-4 h-4 text-muted-foreground" />
             </button>
             {propOpen && (
@@ -160,7 +162,7 @@ export function DealFormDialog({ deal, onSave, onClose }: { deal: Deal | null; o
                     </button>
                     <div className="overflow-y-auto max-h-44">
                       <button type="button" onClick={() => { upd('propertyId', ''); setPropOpen(false); setPropSearch(''); }} className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50">— {t('common.notSelected')}</button>
-                      {filteredProps.map((p) => <button type="button" key={p.id} onClick={() => { upd('propertyId', p.id); setPropOpen(false); setPropSearch(''); }} className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50">{p.title}</button>)}
+                      {filteredProps.map((p) => <button type="button" key={p.id} onClick={() => { upd('propertyId', p.id); setPropOpen(false); setPropSearch(''); }} className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50">{p.title}{p.dealTypes?.length ? ` • ${p.dealTypes.map(getDealTypeLabel).join(', ')}` : ''}</button>)}
                     </div>
                   </>
                 ) : (
@@ -182,9 +184,28 @@ export function DealFormDialog({ deal, onSave, onClose }: { deal: Deal | null; o
                       <input type="number" min="0" step="0.01" value={newPropForm.price} onChange={(e) => updateNewPropField('price', e.target.value)} placeholder={`${t('common.price')} *`} className={`w-full px-2.5 py-1.5 border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 ${newPropErrors.price ? 'border-destructive/60' : 'border-border'}`} />
                       {newPropErrors.price ? <p className="mt-1 text-xs text-destructive">{newPropErrors.price}</p> : null}
                     </div>
+                    <div>
+                      <p className="mb-1 text-xs text-muted-foreground">{t('properties.dealType')}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {PROPERTY_DEAL_TYPES.map((item) => {
+                          const active = newPropForm.dealTypes.includes(item.value);
+                          return (
+                            <button
+                              key={item.value}
+                              type="button"
+                              onClick={() => updateNewPropField('dealTypes', active ? newPropForm.dealTypes.filter((value) => value !== item.value) : [...newPropForm.dealTypes, item.value])}
+                              className={`px-2.5 py-1.5 rounded-lg border text-xs transition ${active ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-muted/60'}`}
+                            >
+                              {getDealTypeLabel(item.value)}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {newPropErrors.dealTypes ? <p className="mt-1 text-xs text-destructive">{newPropErrors.dealTypes}</p> : null}
+                    </div>
                     <div className="flex gap-2 pt-1">
                       <button type="button" onClick={resetNewPropFormState} className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-border hover:bg-muted/60">{t('common.cancel')}</button>
-                      <button type="button" onClick={createPropertyOption} disabled={creatingProp || !newPropForm.title.trim() || !newPropForm.address.trim() || !newPropForm.price.trim()} className="flex-1 px-3 py-1.5 text-sm rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50">{creatingProp ? t('common.saving') : t('common.create')}</button>
+                      <button type="button" onClick={createPropertyOption} disabled={creatingProp || !newPropForm.title.trim() || !newPropForm.address.trim() || !newPropForm.price.trim() || newPropForm.dealTypes.length === 0} className="flex-1 px-3 py-1.5 text-sm rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50">{creatingProp ? t('common.saving') : t('common.create')}</button>
                     </div>
                   </div>
                 )}

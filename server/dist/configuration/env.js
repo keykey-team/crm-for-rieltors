@@ -7,6 +7,7 @@ exports.env = void 0;
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
 const defaultClientUrls = ['http://localhost:3000', 'http://localhost:3001'];
+const nodeEnv = process.env.NODE_ENV ?? 'development';
 function getRequired(name) {
     const value = process.env[name];
     if (!value)
@@ -18,14 +19,18 @@ function getClientUrls() {
     if (!rawValue) {
         return defaultClientUrls;
     }
-    return rawValue
+    const configuredUrls = rawValue
         .split(',')
         .map((value) => value.trim())
         .filter(Boolean);
+    if (nodeEnv === 'development') {
+        return [...new Set([...configuredUrls, ...defaultClientUrls])];
+    }
+    return configuredUrls;
 }
 const clientUrls = getClientUrls();
 exports.env = {
-    nodeEnv: process.env.NODE_ENV ?? 'development',
+    nodeEnv,
     port: Number(process.env.PORT ?? 4000),
     clientUrl: clientUrls[0] ?? defaultClientUrls[0],
     clientUrls,

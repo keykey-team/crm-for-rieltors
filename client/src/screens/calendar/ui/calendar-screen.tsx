@@ -1,10 +1,11 @@
 'use client';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { CalendarDays, Plus, ChevronLeft, ChevronRight, Clock, MapPin, Trash2, X, Edit2, Link2, Copy, Check, RefreshCw, ExternalLink } from 'lucide-react';
+import { CalendarDays, Plus, ChevronLeft, ChevronRight, Clock, Trash2, X, Edit2, Link2, Copy, Check, RefreshCw } from 'lucide-react';
 import { useFormDraft } from '@/shared/hooks/use-form-draft';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/lib/i18n/context';
 import { HintTooltip } from '@/shared/ui/hint-tooltip';
+import { DatePicker } from '@/shared/ui';
 import type { CalendarEventUpsertInput } from '@/entities/calendar';
 import { getEventsByMonth, createEvent, updateEvent, deleteEvent, getCalendarToken, createCalendarToken, revokeCalendarToken } from '@/entities/calendar';
 import { EVENT_COLORS, formatTime, getMonday, isSameDay, type ViewMode } from '@/widgets/calendar/model/calendar-utils';
@@ -323,7 +324,7 @@ export function CalendarClient() {
                         <span className="text-lg">📅</span>
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-blue-900">Google Calendar</p>
+                        <p className="text-sm font-semibold text-blue-900">{t('calendar.googleCalendar')}</p>
                         <p className="text-xs text-blue-700 mt-0.5">{t('calendar.googleInstructions')}</p>
                       </div>
                     </div>
@@ -332,7 +333,7 @@ export function CalendarClient() {
                         <span className="text-lg">🍎</span>
                       </div>
                       <div>
-                        <p className="text-sm font-semibold">Apple Calendar</p>
+                        <p className="text-sm font-semibold">{t('calendar.appleCalendar')}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">{t('calendar.appleInstructions')}</p>
                       </div>
                     </div>
@@ -670,17 +671,21 @@ function EventDialog({ date, event, onSave, onClose, t }: { date: string | null;
   const startPreview = `${String(form.startHour).padStart(2, '0')}:${String(form.startMinute).padStart(2, '0')}`;
   const endPreview = `${String(form.endHour).padStart(2, '0')}:${String(form.endMinute).padStart(2, '0')}`;
 
-  const handleClose = () => {
+  const handleDismiss = () => {
+    onClose();
+  };
+
+  const handleCancel = () => {
     resetForm();
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={handleClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={handleDismiss}>
       <div className="bg-card rounded-2xl w-full max-w-md" style={{ boxShadow: 'var(--shadow-lg)' }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-border/30">
           <h2 className="font-display font-bold text-lg">{event ? t('calendar.editEvent') : t('calendar.newEvent')}</h2>
-          <button onClick={handleClose} className="p-1.5 rounded-lg hover:bg-muted"><X className="w-4 h-4" /></button>
+          <button onClick={handleDismiss} className="p-1.5 rounded-lg hover:bg-muted"><X className="w-4 h-4" /></button>
         </div>
         <form onSubmit={async (e) => {
           e.preventDefault();
@@ -723,24 +728,24 @@ function EventDialog({ date, event, onSave, onClose, t }: { date: string | null;
           </div>
           <div>
             <label className="text-sm font-medium mb-1.5 block">{t('calendar.dateTime')}</label>
-            <DatePicker value={form.day} onChange={(v) => setForm(p => ({ ...p, day: v }))} />
+            <DatePicker value={form.day} onChange={(value: string) => setForm(p => ({ ...p, day: value }))} />
           </div>
 
           <div className="rounded-2xl border border-border/60 bg-muted/20 p-3">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Time Range</p>
+              <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">{t('calendar.timeRange')}</p>
               <p className="text-sm font-semibold text-primary">{startPreview} - {endPreview}</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl border border-border/60 bg-card p-2">
-                <p className="text-xs font-medium text-muted-foreground mb-2">From</p>
+                <p className="text-xs font-medium text-muted-foreground mb-2">{t('calendar.from')}</p>
                 <div className="grid grid-cols-2 gap-2">
                   <TimeWheel values={HOURS} selected={form.startHour} onChange={(v) => setForm(p => ({ ...p, startHour: v }))} />
                   <TimeWheel values={MINUTES} selected={form.startMinute} onChange={(v) => setForm(p => ({ ...p, startMinute: v }))} />
                 </div>
               </div>
               <div className="rounded-xl border border-border/60 bg-card p-2">
-                <p className="text-xs font-medium text-muted-foreground mb-2">To</p>
+                <p className="text-xs font-medium text-muted-foreground mb-2">{t('calendar.to')}</p>
                 <div className="grid grid-cols-2 gap-2">
                   <TimeWheel values={HOURS} selected={form.endHour} onChange={(v) => setForm(p => ({ ...p, endHour: v }))} />
                   <TimeWheel values={MINUTES} selected={form.endMinute} onChange={(v) => setForm(p => ({ ...p, endMinute: v }))} />
@@ -754,7 +759,7 @@ function EventDialog({ date, event, onSave, onClose, t }: { date: string | null;
               className="w-full px-3.5 py-2.5 rounded-xl border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition resize-none" />
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={handleClose} className="px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-muted transition">{t('common.cancel')}</button>
+            <button type="button" onClick={handleCancel} className="px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-muted transition">{t('common.cancel')}</button>
             <button type="submit" disabled={saving}
               className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition disabled:opacity-50">
               {saving ? t('common.saving') : t('common.save')}
@@ -813,140 +818,3 @@ function TimeWheel({ values, selected, onChange }: { values: number[]; selected:
 }
 
 /* ─── Date Picker ─── */
-function DatePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const { t } = useTranslation();
-  const MONTHS_FULL = [
-    t('calendar.january'), t('calendar.february'), t('calendar.march'),
-    t('calendar.april'), t('calendar.may'), t('calendar.june'),
-    t('calendar.july'), t('calendar.august'), t('calendar.september'),
-    t('calendar.october'), t('calendar.november'), t('calendar.december'),
-  ];
-  const DAYS_SHORT = [
-    t('calendar.mon'), t('calendar.tue'), t('calendar.wed'),
-    t('calendar.thu'), t('calendar.fri'), t('calendar.sat'), t('calendar.sun'),
-  ];
-
-  const [open, setOpen] = useState(false);
-  const [viewDate, setViewDate] = useState(() => value ? new Date(value + 'T00:00') : new Date());
-  const ref = useRef<HTMLDivElement>(null);
-  const today = useMemo(() => new Date(), []);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    if (open) document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
-
-  useEffect(() => {
-    if (value) setViewDate(new Date(value + 'T00:00'));
-  }, [value]);
-
-  const selected = value ? new Date(value + 'T00:00') : null;
-  const year = viewDate.getFullYear();
-  const month = viewDate.getMonth();
-
-  const firstDay = new Date(year, month, 1);
-  const startDay = (firstDay.getDay() + 6) % 7;
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const prevMonthLast = new Date(year, month, 0).getDate();
-
-  const cells: { day: number; current: boolean; date: Date }[] = [];
-  for (let i = startDay - 1; i >= 0; i--)
-    cells.push({ day: prevMonthLast - i, current: false, date: new Date(year, month - 1, prevMonthLast - i) });
-  for (let i = 1; i <= daysInMonth; i++)
-    cells.push({ day: i, current: true, date: new Date(year, month, i) });
-  const remaining = (7 - (cells.length % 7)) % 7;
-  for (let i = 1; i <= remaining; i++)
-    cells.push({ day: i, current: false, date: new Date(year, month + 1, i) });
-
-  const displayValue = selected
-    ? `${String(selected.getDate()).padStart(2, '0')}.${String(selected.getMonth() + 1).padStart(2, '0')}.${selected.getFullYear()}`
-    : '';
-
-  const selectDate = (date: Date) => {
-    const str = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    onChange(str);
-    setOpen(false);
-  };
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen(v => !v)}
-        className={cn(
-          'w-full flex items-center gap-2.5 pl-10 pr-3.5 py-2.5 rounded-xl border text-sm text-left transition bg-card',
-          open ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-primary/50'
-        )}>
-        <CalendarDays className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-        <span className={displayValue ? 'text-foreground' : 'text-muted-foreground'}>
-          {displayValue || '—'}
-        </span>
-      </button>
-
-      {open && (
-        <div
-          className="absolute z-50 top-full mt-1.5 left-0 bg-card rounded-2xl border border-border/50 p-3 w-64"
-          style={{ boxShadow: 'var(--shadow-lg)' }}
-          onClick={e => e.stopPropagation()}>
-          {/*Navigation by month*/}
-          <div className="flex items-center justify-between mb-2">
-            <button type="button" onClick={() => setViewDate(new Date(year, month - 1, 1))}
-              className="p-1.5 rounded-lg hover:bg-muted transition">
-              <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
-            <span className="text-sm font-semibold">{MONTHS_FULL[month]} {year}</span>
-            <button type="button" onClick={() => setViewDate(new Date(year, month + 1, 1))}
-              className="p-1.5 rounded-lg hover:bg-muted transition">
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {/* Headings of the day*/}
-          <div className="grid grid-cols-7 mb-1">
-            {DAYS_SHORT.map(d => (
-              <div key={d} className="text-center text-[10px] font-semibold text-muted-foreground uppercase py-1">{d}</div>
-            ))}
-          </div>
-
-          {/* Grid of days */}
-          <div className="grid grid-cols-7 gap-y-0.5">
-            {cells.map((cell, idx) => {
-              const isSelected = selected && isSameDay(cell.date, selected);
-              const isToday = isSameDay(cell.date, today);
-              return (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => selectDate(cell.date)}
-                  className={cn(
-                    'h-7 w-full flex items-center justify-center rounded-lg text-xs font-medium transition',
-                    isSelected ? 'bg-primary text-primary-foreground' :
-                    isToday ? 'border border-primary/60 text-primary' :
-                    cell.current ? 'text-foreground hover:bg-muted' :
-                    'text-muted-foreground/50 hover:bg-muted/50'
-                  )}>
-                  {cell.day}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/30">
-            <button type="button" onClick={() => { onChange(''); setOpen(false); }}
-              className="text-xs text-muted-foreground hover:text-foreground transition px-1">
-              {t('common.delete')}
-            </button>
-            <button type="button" onClick={() => selectDate(today)}
-              className="text-xs text-primary hover:text-primary/80 font-medium transition px-1">
-              {t('calendar.today')}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}

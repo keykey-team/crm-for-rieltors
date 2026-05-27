@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Phone, MessageSquare, Edit2 } from 'lucide-react';
 
 import { useTranslation } from '@/shared/lib/i18n/context';
-import { LEAD_STATUSES, LEAD_SOURCES } from '@/shared/lib/constants';
+import { LEAD_SOURCES } from '@/shared/lib/constants';
 import { formatDate } from '@/shared/lib/format';
 import type { Lead } from '@/entities/lead';
 import { LeadAvatar } from '@/entities/lead';
@@ -17,12 +17,21 @@ interface Props {
   onStatusChange: (id: string, status: string) => void;
   onCall?: (phone: string) => void;
   onMessage?: (phone: string) => void;
+  leadStatuses: Array<{ value: string; label: string; color?: string }>;
 }
 
-export function LeadKanban({ leads, loading, onEdit, onStatusChange, onCall, onMessage }: Props) {
+export function LeadKanban({ leads, loading, onEdit, onStatusChange, onCall, onMessage, leadStatuses }: Props) {
   const { t } = useTranslation();
   const router = useRouter();
   const { handleDragStart, handleDrop, byStatus } = useLeadKanbanUi(onStatusChange);
+
+  const getNeedTypeLabel = (needType?: string | null) => {
+    if (!needType) return '—';
+    if (needType === 'buy') return t('leads.dialog.needBuy');
+    if (needType === 'sell') return t('leads.dialog.needSell');
+    if (needType === 'rent') return t('leads.dialog.needRent');
+    return t(`const.needType.${needType}`) || needType;
+  };
 
   if (loading) {
     return (
@@ -34,7 +43,7 @@ export function LeadKanban({ leads, loading, onEdit, onStatusChange, onCall, onM
 
   return (
     <div className="flex gap-4 overflow-x-auto pb-4">
-      {LEAD_STATUSES.map((status) => {
+      {leadStatuses.map((status) => {
         const statusLeads = byStatus(leads, status.value);
         return (
           <div
@@ -45,7 +54,7 @@ export function LeadKanban({ leads, loading, onEdit, onStatusChange, onCall, onM
           >
             <div className="flex items-center gap-2 mb-3 px-1">
               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: status.color }} />
-              <h3 className="text-sm font-semibold">{t(`const.leadStatus.${status.value}`) || status.label}</h3>
+              <h3 className="text-sm font-semibold">{status.label || t(`const.dealStage.${status.value}`) || status.value}</h3>
               <span className="text-xs text-muted-foreground ml-auto">{statusLeads.length}</span>
             </div>
 
@@ -74,6 +83,12 @@ export function LeadKanban({ leads, loading, onEdit, onStatusChange, onCall, onM
                       {t(`const.leadSource.${lead.source}`) || LEAD_SOURCES.find((s) => s.value === lead.source)?.label || lead.source}
                     </p>
                   )}
+
+                  <div className="mt-2 space-y-1">
+                    <p className="text-[11px] text-muted-foreground">{t('common.budget')}: {lead.budget != null ? lead.budget.toLocaleString() : '—'}</p>
+                    <p className="text-[11px] text-muted-foreground">{t('leads.form.needType')}: {getNeedTypeLabel(lead.needType)}</p>
+                    <p className="text-[11px] text-muted-foreground">{t('leads.lastContact')}: {lead.lastContact ? formatDate(lead.lastContact) : '—'}</p>
+                  </div>
 
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-xs text-muted-foreground">{formatDate(lead.createdAt)}</span>

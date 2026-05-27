@@ -36,11 +36,7 @@ export const LEAD_SOURCES = [
 ];
 
 export const LEAD_STATUSES = [
-  { value: 'new', label: 'Новий', color: '#60B5FF' },
-  { value: 'active', label: 'Активний', color: '#72BF78' },
-  { value: 'warm', label: 'Теплий', color: '#FF9149' },
-  { value: 'cold', label: 'Холодний', color: '#A19AD3' },
-  { value: 'lost', label: 'Втрачений', color: '#EF476F' },
+  ...DEAL_STAGES,
 ];
 
 export const PROPERTY_TYPES = [
@@ -55,6 +51,11 @@ export const PROPERTY_STATUSES = [
   { value: 'sold', label: 'Продано', color: '#A19AD3' },
   { value: 'reserved', label: 'Зарезервовано', color: '#FF9149' },
   { value: 'inactive', label: 'Неактивний', color: '#EF476F' },
+];
+
+export const PROPERTY_DEAL_TYPES = [
+  { value: 'sale', label: 'Продаж' },
+  { value: 'rent', label: 'Оренда' },
 ];
 
 export const TASK_TYPES = [

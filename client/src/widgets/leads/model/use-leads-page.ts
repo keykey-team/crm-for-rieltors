@@ -4,17 +4,28 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 
-import { LEAD_STATUSES, LEAD_SOURCES } from '@/shared/lib/constants';
+import { DEAL_STAGES, LEAD_SOURCES } from '@/shared/lib/constants';
 import { confirmAction } from '@/shared/lib/confirm-action';
+import { normalizeStageOption } from '@/shared/lib/funnel-stages';
 import { useTranslation } from '@/shared/lib/i18n/context';
 import type { Lead, LeadUpsertInput } from '@/entities/lead';
 import { bulkLeadsAction, createLead, deleteLead, getLeads, importLeads, updateLead } from '@/entities/lead';
+import { getFunnelStages } from '@/entities/settings';
 import type { User } from '@/entities/user';
 import { getUsers } from '@/entities/user';
+
+type LeadStatusOption = { value: string; label: string; color: string };
+
+function toIsoDate(value?: string | null) {
+  if (!value) return null;
+  const date = new Date(`${value}T00:00`);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
 
 export function useLeadsPage() {
   const { t } = useTranslation();
   const searchParams = useSearchParams();
+  const fallbackLeadStatuses = DEAL_STAGES.map((stage) => normalizeStageOption(stage, t)) as LeadStatusOption[];
 
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,6 +34,7 @@ export function useLeadsPage() {
   const [sourceFilter, setSourceFilter] = useState('');
   const [managerFilter, setManagerFilter] = useState('');
   const [managers, setManagers] = useState<User[]>([]);
+  const [leadStatuses, setLeadStatuses] = useState<LeadStatusOption[]>(fallbackLeadStatuses);
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState<Lead | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
@@ -34,7 +46,12 @@ export function useLeadsPage() {
 
   useEffect(() => {
     getUsers().then(setManagers).catch(() => {});
-  }, []);
+    getFunnelStages().then((stages) => {
+      if (Array.isArray(stages) && stages.length > 0) {
+        setLeadStatuses(stages.map((stage) => normalizeStageOption(stage, t)) as LeadStatusOption[]);
+      }
+    }).catch(() => {});
+  }, [t]);
 
   useEffect(() => {
     if (searchParams.get('create') === '1') {
@@ -96,6 +113,11 @@ export function useLeadsPage() {
 
   const onManagerChange = async (id: string, managerId: string | null) => {
     await updateLead(id, { assignedToId: managerId ?? '' });
+    fetchLeads();
+  };
+
+  const onLastContactChange = async (id: string, lastContact: string | null) => {
+    await updateLead(id, { lastContact: toIsoDate(lastContact) });
     fetchLeads();
   };
 
@@ -224,6 +246,7 @@ export function useLeadsPage() {
     onStatusChange,
     onSourceChange,
     onManagerChange,
+    onLastContactChange,
     quickCall,
     quickMessage,
     toggleSelect,
@@ -236,7 +259,7 @@ export function useLeadsPage() {
     openEditDialog,
     closeDialog,
     handleSort,
-    leadStatuses: LEAD_STATUSES,
+    leadStatuses,
     leadSources: LEAD_SOURCES,
   };
 }

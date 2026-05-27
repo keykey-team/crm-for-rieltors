@@ -9,9 +9,18 @@ export async function findLeadCommunications(leadId: string) {
 }
 
 export async function createLeadCommunication(data: Record<string, unknown>) {
-  return prisma.communication.create({
-    data: data as any,
-    include: { user: { select: { id: true, name: true } } },
+  return prisma.$transaction(async (tx) => {
+    const communication = await tx.communication.create({
+      data: data as any,
+      include: { user: { select: { id: true, name: true } } },
+    });
+
+    await tx.lead.update({
+      where: { id: String(data.leadId) },
+      data: { lastContact: communication.createdAt },
+    });
+
+    return communication;
   });
 }
 

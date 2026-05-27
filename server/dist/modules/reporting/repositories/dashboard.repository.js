@@ -7,7 +7,7 @@ const prisma_1 = require("../../../common/infrastructure/db/prisma");
 async function getDashboardCounts(where, todayStart, todayEnd) {
     const [totalLeads, newLeads, totalDeals, activeDeals, totalProperties, totalTasks, pendingTasks, todayTasks] = await Promise.all([
         prisma_1.prisma.lead.count({ where: where }),
-        prisma_1.prisma.lead.count({ where: { ...where, status: 'new' } }),
+        prisma_1.prisma.lead.count({ where: { ...where, status: 'new_lead' } }),
         prisma_1.prisma.deal.count({ where: where }),
         prisma_1.prisma.deal.count({ where: { ...where, stage: { notIn: ['closed', 'rejected'] } } }),
         prisma_1.prisma.property.count(),

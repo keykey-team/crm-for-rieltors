@@ -6,3 +6,4 @@ export * from '@/shared/ui/dialog';
 export * from '@/shared/ui/toast';
 export * from '@/shared/ui/toaster';
 export * from '@/shared/ui/phone-input';
+export * from '@/shared/ui/date-picker';

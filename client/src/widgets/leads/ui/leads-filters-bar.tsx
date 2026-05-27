@@ -7,6 +7,7 @@ import { cn } from '@/shared/lib/utils';
 
 type Option = { value: string; label: string };
 type Manager = { id: string; name?: string | null; email?: string | null };
+type StatusOption = { value: string; label: string; color?: string };
 
 interface Props {
   search: string;
@@ -18,7 +19,7 @@ interface Props {
   managerFilter: string;
   setManagerFilter: (value: string) => void;
   managers: Manager[];
-  leadStatuses: Option[];
+  leadStatuses: StatusOption[];
   leadSources: Option[];
   viewMode: 'table' | 'kanban';
   setViewMode: (mode: 'table' | 'kanban') => void;

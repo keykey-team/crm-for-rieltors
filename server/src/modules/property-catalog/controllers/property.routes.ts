@@ -20,6 +20,7 @@ router.get('/properties', async (req, res) => {
       search: typeof req.query.search === 'string' ? req.query.search : '',
       status: typeof req.query.status === 'string' ? req.query.status : '',
       type: typeof req.query.type === 'string' ? req.query.type : '',
+      dealType: typeof req.query.dealType === 'string' ? req.query.dealType : '',
     }),
   );
 });

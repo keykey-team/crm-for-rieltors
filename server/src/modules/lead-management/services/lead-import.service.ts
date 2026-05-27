@@ -26,7 +26,7 @@ export async function importLeads(input: Record<string, unknown>, userId?: strin
         phone,
         email: String(row.email || '').trim() || null,
         source: row.source || 'manual',
-        status: 'new',
+        status: 'new_lead',
         needType: row.needType || 'buy',
         budget: row.budget ? parseFloat(String(row.budget)) : null,
         districts: String(row.districts || '').trim() || null,

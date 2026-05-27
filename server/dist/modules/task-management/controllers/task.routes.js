@@ -3,6 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.taskRoutes = void 0;
 const async_handler_1 = require("../../../common/infrastructure/http/async-handler");
 const task_service_1 = require("../services/task.service");
+const middleware_1 = require("../../../common/validation/middleware");
+const task_schemas_1 = require("./task.schemas");
 const router = (0, async_handler_1.createAsyncRouter)();
 router.get('/tasks', async (req, res) => {
     res.json(await (0, task_service_1.listTasks)({
@@ -13,11 +15,11 @@ router.get('/tasks', async (req, res) => {
         role: req.user?.role,
     }));
 });
-router.post('/tasks', async (req, res) => {
-    res.status(201).json(await (0, task_service_1.addTask)(req.user.id, req.body ?? {}));
+router.post('/tasks', (0, middleware_1.validateBody)(task_schemas_1.createTaskSchema), async (req, res) => {
+    res.status(201).json(await (0, task_service_1.addTask)(req.user.id, req.body));
 });
-router.put('/tasks/:id', async (req, res) => {
-    res.json(await (0, task_service_1.changeTask)(req.params.id, req.body ?? {}));
+router.put('/tasks/:id', (0, middleware_1.validateBody)(task_schemas_1.updateTaskSchema), async (req, res) => {
+    res.json(await (0, task_service_1.changeTask)(req.params.id, req.body));
 });
 router.delete('/tasks/:id', async (req, res) => {
     res.json(await (0, task_service_1.removeTask)(req.params.id));

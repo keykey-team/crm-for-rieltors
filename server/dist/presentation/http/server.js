@@ -10,9 +10,16 @@ const env_1 = require("../../configuration/env");
 const error_handler_1 = require("../../common/infrastructure/http/error-handler");
 const routes_1 = require("./routes");
 const app = (0, express_1.default)();
+function isAllowedOrigin(origin) {
+    if (!origin)
+        return true;
+    if (env_1.env.clientUrls.includes(origin))
+        return true;
+    return env_1.env.nodeEnv === 'development' && /^https:\/\/[a-z0-9-]+\.ngrok-free\.app$/i.test(origin);
+}
 app.use((0, cors_1.default)({
     origin(origin, callback) {
-        if (!origin || env_1.env.clientUrls.includes(origin)) {
+        if (isAllowedOrigin(origin)) {
             callback(null, true);
             return;
         }

@@ -2,16 +2,18 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.calendarRoutes = void 0;
 const async_handler_1 = require("../../../common/infrastructure/http/async-handler");
+const middleware_1 = require("../../../common/validation/middleware");
+const calendar_schemas_1 = require("./calendar.schemas");
 const calendar_service_1 = require("../services/calendar.service");
 const router = (0, async_handler_1.createAsyncRouter)();
 router.get('/events', async (req, res) => {
     res.json(await (0, calendar_service_1.listEvents)(typeof req.query.month === 'string' ? req.query.month : '', typeof req.query.year === 'string' ? req.query.year : ''));
 });
-router.post('/events', async (req, res) => {
-    res.status(201).json(await (0, calendar_service_1.addEvent)(req.user?.id, req.body ?? {}));
+router.post('/events', (0, middleware_1.validateBody)(calendar_schemas_1.createEventSchema), async (req, res) => {
+    res.status(201).json(await (0, calendar_service_1.addEvent)(req.user?.id, req.body));
 });
-router.put('/events/:id', async (req, res) => {
-    res.json(await (0, calendar_service_1.changeEvent)(req.params.id, req.body ?? {}));
+router.put('/events/:id', (0, middleware_1.validateBody)(calendar_schemas_1.updateEventSchema), async (req, res) => {
+    res.json(await (0, calendar_service_1.changeEvent)(req.params.id, req.body));
 });
 router.delete('/events/:id', async (req, res) => {
     res.json(await (0, calendar_service_1.removeEvent)(req.params.id));
