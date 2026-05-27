@@ -3,6 +3,8 @@ import { createAsyncRouter } from '../../../common/infrastructure/http/async-han
 import { authMiddleware } from '../../../common/infrastructure/middleware/auth.middleware';
 import { env } from '../../../configuration/env';
 import { getSessionUser, login, signup } from '../services/auth.service';
+import { validateBody } from '../../../common/validation/middleware';
+import { loginSchema, signupSchema } from './iam.schemas';
 
 const AUTH_COOKIE_NAME = 'crm_token';
 const router = createAsyncRouter();
@@ -24,14 +26,14 @@ function setSessionCookie(res: Response, token: string): void {
   });
 }
 
-router.post('/login', async (req, res) => {
+router.post('/login', validateBody(loginSchema), async (req, res) => {
   const result = await login(req.body ?? {});
   setSessionCookie(res, result.token);
   const includeToken = req.get('x-return-session-token') === 'true';
   res.json(includeToken ? { ...result.user, backendToken: result.token } : result.user);
 });
 
-router.post('/signup', async (req, res) => {
+router.post('/signup', validateBody(signupSchema), async (req, res) => {
   res.status(201).json(await signup(req.body ?? {}));
 });
 

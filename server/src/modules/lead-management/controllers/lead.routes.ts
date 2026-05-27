@@ -7,12 +7,22 @@ import {
   listLeadDistributionRules,
   removeLeadDistributionRule,
 } from '../services/lead-distribution.service';
+import { validateBody } from '../../../common/validation/middleware';
+import {
+  createLeadSchema,
+  updateLeadSchema,
+  bulkLeadSchema,
+  importLeadsSchema,
+  createDistributionRuleSchema,
+  updateDistributionRuleSchema,
+  createCommunicationSchema,
+} from './lead.schemas';
 
 const router = createAsyncRouter();
 
 router.get('/lead-distribution', async (_req, res) => res.json(await listLeadDistributionRules()));
-router.post('/lead-distribution', async (req, res) => res.status(201).json(await addLeadDistributionRule(req.body ?? {})));
-router.put('/lead-distribution', async (req, res) => res.json(await changeLeadDistributionRule(req.body ?? {})));
+router.post('/lead-distribution', validateBody(createDistributionRuleSchema), async (req, res) => res.status(201).json(await addLeadDistributionRule(req.body)));
+router.put('/lead-distribution', validateBody(updateDistributionRuleSchema), async (req, res) => res.json(await changeLeadDistributionRule(req.body)));
 router.delete('/lead-distribution', async (req, res) => res.json(await removeLeadDistributionRule(req.query.id)));
 
 router.get('/leads', async (req, res) => {
@@ -30,12 +40,12 @@ router.get('/leads', async (req, res) => {
   );
 });
 
-router.post('/leads', async (req, res) => res.status(201).json(await addLead(req.body ?? {}, req.user?.id)));
+router.post('/leads', validateBody(createLeadSchema), async (req, res) => res.status(201).json(await addLead(req.body, req.user?.id)));
 router.get('/leads/:id', async (req, res) => res.json(await getLead(req.params.id, req.user?.id, req.user?.role)));
-router.put('/leads/:id', async (req, res) => res.json(await changeLead(req.params.id, req.body ?? {}, req.user?.id, req.user?.role)));
+router.put('/leads/:id', validateBody(updateLeadSchema), async (req, res) => res.json(await changeLead(req.params.id, req.body, req.user?.id, req.user?.role)));
 router.delete('/leads/:id', async (req, res) => res.json(await removeLead(req.params.id)));
-router.post('/leads/bulk', async (req, res) => res.json(await bulkLeadAction(req.body ?? {}, req.user?.id, req.user?.role)));
-router.post('/leads/import', async (req, res) => res.json(await importLeads(req.body ?? {}, req.user?.id)));
+router.post('/leads/bulk', validateBody(bulkLeadSchema), async (req, res) => res.json(await bulkLeadAction(req.body, req.user?.id, req.user?.role)));
+router.post('/leads/import', validateBody(importLeadsSchema), async (req, res) => res.json(await importLeads(req.body, req.user?.id)));
 
 export const leadRoutes = router;
 
