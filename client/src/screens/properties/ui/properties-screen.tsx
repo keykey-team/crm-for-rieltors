@@ -175,7 +175,7 @@ export function PropertiesClient() {
                   {p.price && (
                     <div className="bg-emerald-500/10 dark:bg-emerald-500/15 rounded-xl p-3">
                       <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wider mb-0.5">{t('common.price')}</p>
-                      <p className="font-mono font-bold text-emerald-700 dark:text-emerald-300">{formatPrice(p.price)}</p>
+                      <p className="font-mono font-bold text-emerald-700 dark:text-emerald-300">{formatPrice(p.price, p.currency ?? 'USD')}</p>
                     </div>
                   )}
                   {p.area && (

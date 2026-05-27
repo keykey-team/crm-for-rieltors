@@ -25,6 +25,7 @@ function normalizeDealPayload(payload: Partial<DealUpsertInput>): Partial<DealUp
   return {
     title: normalizeText(payload.title),
     stage: normalizeText(payload.stage),
+    dealType: normalizeText(payload.dealType ?? undefined),
     funnelId: normalizeId(payload.funnelId),
     amount: normalizeNumber(payload.amount),
     commission: normalizeNumber(payload.commission),

@@ -8,8 +8,7 @@ import { LEAD_SOURCES } from '@/shared/lib/constants';
 import type { Lead } from '@/entities/lead';
 import type { User } from '@/entities/user';
 import { LeadAvatar } from '@/entities/lead';
-import { formatDate } from '@/shared/lib/format';
-import { getInitials } from '@/shared/lib/format';
+import { formatDate, formatPrice, getInitials } from '@/shared/lib/format';
 import { EmptyState } from '@/shared/ui/empty-state';
 import { DatePicker } from '@/shared/ui';
 import { useLeadTableUi } from '@/features/update-lead';
@@ -44,7 +43,7 @@ function toDateInputValue(dateLike?: string | null) {
 }
 
 export function LeadTable({ leads, loading, onEdit, onDelete, onCall, onMessage, onStatusChange, onSourceChange, onManagerChange, onLastContactChange, managers = [], sortBy, sortDir, onSort, selectedIds, onToggleSelect, onToggleAll, leadStatuses }: Props) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const router = useRouter();
   const { activeDropdown, setActiveDropdown, toggleDropdown, sortedLeads } = useLeadTableUi(leads, sortBy, sortDir);
 
@@ -118,7 +117,7 @@ export function LeadTable({ leads, loading, onEdit, onDelete, onCall, onMessage,
                     </div>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{lead.phone}</td>
-                  <td className="px-4 py-3 text-xs font-medium text-foreground">{lead.budget != null ? lead.budget.toLocaleString() : '—'}</td>
+                  <td className="px-4 py-3 text-xs font-medium text-foreground">{formatPrice(lead.budget, 'USD', locale)}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{getNeedTypeLabel(lead.needType)}</td>
                   {/* Source dropdown */}
                   <td className="px-4 py-3" onClick={e => e.stopPropagation()}>

@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { cn } from '@/shared/lib/utils';
 import { LEAD_STATUSES, LEAD_SOURCES } from '@/shared/lib/constants';
 import { normalizeStageValue, resolveDealStageLabel } from '@/shared/lib/funnel-stages';
-import { formatDate, formatDateTime, getInitials } from '@/shared/lib/format';
+import { formatDate, formatDateTime, formatPrice, getInitials } from '@/shared/lib/format';
 import { toast } from 'sonner';
 import { useTranslation } from '@/shared/lib/i18n/context';
 import { getLeadCommunications, createLeadCommunication } from '@/entities/communication';
@@ -97,7 +97,7 @@ export function LeadDetailClient({ leadId }: { leadId: string }) {
               {lead.source && <div className="flex items-center gap-2"><span className="text-muted-foreground">{t('common.source')}:</span><span>{t(`const.leadSource.${lead.source}`) || LEAD_SOURCES.find(s => s.value === lead.source)?.label || lead.source}</span></div>}
               {lead.needType && <div className="flex items-center gap-2"><span className="text-muted-foreground">{t('common.needType')}:</span><span>{t(`const.needType.${lead.needType}`) || lead.needType}</span></div>}
               {lead.priority && <div className="flex items-center gap-2"><span className="text-muted-foreground">{t('common.priority')}:</span><span>{t(`const.priority.${lead.priority}`) || lead.priority}</span></div>}
-              {lead.budget && <div className="flex items-center gap-2"><span className="text-muted-foreground">{t('leads.budget')}:</span><span className="font-mono font-bold">${lead.budget?.toLocaleString()}</span></div>}
+              {lead.budget && <div className="flex items-center gap-2"><span className="text-muted-foreground">{t('leads.budget')}:</span><span className="font-mono font-bold">{formatPrice(lead.budget, 'USD', locale)}</span></div>}
               <div className="flex items-center gap-2"><span className="text-muted-foreground">{t('leads.lastContact')}:</span><span>{lead.lastContact ? formatDate(lead.lastContact, locale) : '—'}</span></div>
               {lead.districts && <div className="flex items-center gap-2"><span className="text-muted-foreground">{t('leads.districtLabel')}:</span><span>{lead.districts}</span></div>}
               {lead.propertyType && <div className="flex items-center gap-2"><span className="text-muted-foreground">{t('leads.typeLabel')}:</span><span>{t(`const.propertyType.${lead.propertyType}`) || lead.propertyType}</span></div>}

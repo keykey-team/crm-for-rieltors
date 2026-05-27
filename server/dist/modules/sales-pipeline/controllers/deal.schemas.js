@@ -4,6 +4,7 @@ exports.updateDealCustomFieldsSchema = exports.addDealCustomFieldSchema = export
 const zod_1 = require("zod");
 const common_1 = require("../../../common/validation/common");
 const CURRENCIES = ['UAH', 'USD', 'EUR'];
+const DEAL_TYPES = ['sale', 'rent'];
 function emptyStringToUndefined(value) {
     if (value === null || value === undefined)
         return undefined;
@@ -35,6 +36,7 @@ const dealOptionalId = zod_1.z.preprocess((value) => emptyStringToUndefined(valu
 const dealBase = {
     title: (0, common_1.shortText)(150),
     stage: (0, common_1.optionalText)(80),
+    dealType: zod_1.z.enum(DEAL_TYPES).optional(),
     funnelId: dealOptionalId,
     amount: dealOptionalDecimal,
     commission: dealOptionalPercentage,
@@ -52,6 +54,7 @@ exports.convertLeadToDealSchema = zod_1.z
     .object({
     title: (0, common_1.shortText)(150).optional(),
     stage: (0, common_1.optionalText)(80),
+    dealType: zod_1.z.enum(DEAL_TYPES).optional(),
     funnelId: dealOptionalId,
     amount: common_1.optionalPositiveDecimal,
     currency: zod_1.z.enum(CURRENCIES).optional(),

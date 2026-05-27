@@ -23,7 +23,7 @@ export async function searchRecords(q: string, where: Record<string, unknown>) {
           { notes: { contains: q, mode: 'insensitive' } },
         ],
       },
-      select: { id: true, title: true, stage: true, amount: true },
+      select: { id: true, title: true, stage: true, amount: true, currency: true },
       take: 5,
     }),
     prisma.property.findMany({

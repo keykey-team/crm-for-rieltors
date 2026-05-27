@@ -10,6 +10,9 @@ exports.createDealComment = createDealComment;
 exports.findDealChecklist = findDealChecklist;
 exports.createDealChecklistItem = createDealChecklistItem;
 exports.updateDealChecklistItem = updateDealChecklistItem;
+exports.findLeadIdsForProperty = findLeadIdsForProperty;
+exports.findDealIdsByPropertyId = findDealIdsByPropertyId;
+exports.bulkSetDealStage = bulkSetDealStage;
 const prisma_1 = require("../../../common/infrastructure/db/prisma");
 async function findDeals(where) {
     return prisma_1.prisma.deal.findMany({
@@ -59,4 +62,29 @@ async function createDealChecklistItem(data) {
 }
 async function updateDealChecklistItem(id, completed) {
     return prisma_1.prisma.dealChecklist.update({ where: { id }, data: { completed: completed } });
+}
+async function findLeadIdsForProperty(propertyId, excludeLeadId) {
+    const leads = await prisma_1.prisma.lead.findMany({
+        where: {
+            deals: { some: { propertyId } },
+            ...(excludeLeadId ? { id: { not: excludeLeadId } } : {}),
+        },
+        select: { id: true },
+    });
+    return leads.map((l) => l.id);
+}
+async function findDealIdsByPropertyId(propertyId, excludeDealId) {
+    const deals = await prisma_1.prisma.deal.findMany({
+        where: {
+            propertyId,
+            ...(excludeDealId ? { id: { not: excludeDealId } } : {}),
+        },
+        select: { id: true },
+    });
+    return deals.map((d) => d.id);
+}
+async function bulkSetDealStage(ids, stage) {
+    if (ids.length === 0)
+        return;
+    await prisma_1.prisma.deal.updateMany({ where: { id: { in: ids } }, data: { stage } });
 }

@@ -5,7 +5,7 @@ import { Phone, MessageSquare, Edit2 } from 'lucide-react';
 
 import { useTranslation } from '@/shared/lib/i18n/context';
 import { LEAD_SOURCES } from '@/shared/lib/constants';
-import { formatDate } from '@/shared/lib/format';
+import { formatDate, formatPrice } from '@/shared/lib/format';
 import type { Lead } from '@/entities/lead';
 import { LeadAvatar } from '@/entities/lead';
 import { useLeadKanbanUi } from '@/features/update-lead';
@@ -21,7 +21,7 @@ interface Props {
 }
 
 export function LeadKanban({ leads, loading, onEdit, onStatusChange, onCall, onMessage, leadStatuses }: Props) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const router = useRouter();
   const { handleDragStart, handleDrop, byStatus } = useLeadKanbanUi(onStatusChange);
 
@@ -85,7 +85,7 @@ export function LeadKanban({ leads, loading, onEdit, onStatusChange, onCall, onM
                   )}
 
                   <div className="mt-2 space-y-1">
-                    <p className="text-[11px] text-muted-foreground">{t('common.budget')}: {lead.budget != null ? lead.budget.toLocaleString() : '—'}</p>
+                    <p className="text-[11px] text-muted-foreground">{t('common.budget')}: {formatPrice(lead.budget, 'USD', locale)}</p>
                     <p className="text-[11px] text-muted-foreground">{t('leads.form.needType')}: {getNeedTypeLabel(lead.needType)}</p>
                     <p className="text-[11px] text-muted-foreground">{t('leads.lastContact')}: {lead.lastContact ? formatDate(lead.lastContact) : '—'}</p>
                   </div>

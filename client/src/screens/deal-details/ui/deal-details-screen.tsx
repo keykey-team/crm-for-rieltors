@@ -615,13 +615,16 @@ export function DealDetailClient({ dealId }: { dealId: string }) {
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">{t('deals.amount')}</label>
                 <div className="flex gap-2">
-                  <input
-                    type="number"
-                    autoFocus
-                    value={financeForm.amount}
-                    onChange={e => setFinanceForm(f => ({ ...f, amount: e.target.value }))}
-                    className="flex-1 px-2.5 py-1.5 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
+                  <div className="relative flex-1">
+                    <input
+                      type="number"
+                      autoFocus
+                      value={financeForm.amount}
+                      onChange={e => setFinanceForm(f => ({ ...f, amount: e.target.value }))}
+                      className="w-full pl-2.5 pr-8 py-1.5 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+                    <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">{financeForm.currency === 'UAH' ? '₴' : financeForm.currency === 'EUR' ? '€' : '$'}</span>
+                  </div>
                   <select
                     value={financeForm.currency}
                     onChange={e => setFinanceForm(f => ({ ...f, currency: e.target.value }))}

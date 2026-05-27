@@ -44,6 +44,7 @@ export async function addDeal(input: Record<string, unknown>, userId?: string) {
   return createDeal({
     title: input.title,
     stage: input.stage ?? 'new_lead',
+    dealType: input.dealType ?? null,
     funnelId,
     amount: parseFloatOrNull(input.amount),
     commission: parseFloatOrNull(input.commission),
@@ -65,6 +66,7 @@ export async function changeDeal(id: string, input: Record<string, unknown>) {
   const result = await updateDeal(id, {
     ...(input.title !== undefined ? { title: input.title } : {}),
     ...(input.stage !== undefined ? { stage: input.stage } : {}),
+    ...(input.dealType !== undefined ? { dealType: input.dealType || null } : {}),
     ...(input.funnelId !== undefined ? { funnelId: input.funnelId || null } : {}),
     ...(input.amount !== undefined ? { amount: parseFloatOrNull(input.amount) } : {}),
     ...(input.commission !== undefined ? { commission: parseFloatOrNull(input.commission) } : {}),
@@ -100,6 +102,7 @@ export async function convertLeadToDeal(leadId: string, input: Record<string, un
   const deal = await createDeal({
     title: input.title || `Угода: ${lead.firstName} ${lead.lastName || ''}`.trim(),
     stage: 'new_lead',
+    dealType: input.dealType ?? lead.needType ?? null,
     funnelId,
     leadId: lead.id,
     assignedToId: lead.assignedToId || userId || null,

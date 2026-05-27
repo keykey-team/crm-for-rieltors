@@ -64,7 +64,7 @@ export function SearchPalette() {
     }));
     results.deals?.forEach((d: any) => allItems.push({
       type: 'deal', href: `/deals/${d.id}`,
-      label: d.title, sub: d.amount ? formatPrice(d.amount, 'USD', locale) : undefined,
+      label: d.title, sub: d.amount ? formatPrice(d.amount, d.currency || 'USD', locale) : undefined,
     }));
     results.properties?.forEach((p: any) => allItems.push({
       type: 'property', href: `/properties`,

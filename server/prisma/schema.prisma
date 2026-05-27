@@ -126,6 +126,7 @@ model Deal {
   id                String                 @id @default(cuid())
   title             String
   stage             String                 @default("new_lead")
+  dealType          String?
   funnelId          String?
   amount            Float?
   commission        Float?

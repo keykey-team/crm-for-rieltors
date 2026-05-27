@@ -58,6 +58,7 @@ export const dealSchema = z.object({
     .string({ required_error: 'Название обязательно' })
     .min(1, 'Название обязательно')
     .max(150, 'Название слишком длинное'),
+  dealType: z.enum(['sale', 'rent']).optional(),
   amount: z
     .number({ invalid_type_error: 'Сумма должна быть числом' })
     .min(0, 'Сумма не может быть отрицательной')

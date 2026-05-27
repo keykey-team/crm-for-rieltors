@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 require("dotenv/config");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const prisma_1 = require("../common/infrastructure/db/prisma");
+const funnel_repository_1 = require("../modules/sales-pipeline/repositories/funnel.repository");
 const email = process.env.SUPER_ADMIN_EMAIL || 'superadmin@local.crm';
 const password = process.env.SUPER_ADMIN_PASSWORD || 'SuperAdmin123!';
 const name = process.env.SUPER_ADMIN_NAME || 'Super Admin';
@@ -40,6 +41,7 @@ async function main() {
         },
     });
     console.log(`Super admin ready: ${user.email} (${user.role}, ${user.accountType}, ${user.plan})`);
+    await (0, funnel_repository_1.ensureSystemStages)();
 }
 main()
     .catch((error) => {

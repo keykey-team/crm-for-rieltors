@@ -9,6 +9,7 @@ import {
 } from '../../../common/validation/common';
 
 const CURRENCIES = ['UAH', 'USD', 'EUR'] as const;
+const DEAL_TYPES = ['sale', 'rent'] as const;
 
 function emptyStringToUndefined(value: unknown) {
   if (value === null || value === undefined) return undefined;
@@ -41,6 +42,7 @@ const dealOptionalId = z.preprocess((value) => emptyStringToUndefined(value), op
 const dealBase = {
   title: shortText(150),
   stage: optionalText(80),
+  dealType: z.enum(DEAL_TYPES).optional(),
   funnelId: dealOptionalId,
   amount: dealOptionalDecimal,
   commission: dealOptionalPercentage,
@@ -61,6 +63,7 @@ export const convertLeadToDealSchema = z
   .object({
     title: shortText(150).optional(),
     stage: optionalText(80),
+    dealType: z.enum(DEAL_TYPES).optional(),
     funnelId: dealOptionalId,
     amount: optionalPositiveDecimal,
     currency: z.enum(CURRENCIES).optional(),

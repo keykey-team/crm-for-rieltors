@@ -25,7 +25,7 @@ async function searchRecords(q, where) {
                     { notes: { contains: q, mode: 'insensitive' } },
                 ],
             },
-            select: { id: true, title: true, stage: true, amount: true },
+            select: { id: true, title: true, stage: true, amount: true, currency: true },
             take: 5,
         }),
         prisma_1.prisma.property.findMany({

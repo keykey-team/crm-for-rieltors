@@ -30,6 +30,7 @@ function createEmptyForm(deal: Deal | null, preferredFunnelId?: string | null): 
   return {
     title: deal?.title ?? '',
     stage: deal?.stage ?? 'new_lead',
+    dealType: deal?.dealType ?? '',
     funnelId: deal?.funnelId ?? preferredFunnelId ?? '',
     amount: deal?.amount?.toString() ?? '',
     commission: deal?.commission?.toString() ?? '',
@@ -155,6 +156,20 @@ export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => v
   const selectedLead = leads.find((l) => l.id === form.leadId);
   const selectedProp = properties.find((p) => p.id === form.propertyId);
 
+  const applyPropertyDefaults = useCallback((property: Property | null | undefined) => {
+    if (!property) return;
+
+    setForm((prev) => ({
+      ...prev,
+      propertyId: property.id,
+      amount: property.price != null ? property.price.toString() : prev.amount,
+      currency: property.currency ?? prev.currency ?? 'USD',
+      dealType: property.dealTypes?.[0] ?? prev.dealType,
+    }));
+    setErrors((prev) => ({ ...prev, propertyId: '', amount: '', currency: '', dealType: '' }));
+    setSubmitError('');
+  }, [setForm]);
+
   const createLeadOption = async () => {
     const normalizedLead = {
       firstName: newLeadForm.firstName.trim(),
@@ -216,7 +231,7 @@ export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => v
         dealTypes: validation.data.dealTypes,
       });
       setProperties((prev) => [property, ...prev.filter((item) => item.id !== property.id)]);
-      setForm((prev) => ({ ...prev, propertyId: property.id }));
+      applyPropertyDefaults(property);
       setPropSearch('');
       setPropOpen(false);
       resetNewPropFormState();
@@ -234,6 +249,7 @@ export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => v
     const commissionVal = toNum(form.commission as string | undefined);
     const validation = parseForm(dealSchema, {
       title: form.title,
+      dealType: form.dealType || undefined,
       amount: Number.isNaN(amountVal) ? undefined : amountVal,
       commission: Number.isNaN(commissionVal) ? undefined : commissionVal,
       notes: form.notes || undefined,
@@ -245,6 +261,7 @@ export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => v
     try {
       await onSave({
         ...form,
+        dealType: form.dealType || null,
         funnelId: form.funnelId || null,
         leadId: form.leadId || null,
         propertyId: form.propertyId || null,
@@ -296,6 +313,7 @@ export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => v
     filteredProps,
     selectedLead,
     selectedProp,
+    applyPropertyDefaults,
     setLeadOpen,
     setPropOpen,
     setShowNewLeadForm,

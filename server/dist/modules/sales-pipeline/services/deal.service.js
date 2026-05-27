@@ -36,6 +36,7 @@ async function addDeal(input, userId) {
     return (0, deal_repository_1.createDeal)({
         title: input.title,
         stage: input.stage ?? 'new_lead',
+        dealType: input.dealType ?? null,
         funnelId,
         amount: parseFloatOrNull(input.amount),
         commission: parseFloatOrNull(input.commission),
@@ -53,9 +54,10 @@ async function getDeal(id) {
     return deal;
 }
 async function changeDeal(id, input) {
-    return (0, deal_repository_1.updateDeal)(id, {
+    const result = await (0, deal_repository_1.updateDeal)(id, {
         ...(input.title !== undefined ? { title: input.title } : {}),
         ...(input.stage !== undefined ? { stage: input.stage } : {}),
+        ...(input.dealType !== undefined ? { dealType: input.dealType || null } : {}),
         ...(input.funnelId !== undefined ? { funnelId: input.funnelId || null } : {}),
         ...(input.amount !== undefined ? { amount: parseFloatOrNull(input.amount) } : {}),
         ...(input.commission !== undefined ? { commission: parseFloatOrNull(input.commission) } : {}),
@@ -64,6 +66,17 @@ async function changeDeal(id, input) {
         ...(input.propertyId !== undefined ? { propertyId: input.propertyId } : {}),
         ...(input.notes !== undefined ? { notes: input.notes } : {}),
     });
+    if (input.stage === 'success') {
+        const deal = await (0, deal_repository_1.findDeal)(id);
+        if (deal?.propertyId) {
+            const otherDealIds = await (0, deal_repository_1.findDealIdsByPropertyId)(deal.propertyId, id);
+            if (otherDealIds.length > 0) {
+                await (0, deal_repository_1.bulkSetDealStage)(otherDealIds, 'object_cancelled');
+                return { ...result, _affectedCount: otherDealIds.length };
+            }
+        }
+    }
+    return result;
 }
 async function removeDeal(id) {
     await (0, deal_repository_1.deleteDeal)(id);
@@ -77,6 +90,7 @@ async function convertLeadToDeal(leadId, input, userId) {
     const deal = await (0, deal_repository_1.createDeal)({
         title: input.title || `Угода: ${lead.firstName} ${lead.lastName || ''}`.trim(),
         stage: 'new_lead',
+        dealType: input.dealType ?? lead.needType ?? null,
         funnelId,
         leadId: lead.id,
         assignedToId: lead.assignedToId || userId || null,

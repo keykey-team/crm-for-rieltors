@@ -37,6 +37,7 @@ export function DealFormDialog({ deal, onSave, onClose, preferredFunnelId }: { d
     filteredProps,
     selectedLead,
     selectedProp,
+    applyPropertyDefaults,
     setLeadOpen,
     setPropOpen,
     setShowNewLeadForm,
@@ -163,7 +164,7 @@ export function DealFormDialog({ deal, onSave, onClose, preferredFunnelId }: { d
                     </button>
                     <div className="overflow-y-auto max-h-44">
                       <button type="button" onClick={() => { upd('propertyId', ''); setPropOpen(false); setPropSearch(''); }} className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50">— {t('common.notSelected')}</button>
-                      {filteredProps.map((p) => <button type="button" key={p.id} onClick={() => { upd('propertyId', p.id); setPropOpen(false); setPropSearch(''); }} className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50">{p.title}{p.dealTypes?.length ? ` • ${p.dealTypes.map(getDealTypeLabel).join(', ')}` : ''}</button>)}
+                      {filteredProps.map((p) => <button type="button" key={p.id} onClick={() => { applyPropertyDefaults(p); setPropOpen(false); setPropSearch(''); }} className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50">{p.title}{p.dealTypes?.length ? ` • ${p.dealTypes.map(getDealTypeLabel).join(', ')}` : ''}</button>)}
                     </div>
                   </>
                 ) : (
@@ -215,6 +216,13 @@ export function DealFormDialog({ deal, onSave, onClose, preferredFunnelId }: { d
             </div>
           </div>
           <div>
+            <label className="mb-1.5 block text-xs text-muted-foreground">{t('properties.dealType')}</label>
+            <select value={form.dealType ?? ''} onChange={(e) => upd('dealType', e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm">
+              <option value="">{t('common.notSelected')}</option>
+              {PROPERTY_DEAL_TYPES.map((item) => <option key={item.value} value={item.value}>{getDealTypeLabel(item.value)}</option>)}
+            </select>
+          </div>
+          <div>
             <label className="mb-1.5 block text-xs text-muted-foreground">{t('settings.funnel')}</label>
             <select value={form.funnelId ?? ''} onChange={(e) => upd('funnelId', e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm">
               <option value="">{t('deals.selectFunnel')}</option>
@@ -225,10 +233,13 @@ export function DealFormDialog({ deal, onSave, onClose, preferredFunnelId }: { d
             <label className="mb-1.5 block text-xs text-muted-foreground">{t('deals.stage')}</label>
             <select value={form.stage ?? 'new_lead'} onChange={(e) => upd('stage', e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm">{stages.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}</select>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="mb-1.5 block text-xs text-muted-foreground">{t('deals.amount')}</label>
-              <input type="number" value={form.amount} onChange={(e) => upd('amount', e.target.value)} className={`w-full px-3 py-2.5 rounded-xl border bg-muted/30 text-sm ${errors.amount ? 'border-destructive/60' : 'border-border'}`} />
+              <div className="relative">
+                <input type="number" value={form.amount} onChange={(e) => upd('amount', e.target.value)} className={`w-full pl-3 pr-10 py-2.5 rounded-xl border bg-muted/30 text-sm ${errors.amount ? 'border-destructive/60' : 'border-border'}`} />
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">{form.currency === 'UAH' ? '₴' : form.currency === 'EUR' ? '€' : '$'}</span>
+              </div>
               {errors.amount && <p className="text-xs text-destructive mt-1">{errors.amount}</p>}
             </div>
             <div>
