@@ -37,7 +37,9 @@ export function validateLeadForm(
 
   if (lastName.length > 100) nextErrors.lastName = t('leads.form.validation.lastNameTooLong');
 
-  if (!phone) nextErrors.phone = t('leads.form.validation.phoneRequired');
+  // require at least 5 digits total so a bare dial code like "+380" doesn't pass
+  const phoneDigits = phone.replace(/\D/g, '');
+  if (!phone || phoneDigits.length < 5) nextErrors.phone = t('leads.form.validation.phoneRequired');
   else if (phone.length > 20) nextErrors.phone = t('leads.form.validation.phoneTooLong');
   else if (!/^[+\d\s\-().]{1,20}$/.test(phone)) nextErrors.phone = t('leads.form.validation.phoneInvalid');
 

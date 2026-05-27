@@ -54,6 +54,7 @@ export function useLeadForm(lead: Lead | null, onSave: (data: LeadUpsertInput) =
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState('');
+  const [submitted, setSubmitted] = useState(false);
   const [draftReady, setDraftReady] = useState(false);
   const [form, setForm] = useState<LeadUpsertInput>(() => createEmptyForm(lead));
 
@@ -66,6 +67,7 @@ export function useLeadForm(lead: Lead | null, onSave: (data: LeadUpsertInput) =
       setForm(createEmptyForm(lead));
       setErrors({});
       setSubmitError('');
+      setSubmitted(false);
       setDraftReady(true);
       return;
     }
@@ -73,6 +75,7 @@ export function useLeadForm(lead: Lead | null, onSave: (data: LeadUpsertInput) =
     setForm(readDraft() ?? createEmptyForm(null));
     setErrors({});
     setSubmitError('');
+    setSubmitted(false);
     setDraftReady(true);
   }, [lead]);
 
@@ -91,12 +94,19 @@ export function useLeadForm(lead: Lead | null, onSave: (data: LeadUpsertInput) =
     if (key === 'email') nextValue = normalizeEmailInput(String(val ?? '')) as LeadUpsertInput[K];
 
     setForm((prev) => ({ ...prev, [key]: nextValue }));
-    setErrors((prev) => ({ ...prev, [key as string]: '' }));
+
+    // After first failed submit: re-show the required error if phone is cleared again
+    if (submitted && key === 'phone' && !String(nextValue)) {
+      setErrors((prev) => ({ ...prev, phone: t('leads.form.validation.phoneRequired') }));
+    } else {
+      setErrors((prev) => ({ ...prev, [key as string]: '' }));
+    }
     setSubmitError('');
   };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitted(true);
     const normalizedForm: LeadUpsertInput = {
       firstName: form.firstName.trim(),
       lastName: form.lastName?.trim() || undefined,
@@ -139,6 +149,7 @@ export function useLeadForm(lead: Lead | null, onSave: (data: LeadUpsertInput) =
     setForm(createEmptyForm(lead));
     setErrors({});
     setSubmitError('');
+    setSubmitted(false);
   };
 
   return { users, saving, form, upd, submit, errors, submitError, resetForm };
