@@ -39,6 +39,7 @@ export function LeadsClient() {
     onStatusChange,
     onSourceChange,
     onManagerChange,
+    onLastContactChange,
     quickCall,
     quickMessage,
     toggleSelect,
@@ -107,6 +108,7 @@ export function LeadsClient() {
           onStatusChange={onStatusChange}
           onSourceChange={onSourceChange}
           onManagerChange={onManagerChange}
+          onLastContactChange={onLastContactChange}
           managers={managers}
           sortBy={sortBy}
           sortDir={sortDir}
@@ -114,6 +116,7 @@ export function LeadsClient() {
           selectedIds={selectedIds}
           onToggleSelect={toggleSelect}
           onToggleAll={toggleAll}
+          leadStatuses={leadStatuses}
         />
       ) : (
         <LeadKanban
@@ -123,10 +126,11 @@ export function LeadsClient() {
           onStatusChange={onStatusChange}
           onCall={quickCall}
           onMessage={quickMessage}
+          leadStatuses={leadStatuses}
         />
       )}
 
-      {showDialog && <LeadFormDialog lead={editing} onSave={onSave} onClose={closeDialog} />}
+      {showDialog && <LeadFormDialog lead={editing} onSave={onSave} onClose={closeDialog} leadStatuses={leadStatuses} />}
     </div>
   );
 }

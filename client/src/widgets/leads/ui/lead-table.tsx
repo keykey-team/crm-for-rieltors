@@ -4,13 +4,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Edit2, Trash2, Phone, MessageSquare, ExternalLink, ArrowUpDown, ArrowUp, ArrowDown, Users } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
-import { LEAD_STATUSES, LEAD_SOURCES } from '@/shared/lib/constants';
+import { LEAD_SOURCES } from '@/shared/lib/constants';
 import type { Lead } from '@/entities/lead';
 import type { User } from '@/entities/user';
 import { LeadAvatar } from '@/entities/lead';
 import { formatDate } from '@/shared/lib/format';
 import { getInitials } from '@/shared/lib/format';
 import { EmptyState } from '@/shared/ui/empty-state';
+import { DatePicker } from '@/shared/ui';
 import { useLeadTableUi } from '@/features/update-lead';
 
 interface Props {
@@ -23,6 +24,7 @@ interface Props {
   onStatusChange?: (id: string, status: string) => void;
   onSourceChange?: (id: string, source: string) => void;
   onManagerChange?: (id: string, managerId: string | null) => void;
+  onLastContactChange?: (id: string, lastContact: string | null) => void;
   managers?: User[];
   sortBy?: string;
   sortDir?: 'asc' | 'desc';
@@ -30,12 +32,29 @@ interface Props {
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   onToggleAll: () => void;
+  leadStatuses: Array<{ value: string; label: string; color?: string }>;
 }
 
-export function LeadTable({ leads, loading, onEdit, onDelete, onCall, onMessage, onStatusChange, onSourceChange, onManagerChange, managers = [], sortBy, sortDir, onSort, selectedIds, onToggleSelect, onToggleAll }: Props) {
+function toDateInputValue(dateLike?: string | null) {
+  if (!dateLike) return '';
+  const date = new Date(dateLike);
+  if (Number.isNaN(date.getTime())) return '';
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
+export function LeadTable({ leads, loading, onEdit, onDelete, onCall, onMessage, onStatusChange, onSourceChange, onManagerChange, onLastContactChange, managers = [], sortBy, sortDir, onSort, selectedIds, onToggleSelect, onToggleAll, leadStatuses }: Props) {
   const { t } = useTranslation();
   const router = useRouter();
   const { activeDropdown, setActiveDropdown, toggleDropdown, sortedLeads } = useLeadTableUi(leads, sortBy, sortDir);
+
+  const getNeedTypeLabel = (needType?: string | null) => {
+    if (!needType) return '—';
+    if (needType === 'buy') return t('leads.dialog.needBuy');
+    if (needType === 'sell') return t('leads.dialog.needSell');
+    if (needType === 'rent') return t('leads.dialog.needRent');
+    return t(`const.needType.${needType}`) || needType;
+  };
 
   const SortIcon = ({ col }: { col: string }) => {
     if (sortBy !== col) return <ArrowUpDown className="w-3 h-3 text-muted-foreground/40 ml-1" />;
@@ -62,12 +81,15 @@ export function LeadTable({ leads, loading, onEdit, onDelete, onCall, onMessage,
                 <span className="inline-flex items-center">{t('common.name')}<SortIcon col="name" /></span>
               </th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('common.phone')}</th>
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('common.budget')}</th>
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('leads.form.needType')}</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground cursor-pointer select-none hover:text-foreground transition" onClick={() => onSort?.('source')}>
                 <span className="inline-flex items-center">{t('common.source')}<SortIcon col="source" /></span>
               </th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground cursor-pointer select-none hover:text-foreground transition" onClick={() => onSort?.('status')}>
                 <span className="inline-flex items-center">{t('common.status')}<SortIcon col="status" /></span>
               </th>
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('leads.lastContact')}</th>
               <th className="text-left px-4 py-3 font-medium text-muted-foreground cursor-pointer select-none hover:text-foreground transition" onClick={() => onSort?.('manager')}>
                 <span className="inline-flex items-center">{t('common.manager')}<SortIcon col="manager" /></span>
               </th>
@@ -79,7 +101,7 @@ export function LeadTable({ leads, loading, onEdit, onDelete, onCall, onMessage,
           </thead>
           <tbody>
             {sortedLeads.map(lead => {
-              const status = LEAD_STATUSES.find(s => s.value === lead.status);
+              const status = leadStatuses.find((item) => item.value === lead.status);
               return (
                 <tr key={lead.id} className={cn("border-b border-border last:border-0 hover:bg-muted/20 transition cursor-pointer group/row", selectedIds.has(lead.id) && "bg-primary/5")} onClick={() => router.push(`/leads/${lead.id}`)}>
                   <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
@@ -96,6 +118,8 @@ export function LeadTable({ leads, loading, onEdit, onDelete, onCall, onMessage,
                     </div>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{lead.phone}</td>
+                  <td className="px-4 py-3 text-xs font-medium text-foreground">{lead.budget != null ? lead.budget.toLocaleString() : '—'}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{getNeedTypeLabel(lead.needType)}</td>
                   {/* Source dropdown */}
                   <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                     <div data-inline-dropdown>
@@ -123,22 +147,34 @@ export function LeadTable({ leads, loading, onEdit, onDelete, onCall, onMessage,
                       <button onClick={(e) => toggleDropdown(lead.id, 'status', e.currentTarget.getBoundingClientRect())}
                         className="text-xs px-2 py-0.5 rounded-full cursor-pointer hover:ring-2 hover:ring-primary/20 transition"
                         style={{ backgroundColor: status?.color + '20', color: status?.color }}>
-                        {t(`const.leadStatus.${lead.status}`) || status?.label || lead.status}
+                        {status?.label || t(`const.dealStage.${lead.status}`) || lead.status}
                       </button>
                       {activeDropdown?.id === lead.id && activeDropdown?.type === 'status' && onStatusChange && (
                         <div data-inline-dropdown className="fixed bg-card border border-border rounded-xl py-1 z-50 min-w-[140px] max-h-48 overflow-y-auto"
                           style={{ top: activeDropdown.rect.bottom + 4, left: activeDropdown.rect.left, boxShadow: 'var(--shadow-lg)' }}>
-                          {LEAD_STATUSES.map(s => (
+                          {leadStatuses.map(s => (
                             <button key={s.value} onClick={() => { onStatusChange(lead.id, s.value); setActiveDropdown(null); }}
                               className={cn('w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-muted transition',
                                 lead.status === s.value && 'font-semibold')}>
                               <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
-                              {t(`const.leadStatus.${s.value}`) || s.label}
+                              {s.label || t(`const.dealStage.${s.value}`) || s.value}
                             </button>
                           ))}
                         </div>
                       )}
                     </div>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground" onClick={e => e.stopPropagation()}>
+                    {onLastContactChange ? (
+                      <div className="min-w-[160px] max-w-[180px]" data-inline-dropdown>
+                        <DatePicker
+                          value={toDateInputValue(lead.lastContact)}
+                          onChange={(value: string) => onLastContactChange(lead.id, value || null)}
+                        />
+                      </div>
+                    ) : (
+                      lead.lastContact ? formatDate(lead.lastContact) : '—'
+                    )}
                   </td>
                   {/* Manager dropdown */}
                   <td className="px-4 py-3 text-sm" onClick={e => e.stopPropagation()}>

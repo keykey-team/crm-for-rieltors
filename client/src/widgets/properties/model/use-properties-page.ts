@@ -9,6 +9,7 @@ export function usePropertiesPage(t: (k: string) => string) {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [dealTypeFilter, setDealTypeFilter] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editProp, setEditProp] = useState<Property | null>(null);
   const [view, setView] = useState<'grid' | 'list'>('grid');
@@ -23,10 +24,11 @@ export function usePropertiesPage(t: (k: string) => string) {
       search: search || undefined,
       type: typeFilter || undefined,
       status: statusFilter || undefined,
+      dealType: dealTypeFilter || undefined,
     });
     setProperties(data);
     setLoading(false);
-  }, [search, typeFilter, statusFilter]);
+  }, [dealTypeFilter, search, statusFilter, typeFilter]);
 
   useEffect(() => {
     fetchProps();
@@ -56,6 +58,8 @@ export function usePropertiesPage(t: (k: string) => string) {
     setTypeFilter,
     statusFilter,
     setStatusFilter,
+    dealTypeFilter,
+    setDealTypeFilter,
     dialogOpen,
     setDialogOpen,
     editProp,

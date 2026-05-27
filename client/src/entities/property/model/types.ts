@@ -7,6 +7,7 @@ export interface Property {
   title: string;
   type?: string | null;
   status?: string | null;
+  dealTypes?: string[] | null;
   address?: string | null;
   district?: string | null;
   city?: string | null;
@@ -26,6 +27,7 @@ export interface PropertyUpsertInput {
   title: string;
   type?: string;
   status?: string;
+  dealTypes?: string[];
   address?: string;
   district?: string;
   city?: string;
@@ -42,4 +44,5 @@ export interface PropertiesQuery {
   search?: string;
   type?: string;
   status?: string;
+  dealType?: string;
 }

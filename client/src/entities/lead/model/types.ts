@@ -1,4 +1,4 @@
-export type LeadStatus = 'new' | 'active' | 'warm' | 'cold' | 'lost' | string;
+export type LeadStatus = string;
 export type LeadSource = 'manual' | 'telegram' | 'instagram' | 'olx' | 'dom_ria' | 'website' | 'referral' | 'other' | string;
 
 export interface Lead {
@@ -17,6 +17,7 @@ export interface Lead {
   propertyType?: string | null;
   assignedToId?: string | null;
   assignedTo?: { id: string; name?: string | null; email?: string | null; avatar?: string | null } | null;
+  lastContact?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -34,6 +35,7 @@ export interface LeadUpsertInput {
   notes?: string;
   districts?: string;
   propertyType?: string;
+  lastContact?: string | null;
   assignedToId?: string | null;
   assignedTo?: { id: string; name?: string | null; email?: string | null; avatar?: string | null } | null;
 }

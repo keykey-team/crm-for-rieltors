@@ -9,10 +9,10 @@ import {
   optionalPositiveDecimal,
   optionalCuid,
   cuid,
+  isoDate,
 } from '../../../common/validation/common';
 
 const LEAD_SOURCES = ['manual', 'telegram', 'instagram', 'olx', 'dom_ria', 'website', 'referral', 'social', 'call', 'email', 'other'] as const;
-const LEAD_STATUSES = ['new', 'active', 'warm', 'cold', 'lost', 'contacted', 'qualified', 'converted'] as const;
 const NEED_TYPES = ['buy', 'rent', 'sell', 'invest', 'other'] as const;
 const PRIORITIES = ['low', 'medium', 'high'] as const;
 
@@ -33,6 +33,7 @@ const leadBudgetInput = z.preprocess((value) => {
 }, optionalPositiveDecimal);
 
 const leadAssignedToId = z.preprocess(emptyStringToUndefined, optionalCuid);
+const leadLastContact = z.preprocess(emptyStringToUndefined, isoDate);
 
 const leadBase = {
   firstName: shortText(100),
@@ -40,13 +41,14 @@ const leadBase = {
   email: optionalEmail,
   phone,
   source: z.enum(LEAD_SOURCES).optional(),
-  status: z.enum(LEAD_STATUSES).optional(),
+  status: optionalText(80),
   needType: z.enum(NEED_TYPES).optional(),
   priority: z.enum(PRIORITIES).optional(),
   budget: leadBudgetInput,
   notes: noteText(),
   districts: optionalText(250),
   propertyType: optionalText(80),
+  lastContact: leadLastContact,
   assignedToId: leadAssignedToId,
 };
 
@@ -65,7 +67,7 @@ export const bulkLeadSchema = z
     action: z.enum(['delete', 'assign', 'status']),
     ids: z.array(cuid).min(1).max(500),
     assignedToId: optionalCuid,
-    status: z.enum(LEAD_STATUSES).optional(),
+    value: optionalText(80),
   })
   .strict();
 

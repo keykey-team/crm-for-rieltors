@@ -25,9 +25,16 @@ async function findLeadCommunications(leadId) {
     });
 }
 async function createLeadCommunication(data) {
-    return prisma_1.prisma.communication.create({
-        data: data,
-        include: { user: { select: { id: true, name: true } } },
+    return prisma_1.prisma.$transaction(async (tx) => {
+        const communication = await tx.communication.create({
+            data: data,
+            include: { user: { select: { id: true, name: true } } },
+        });
+        await tx.lead.update({
+            where: { id: String(data.leadId) },
+            data: { lastContact: communication.createdAt },
+        });
+        return communication;
     });
 }
 async function findDirectMessages(me, other) {

@@ -20,6 +20,9 @@ function normalizePropertyPayload(payload: Partial<PropertyUpsertInput>): Partia
     title: normalizeText(payload.title),
     type: normalizeText(payload.type),
     status: normalizeText(payload.status),
+    dealTypes: Array.isArray(payload.dealTypes)
+      ? payload.dealTypes.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+      : undefined,
     address: normalizeText(payload.address),
     district: normalizeText(payload.district),
     city: normalizeText(payload.city),
@@ -50,6 +53,7 @@ export async function getProperties(query: PropertiesQuery = {}): Promise<Proper
   if (query.search) params.set('search', query.search);
   if (query.type) params.set('type', query.type);
   if (query.status) params.set('status', query.status);
+  if (query.dealType) params.set('dealType', query.dealType);
   const suffix = params.toString();
   const res = await fetch(`/api/properties${suffix ? `?${suffix}` : ''}`);
   const data = await parseJson<unknown>(res);

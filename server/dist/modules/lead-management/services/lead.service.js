@@ -64,13 +64,14 @@ async function addLead(input, userId) {
         email: input.email ?? null,
         phone: input.phone,
         source: input.source ?? 'manual',
-        status: input.status ?? 'new',
+        status: input.status ?? 'new_lead',
         needType: input.needType ?? 'buy',
         budget: parseFloatOrNull(input.budget),
         budgetMax: parseFloatOrNull(input.budgetMax),
         districts: input.districts ?? null,
         propertyType: input.propertyType ?? null,
         notes: input.notes ?? null,
+        lastContact: input.lastContact ?? null,
         priority: input.priority ?? 'medium',
         assignedToId: await resolveAssignedTo(input, userId),
     });
@@ -96,6 +97,7 @@ async function changeLead(id, input, userId, role) {
         ...(input.notes !== undefined ? { notes: input.notes } : {}),
         ...(input.districts !== undefined ? { districts: input.districts } : {}),
         ...(input.propertyType !== undefined ? { propertyType: input.propertyType } : {}),
+        ...(input.lastContact !== undefined ? { lastContact: input.lastContact || null } : {}),
         ...(input.assignedToId !== undefined ? { assignedToId: input.assignedToId || null } : {}),
     });
 }

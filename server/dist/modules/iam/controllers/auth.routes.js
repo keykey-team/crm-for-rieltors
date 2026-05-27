@@ -5,6 +5,8 @@ const async_handler_1 = require("../../../common/infrastructure/http/async-handl
 const auth_middleware_1 = require("../../../common/infrastructure/middleware/auth.middleware");
 const env_1 = require("../../../configuration/env");
 const auth_service_1 = require("../services/auth.service");
+const middleware_1 = require("../../../common/validation/middleware");
+const iam_schemas_1 = require("./iam.schemas");
 const AUTH_COOKIE_NAME = 'crm_token';
 const router = (0, async_handler_1.createAsyncRouter)();
 function cookieOptions() {
@@ -22,13 +24,13 @@ function setSessionCookie(res, token) {
         maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 }
-router.post('/login', async (req, res) => {
+router.post('/login', (0, middleware_1.validateBody)(iam_schemas_1.loginSchema), async (req, res) => {
     const result = await (0, auth_service_1.login)(req.body ?? {});
     setSessionCookie(res, result.token);
     const includeToken = req.get('x-return-session-token') === 'true';
     res.json(includeToken ? { ...result.user, backendToken: result.token } : result.user);
 });
-router.post('/signup', async (req, res) => {
+router.post('/signup', (0, middleware_1.validateBody)(iam_schemas_1.signupSchema), async (req, res) => {
     res.status(201).json(await (0, auth_service_1.signup)(req.body ?? {}));
 });
 router.get('/session', auth_middleware_1.authMiddleware, async (req, res) => {

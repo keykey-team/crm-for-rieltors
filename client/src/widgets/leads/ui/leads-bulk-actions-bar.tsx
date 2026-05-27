@@ -2,7 +2,7 @@
 
 import { Trash2, UserCheck, Tag, X } from 'lucide-react';
 
-type Option = { value: string; label: string };
+type Option = { value: string; label: string; color?: string };
 type Manager = { id: string; name?: string | null; email?: string | null };
 
 interface Props {
@@ -38,7 +38,7 @@ export function LeadsBulkActionsBar({
         <div className="flex items-center gap-2">
           <select autoFocus onChange={(e) => { if (e.target.value) executeBulk('status', e.target.value); }} className="px-2 py-1.5 border border-border rounded-lg text-sm bg-card">
             <option value="">{t('common.selectStatus')}</option>
-            {leadStatuses.map((s) => <option key={s.value} value={s.value}>{t(`const.leadStatus.${s.value}`) || s.label}</option>)}
+            {leadStatuses.map((s) => <option key={s.value} value={s.value}>{s.label || t(`const.dealStage.${s.value}`) || s.value}</option>)}
           </select>
           <button onClick={() => setBulkAction(null)} className="p-1 hover:bg-muted rounded-md"><X className="w-4 h-4" /></button>
         </div>

@@ -4,7 +4,7 @@ export async function getDashboardCounts(where: Record<string, unknown>, todaySt
   const [totalLeads, newLeads, totalDeals, activeDeals, totalProperties, totalTasks, pendingTasks, todayTasks] =
     await Promise.all([
       prisma.lead.count({ where: where as any }),
-      prisma.lead.count({ where: { ...(where as any), status: 'new' } }),
+      prisma.lead.count({ where: { ...(where as any), status: 'new_lead' } }),
       prisma.deal.count({ where: where as any }),
       prisma.deal.count({ where: { ...(where as any), stage: { notIn: ['closed', 'rejected'] } } }),
       prisma.property.count(),

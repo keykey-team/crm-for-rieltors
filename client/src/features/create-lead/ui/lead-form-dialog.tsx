@@ -1,13 +1,14 @@
 "use client";
 
+import { useEffect } from "react";
 import { X } from "lucide-react";
 
 import { useTranslation } from "@/shared/lib/i18n/context";
 import {
   LEAD_SOURCES,
-  LEAD_STATUSES,
   PRIORITIES,
 } from "@/shared/lib/constants";
+import { DatePicker } from "@/shared/ui";
 import type { Lead, LeadUpsertInput } from "@/entities/lead";
 import { useLeadForm } from "@/features/create-lead/model/use-lead-form";
 import { PhoneInput } from "@/shared/ui/phone-input";
@@ -16,11 +17,19 @@ interface Props {
   lead: Lead | null;
   onSave: (data: LeadUpsertInput) => void | Promise<void>;
   onClose: () => void;
+  leadStatuses: Array<{ value: string; label: string; color?: string }>;
 }
 
-export function LeadFormDialog({ lead, onSave, onClose }: Props) {
+export function LeadFormDialog({ lead, onSave, onClose, leadStatuses }: Props) {
   const { t } = useTranslation();
   const { users, saving, form, upd, submit, errors, submitError, resetForm } = useLeadForm(lead, onSave);
+
+  useEffect(() => {
+    if (lead || leadStatuses.length === 0) return;
+    if (!leadStatuses.some((status) => status.value === form.status)) {
+      upd("status", leadStatuses[0].value);
+    }
+  }, [form.status, lead, leadStatuses, upd]);
 
   const handleCancel = () => {
     resetForm();
@@ -110,13 +119,13 @@ export function LeadFormDialog({ lead, onSave, onClose }: Props) {
             <label className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground">{t("common.status")}</span>
               <select
-                value={form.status ?? "new"}
+                value={form.status ?? "new_lead"}
                 onChange={(e) => upd("status", e.target.value)}
                 className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
               >
-                {LEAD_STATUSES.map((s) => (
+                {leadStatuses.map((s) => (
                   <option key={s.value} value={s.value}>
-                    {t(`const.leadStatus.${s.value}`) || s.label}
+                    {s.label || t(`const.dealStage.${s.value}`) || s.value}
                   </option>
                 ))}
               </select>
@@ -174,6 +183,10 @@ export function LeadFormDialog({ lead, onSave, onClose }: Props) {
               />
               {errors.budget && <p className="text-xs text-destructive">{errors.budget}</p>}
             </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1.5 block">{t("leads.lastContact")}</label>
+            <DatePicker value={form.lastContact ?? ""} onChange={(value: string) => upd("lastContact", value)} />
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-xs font-medium text-muted-foreground">{t("leads.form.notes")}</span>

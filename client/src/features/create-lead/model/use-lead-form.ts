@@ -15,6 +15,20 @@ import {
 
 const CREATE_LEAD_DRAFT_KEY = 'crm_create_lead_draft';
 
+function toDateInputValue(dateLike?: string | null) {
+  if (!dateLike) return '';
+  const date = new Date(dateLike);
+  if (Number.isNaN(date.getTime())) return '';
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
+function toIsoDate(value?: string | null) {
+  if (!value) return null;
+  const date = new Date(`${value}T00:00`);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
 function createEmptyForm(lead: Lead | null): LeadUpsertInput {
   return {
     firstName: lead?.firstName ?? '',
@@ -22,13 +36,14 @@ function createEmptyForm(lead: Lead | null): LeadUpsertInput {
     email: lead?.email ?? '',
     phone: lead?.phone ?? '',
     source: lead?.source ?? 'manual',
-    status: lead?.status ?? 'new',
+    status: lead?.status ?? 'new_lead',
     needType: lead?.needType ?? 'buy',
     budget: lead?.budget?.toString() ?? '',
     priority: lead?.priority ?? 'medium',
     notes: lead?.notes ?? '',
     districts: lead?.districts ?? '',
     propertyType: lead?.propertyType ?? '',
+    lastContact: toDateInputValue(lead?.lastContact),
     assignedToId: lead?.assignedToId ?? '',
   };
 }
@@ -84,13 +99,14 @@ export function useLeadForm(lead: Lead | null, onSave: (data: LeadUpsertInput) =
       email: normalizeEmailInput(form.email ?? '') || undefined,
       phone: normalizePhoneInput(form.phone ?? ''),
       source: form.source ?? 'manual',
-      status: form.status ?? 'new',
+      status: form.status ?? 'new_lead',
       needType: form.needType ?? 'buy',
       budget: String(form.budget ?? '').trim() || undefined,
       priority: form.priority ?? 'medium',
       notes: form.notes?.trim() || undefined,
       districts: form.districts?.trim() || undefined,
       propertyType: form.propertyType?.trim() || undefined,
+      lastContact: toIsoDate(form.lastContact),
       assignedToId: form.assignedToId || '',
     };
 

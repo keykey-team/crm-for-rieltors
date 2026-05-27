@@ -92,6 +92,9 @@ export const propertySchema = z
     price: z
       .number({ required_error: 'Цена обязательна', invalid_type_error: 'Цена должна быть числом' })
       .min(0, 'Цена не может быть отрицательной'),
+    dealTypes: z
+      .array(z.enum(['sale', 'rent']))
+      .min(1, 'Выберите тип сделки'),
     floor: z.number({ invalid_type_error: 'Этаж должен быть числом' }).int().optional(),
     totalFloors: z
       .number({ invalid_type_error: 'Этажность должна быть числом' })

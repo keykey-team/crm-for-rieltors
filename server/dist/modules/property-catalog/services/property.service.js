@@ -33,6 +33,9 @@ function parseNullableFloat(value) {
     return Number.isFinite(parsed) ? parsed : undefined;
 }
 function normalizePropertyPayload(input) {
+    const dealTypes = Array.isArray(input.dealTypes)
+        ? input.dealTypes.filter((item) => typeof item === 'string' && item.trim().length > 0)
+        : undefined;
     return {
         ...input,
         rooms: parseNullableInt(input.rooms),
@@ -40,6 +43,7 @@ function normalizePropertyPayload(input) {
         floor: parseNullableInt(input.floor),
         totalFloors: parseNullableInt(input.totalFloors),
         price: parseNullableFloat(input.price),
+        dealTypes,
         district: input.district === '' ? null : input.district,
         description: input.description === '' ? null : input.description,
     };
@@ -50,6 +54,8 @@ async function listProperties(query) {
         where.status = query.status;
     if (query.type)
         where.type = query.type;
+    if (query.dealType)
+        where.dealTypes = { has: query.dealType };
     if (query.search) {
         where.OR = [
             { title: { contains: query.search, mode: 'insensitive' } },

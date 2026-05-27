@@ -2,6 +2,7 @@ export interface PropertyQuery {
   search?: string;
   status?: string;
   type?: string;
+  dealType?: string;
 }
 
 export interface PropertyPayload {
@@ -12,6 +13,7 @@ export interface PropertyPayload {
   price?: unknown;
   district?: unknown;
   description?: unknown;
+  dealTypes?: unknown;
   [key: string]: unknown;
 }
 

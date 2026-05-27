@@ -20,6 +20,7 @@ export function PropertyCard({ property: p, view, onEdit, onDelete, onChessGrid 
   const typeLbl = t(`const.propertyType.${p?.type}`) || PROPERTY_TYPES.find((pt: any) => pt.value === p?.type)?.label || p?.type;
   const st = PROPERTY_STATUSES.find((s: any) => s.value === p?.status);
   const statusColor = st?.color ?? '#72BF78';
+  const getDealTypeLabel = (value: string) => value === 'sale' ? t('leads.dialog.needSell') : value === 'rent' ? t('leads.dialog.needRent') : value;
 
   if (view === 'list') {
     return (
@@ -43,6 +44,7 @@ export function PropertyCard({ property: p, view, onEdit, onDelete, onChessGrid 
           <div className="hidden sm:flex items-center gap-3 text-xs text-muted-foreground">
             {p?.area && <span className="flex items-center gap-1"><Maximize className="w-3.5 h-3.5" />{p.area} м²</span>}
             {p?.rooms && <span className="flex items-center gap-1"><BedDouble className="w-3.5 h-3.5" />{p.rooms}</span>}
+            {p?.dealTypes?.length ? <span>{p.dealTypes.map(getDealTypeLabel).join(', ')}</span> : null}
           </div>
           <span className="font-display font-bold text-sm text-primary">{formatPrice(p?.price, p?.currency ?? undefined)}</span>
           <PropertyStatusBadge status={p?.status} t={t} />
@@ -114,6 +116,15 @@ export function PropertyCard({ property: p, view, onEdit, onDelete, onChessGrid 
             </span>
           )}
         </div>
+        {p?.dealTypes?.length ? (
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {p.dealTypes.map((dealType) => (
+              <span key={dealType} className="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-primary/10 text-primary">
+                {getDealTypeLabel(dealType)}
+              </span>
+            ))}
+          </div>
+        ) : null}
         {/* Price */}
         <div className="flex items-center justify-between">
           <span className="font-display font-bold text-base text-primary">{formatPrice(p?.price, p?.currency ?? undefined)}</span>

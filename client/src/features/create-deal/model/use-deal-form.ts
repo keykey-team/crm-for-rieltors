@@ -51,7 +51,7 @@ export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => v
   const [showNewLeadForm, setShowNewLeadForm] = useState(false);
   const [showNewPropForm, setShowNewPropForm] = useState(false);
   const [newLeadForm, setNewLeadForm] = useState({ firstName: '', lastName: '', phone: '', email: '' });
-  const [newPropForm, setNewPropForm] = useState({ title: '', address: '', price: '' });
+  const [newPropForm, setNewPropForm] = useState({ title: '', address: '', price: '', dealTypes: ['sale'] as string[] });
   const [creatingLead, setCreatingLead] = useState(false);
   const [creatingProp, setCreatingProp] = useState(false);
   const [leadCreateError, setLeadCreateError] = useState('');
@@ -94,7 +94,7 @@ export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => v
     setLeadCreateError('');
   };
 
-  const updateNewPropField = (key: 'title' | 'address' | 'price', value: string) => {
+  const updateNewPropField = (key: 'title' | 'address' | 'price' | 'dealTypes', value: string | string[]) => {
     setNewPropForm((prev) => ({ ...prev, [key]: value }));
     setNewPropErrors((prev) => ({ ...prev, [key]: '' }));
     setPropCreateError('');
@@ -109,7 +109,7 @@ export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => v
 
   const resetNewPropFormState = () => {
     setShowNewPropForm(false);
-    setNewPropForm({ title: '', address: '', price: '' });
+    setNewPropForm({ title: '', address: '', price: '', dealTypes: ['sale'] });
     setNewPropErrors({});
     setPropCreateError('');
   };
@@ -171,6 +171,7 @@ export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => v
       title: newPropForm.title.trim(),
       address: newPropForm.address.trim(),
       price,
+      dealTypes: newPropForm.dealTypes,
     });
 
     if (!validation.ok) {
@@ -186,6 +187,7 @@ export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => v
         title: validation.data.title,
         address: validation.data.address,
         price: validation.data.price,
+        dealTypes: validation.data.dealTypes,
       });
       setProperties((prev) => [property, ...prev.filter((item) => item.id !== property.id)]);
       setForm((prev) => ({ ...prev, propertyId: property.id }));

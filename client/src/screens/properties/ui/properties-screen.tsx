@@ -3,7 +3,7 @@ import { Plus, Search, Building, LayoutGrid, List, X, MapPin, Maximize, Layers, 
 import { PropertyCard } from '@/widgets/properties/ui/property-card';
 import { PropertyDialog } from '@/widgets/properties/ui/property-dialog';
 import { ChessGrid } from '@/widgets/properties/ui/chess-grid';
-import { PROPERTY_TYPES, PROPERTY_STATUSES } from '@/shared/lib/constants';
+import { PROPERTY_DEAL_TYPES, PROPERTY_TYPES, PROPERTY_STATUSES } from '@/shared/lib/constants';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/lib/i18n/context';
 import { HintTooltip } from '@/shared/ui/hint-tooltip';
@@ -12,6 +12,7 @@ import { usePropertiesPage } from '@/widgets/properties/model/use-properties-pag
 
 export function PropertiesClient() {
   const { t } = useTranslation();
+  const getDealTypeLabel = (value: string) => value === 'sale' ? t('leads.dialog.needSell') : value === 'rent' ? t('leads.dialog.needRent') : value;
   const {
     properties,
     loading,
@@ -21,6 +22,8 @@ export function PropertiesClient() {
     setTypeFilter,
     statusFilter,
     setStatusFilter,
+    dealTypeFilter,
+    setDealTypeFilter,
     dialogOpen,
     setDialogOpen,
     editProp,
@@ -79,6 +82,11 @@ export function PropertiesClient() {
             <option value="">{t('common.allStatuses')}</option>
             {PROPERTY_STATUSES.map((s: any) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
+          <select value={dealTypeFilter} onChange={(e) => setDealTypeFilter(e.target.value)}
+            className="px-3 py-2 rounded-xl border border-border/60 dark:border-border/40 bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 flex-shrink-0">
+            <option value="">{t('common.allDealTypes')}</option>
+            {PROPERTY_DEAL_TYPES.map((item) => <option key={item.value} value={item.value}>{getDealTypeLabel(item.value)}</option>)}
+          </select>
           <div className="flex bg-card rounded-xl border border-border/60 dark:border-border/40 p-0.5 flex-shrink-0 ml-auto">
             <button onClick={() => setView('grid')} className={cn('p-2 rounded-lg transition-all', view === 'grid' ? 'bg-primary/10 text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground')}>
               <LayoutGrid className="w-4 h-4" />
@@ -93,7 +101,7 @@ export function PropertiesClient() {
       {/* Content */}
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1,2,3].map((i) => <div key={i} className="h-64 bg-card rounded-2xl border border-border/60 dark:border-border/40 animate-pulse" />)}
+          {[1, 2, 3].map((i) => <div key={i} className="h-64 bg-card rounded-2xl border border-border/60 dark:border-border/40 animate-pulse" />)}
         </div>
       ) : (properties?.length ?? 0) === 0 ? (
         <div className="text-center py-16">
@@ -151,6 +159,11 @@ export function PropertiesClient() {
                 <div className="flex items-center gap-2 flex-wrap">
                   {tp && <span className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary font-semibold">{t(`const.propertyType.${p.type}`) || tp.label}</span>}
                   {st && <span className="text-xs px-2.5 py-1 rounded-full font-semibold" style={{ backgroundColor: st.color + '15', color: st.color }}>{t(`const.propertyStatus.${p.status}`) || st.label}</span>}
+                  {p.dealTypes?.map((dealType: string) => (
+                    <span key={dealType} className="text-xs px-2.5 py-1 rounded-full bg-muted text-muted-foreground font-semibold">
+                      {getDealTypeLabel(dealType)}
+                    </span>
+                  ))}
                 </div>
                 {/* Info grid */}
                 <div className="grid grid-cols-2 gap-3">
@@ -173,7 +186,7 @@ export function PropertiesClient() {
                   )}
                   {p.rooms != null && (
                     <div className="bg-[#073B34]/10 dark:bg-emerald-500/15 rounded-xl p-3">
-                      <p className="text-[10px] text-violet-600 dark:text-[#073B34] dark:text-emerald-400 font-semibold uppercase tracking-wider mb-0.5">{t('common.rooms')}</p>
+                      <p className="text-[10px] text-violet-600 dark:text-emerald-400 font-semibold uppercase tracking-wider mb-0.5">{t('common.rooms')}</p>
                       <p className="font-mono font-bold text-[#073B34] dark:text-emerald-300">{p.rooms}</p>
                     </div>
                   )}
