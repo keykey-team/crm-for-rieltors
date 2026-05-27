@@ -80,6 +80,11 @@ export function PhoneInput({ value, onChange, error, className }: PhoneInputProp
 
   // Sync display when value changes externally (e.g. form reset)
   useEffect(() => {
+    // When value is empty keep the currently selected country, just clear the display
+    if (!value) {
+      setDisplay('');
+      return;
+    }
     const { country: c, digits } = detectCountry(value);
     const expected = c.dialCode + digits;
     const current = country.dialCode + display.replace(/\D/g, '');
@@ -104,7 +109,8 @@ export function PhoneInput({ value, onChange, error, className }: PhoneInputProp
     if (digits.length > country.maxDigits) return;
     const masked = applyMask(digits, country.mask);
     setDisplay(masked);
-    onChange(country.dialCode + digits);
+    // emit '' when no digits so the parent form sees an empty value and can validate "required"
+    onChange(digits ? country.dialCode + digits : '');
   };
 
   const selectCountry = (c: Country) => {
