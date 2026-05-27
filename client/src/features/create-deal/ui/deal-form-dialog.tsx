@@ -8,7 +8,7 @@ import { useDealForm } from '@/features/create-deal/model/use-deal-form';
 
 export function DealFormDialog({ deal, onSave, onClose }: { deal: Deal | null; onSave: (d: DealUpsertInput) => void | Promise<void>; onClose: () => void }) {
   const { t } = useTranslation();
-  const { stages, users, form, saving, leadOpen, propOpen, leadSearch, propSearch, filteredLeads, filteredProps, selectedLead, selectedProp, setLeadOpen, setPropOpen, setLeadSearch, setPropSearch, upd, submit } = useDealForm(deal, onSave);
+  const { stages, users, form, saving, errors, leadOpen, propOpen, leadSearch, propSearch, filteredLeads, filteredProps, selectedLead, selectedProp, setLeadOpen, setPropOpen, setLeadSearch, setPropSearch, upd, submit } = useDealForm(deal, onSave);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
@@ -20,7 +20,8 @@ export function DealFormDialog({ deal, onSave, onClose }: { deal: Deal | null; o
         <form onSubmit={submit} className="p-6 space-y-4">
           <div>
             <label className="mb-1.5 block text-xs text-muted-foreground">Назва угоди</label>
-            <input value={form.title} onChange={(e) => upd('title', e.target.value)} required className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm" />
+            <input value={form.title} onChange={(e) => upd('title', e.target.value)} className={`w-full px-3 py-2.5 rounded-xl border bg-muted/30 text-sm ${errors.title ? 'border-destructive/60' : 'border-border'}`} />
+            {errors.title && <p className="text-xs text-destructive mt-1">{errors.title}</p>}
           </div>
           <div>
             <label className="mb-1.5 block text-xs text-muted-foreground">Лід</label>
@@ -49,11 +50,13 @@ export function DealFormDialog({ deal, onSave, onClose }: { deal: Deal | null; o
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="mb-1.5 block text-xs text-muted-foreground">Сума</label>
-              <input type="number" value={form.amount} onChange={(e) => upd('amount', e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm" />
+              <input type="number" value={form.amount} onChange={(e) => upd('amount', e.target.value)} className={`w-full px-3 py-2.5 rounded-xl border bg-muted/30 text-sm ${errors.amount ? 'border-destructive/60' : 'border-border'}`} />
+              {errors.amount && <p className="text-xs text-destructive mt-1">{errors.amount}</p>}
             </div>
             <div>
               <label className="mb-1.5 block text-xs text-muted-foreground">Комісія (%)</label>
-              <input type="number" step="0.1" value={form.commission} onChange={(e) => upd('commission', e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm" />
+              <input type="number" step="0.1" value={form.commission} onChange={(e) => upd('commission', e.target.value)} className={`w-full px-3 py-2.5 rounded-xl border bg-muted/30 text-sm ${errors.commission ? 'border-destructive/60' : 'border-border'}`} />
+              {errors.commission && <p className="text-xs text-destructive mt-1">{errors.commission}</p>}
             </div>
             <div>
               <label className="mb-1.5 block text-xs text-muted-foreground">Валюта</label>
@@ -66,7 +69,8 @@ export function DealFormDialog({ deal, onSave, onClose }: { deal: Deal | null; o
           </div>
           <div>
             <label className="mb-1.5 block text-xs text-muted-foreground">Нотатки</label>
-            <textarea rows={3} value={form.notes} onChange={(e) => upd('notes', e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm resize-none" />
+            <textarea rows={3} value={form.notes} onChange={(e) => upd('notes', e.target.value)} className={`w-full px-3 py-2.5 rounded-xl border bg-muted/30 text-sm resize-none ${errors.notes ? 'border-destructive/60' : 'border-border'}`} />
+            {errors.notes && <p className="text-xs text-destructive mt-1">{errors.notes}</p>}
           </div>
           <div className="flex justify-end gap-3 pt-2"><button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-muted">{t('common.cancel')}</button><button type="submit" disabled={saving} className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition disabled:opacity-50">{saving ? t('common.saving') : t('common.save')}</button></div>
         </form>

@@ -19,7 +19,7 @@ interface Props {
 
 export function LeadFormDialog({ lead, onSave, onClose }: Props) {
   const { t } = useTranslation();
-  const { users, saving, form, upd, submit } = useLeadForm(lead, onSave);
+  const { users, saving, form, upd, submit, errors } = useLeadForm(lead, onSave);
 
   return (
     <div
@@ -41,15 +41,15 @@ export function LeadFormDialog({ lead, onSave, onClose }: Props) {
         </div>
         <form onSubmit={submit} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <label className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground">{t("common.name")} *</span>
               <input
                 value={form.firstName}
                 onChange={(e) => upd("firstName", e.target.value)}
-                required
-                className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
+                className={`w-full px-3 py-2.5 rounded-xl border bg-muted/30 text-sm ${errors.firstName ? 'border-destructive/60' : 'border-border'}`}
               />
-            </label>
+              {errors.firstName && <p className="text-xs text-destructive">{errors.firstName}</p>}
+            </div>
             <label className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground">{t("common.lastName")}</span>
               <input
@@ -60,24 +60,25 @@ export function LeadFormDialog({ lead, onSave, onClose }: Props) {
             </label>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <label className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground">{t("common.phone")} *</span>
               <input
                 value={form.phone}
                 onChange={(e) => upd("phone", e.target.value)}
-                required
-                className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
+                className={`w-full px-3 py-2.5 rounded-xl border bg-muted/30 text-sm ${errors.phone ? 'border-destructive/60' : 'border-border'}`}
               />
-            </label>
-            <label className="flex flex-col gap-1">
+              {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
+            </div>
+            <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground">{t("common.email")}</span>
               <input
                 type="email"
                 value={form.email}
                 onChange={(e) => upd("email", e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
+                className={`w-full px-3 py-2.5 rounded-xl border bg-muted/30 text-sm ${errors.email ? 'border-destructive/60' : 'border-border'}`}
               />
-            </label>
+              {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+            </div>
           </div>
           <div className="grid grid-cols-3 gap-4">
             <label className="flex flex-col gap-1">
@@ -151,25 +152,27 @@ export function LeadFormDialog({ lead, onSave, onClose }: Props) {
                 <option value="rent">{t("leads.dialog.needRent")}</option>
               </select>
             </label>
-            <label className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground">{t("common.budget")}</span>
               <input
                 type="number"
                 value={form.budget}
                 onChange={(e) => upd("budget", e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
+                className={`w-full px-3 py-2.5 rounded-xl border bg-muted/30 text-sm ${errors.budget ? 'border-destructive/60' : 'border-border'}`}
               />
-            </label>
+              {errors.budget && <p className="text-xs text-destructive">{errors.budget}</p>}
+            </div>
           </div>
-          <label className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1">
             <span className="text-xs font-medium text-muted-foreground">{t("common.notes")}</span>
             <textarea
               rows={3}
               value={form.notes}
               onChange={(e) => upd("notes", e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm resize-none"
+              className={`w-full px-3 py-2.5 rounded-xl border bg-muted/30 text-sm resize-none ${errors.notes ? 'border-destructive/60' : 'border-border'}`}
             />
-          </label>
+            {errors.notes && <p className="text-xs text-destructive">{errors.notes}</p>}
+          </div>
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
