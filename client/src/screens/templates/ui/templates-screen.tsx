@@ -1,6 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { FileText, Plus, Edit2, Trash2, Copy, X } from 'lucide-react';
+import { useFormDraft } from '@/shared/hooks/use-form-draft';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/lib/i18n/context';
 import type { Template, TemplateUpsertInput } from '@/entities/template';
@@ -103,42 +104,60 @@ export function TemplatesClient() {
 }
 
 function TemplateDialog({ template, onSave, onClose, t, templateTypes, templateCategories }: { template: Template | null; onSave: (d: TemplateUpsertInput) => void | Promise<void>; onClose: () => void; t: (k: string) => string; templateTypes: { value: string; label: string; icon: any }[]; templateCategories: { value: string; label: string }[] }) {
-  const [name, setName] = useState(template?.name ?? '');
-  const [type, setType] = useState(template?.type ?? 'message');
-  const [category, setCategory] = useState(template?.category ?? 'general');
-  const [content, setContent] = useState(template?.content ?? '');
+  const createInitialValue = useCallback(() => ({
+    name: template?.name ?? '',
+    type: template?.type ?? 'message',
+    category: template?.category ?? 'general',
+    content: template?.content ?? '',
+  }), [template]);
+  const { form, setForm, clearDraft, resetForm } = useFormDraft({
+    storageKey: 'crm_create_template_draft',
+    createInitialValue,
+    draftEnabled: !template,
+    resetKey: template?.id ?? 'create',
+  });
   const [saving, setSaving] = useState(false);
+
+  const handleDismiss = () => {
+    onClose();
+  };
+
+  const handleCancel = () => {
+    resetForm();
+    onClose();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true);
-    await onSave({ name, type, category, content });
+    await onSave({ name: form.name, type: form.type, category: form.category, content: form.content });
+    if (!template) clearDraft();
     setSaving(false);
   };
 
   return (
-    <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4" onClick={handleDismiss}>
       <div className="bg-card rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()} style={{ boxShadow: 'var(--shadow-lg)' }}>
         <div className="flex items-center justify-between p-5 border-b border-border">
           <h2 className="text-lg font-display font-bold">{template ? t('templates.editTemplate') : t('templates.newTemplate')}</h2>
-          <button onClick={onClose} className="p-1 hover:bg-muted rounded-lg"><X className="w-5 h-5" /></button>
+          <button onClick={handleDismiss} className="p-1 hover:bg-muted rounded-lg"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
             <label className="text-sm font-medium mb-1 block">{t('common.title')} *</label>
-            <input value={name} onChange={e => setName(e.target.value)} required
+            <input value={form.name} onChange={e => setForm((prev) => ({ ...prev, name: e.target.value }))} required
               className="w-full px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium mb-1 block">{t('common.type')}</label>
-              <select value={type} onChange={e => setType(e.target.value)}
+              <select value={form.type} onChange={e => setForm((prev) => ({ ...prev, type: e.target.value }))}
                 className="w-full px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
                 {templateTypes.map(tp => <option key={tp.value} value={tp.value}>{tp.label}</option>)}
               </select>
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">{t('kb.category')}</label>
-              <select value={category} onChange={e => setCategory(e.target.value)}
+              <select value={form.category} onChange={e => setForm((prev) => ({ ...prev, category: e.target.value }))}
                 className="w-full px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
                 {templateCategories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
@@ -146,12 +165,12 @@ function TemplateDialog({ template, onSave, onClose, t, templateTypes, templateC
           </div>
           <div>
             <label className="text-sm font-medium mb-1 block">{t('common.content')} *</label>
-            <textarea value={content} onChange={e => setContent(e.target.value)} required rows={6}
+            <textarea value={form.content} onChange={e => setForm((prev) => ({ ...prev, content: e.target.value }))} required rows={6}
               className="w-full px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
           </div>
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-border rounded-xl text-sm hover:bg-muted transition">{t('common.cancel')}</button>
-            <button type="submit" disabled={saving || !name || !content}
+            <button type="button" onClick={handleCancel} className="flex-1 px-4 py-2.5 border border-border rounded-xl text-sm hover:bg-muted transition">{t('common.cancel')}</button>
+            <button type="submit" disabled={saving || !form.name || !form.content}
               className="flex-1 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition disabled:opacity-50">
               {saving ? t('common.saving') : t('common.save')}
             </button>

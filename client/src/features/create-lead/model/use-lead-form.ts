@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import type { Lead, LeadUpsertInput } from '@/entities/lead';
 import type { User } from '@/entities/user';
 import { getUsers } from '@/entities/user';
 import { useTranslation } from '@/shared/lib/i18n/context';
+import { useFormDraft } from '@/shared/hooks/use-form-draft';
 import {
   normalizeEmailInput,
   normalizePhoneInput,
@@ -32,22 +33,6 @@ function createEmptyForm(lead: Lead | null): LeadUpsertInput {
   };
 }
 
-function readDraft(): LeadUpsertInput | null {
-  try {
-    const raw = localStorage.getItem(CREATE_LEAD_DRAFT_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as LeadUpsertInput;
-  } catch {
-    return null;
-  }
-}
-
-function clearDraft() {
-  try {
-    localStorage.removeItem(CREATE_LEAD_DRAFT_KEY);
-  } catch {}
-}
-
 export function useLeadForm(lead: Lead | null, onSave: (data: LeadUpsertInput) => void | Promise<void>) {
   const { t } = useTranslation();
   const [users, setUsers] = useState<User[]>([]);
@@ -55,37 +40,23 @@ export function useLeadForm(lead: Lead | null, onSave: (data: LeadUpsertInput) =
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState('');
   const [submitted, setSubmitted] = useState(false);
-  const [draftReady, setDraftReady] = useState(false);
-  const [form, setForm] = useState<LeadUpsertInput>(() => createEmptyForm(lead));
+  const createInitialValue = useCallback(() => createEmptyForm(lead), [lead]);
+  const { form, setForm, clearDraft, resetForm: resetDraftForm } = useFormDraft<LeadUpsertInput>({
+    storageKey: CREATE_LEAD_DRAFT_KEY,
+    createInitialValue,
+    draftEnabled: !lead,
+    resetKey: lead?.id ?? 'create',
+  });
 
   useEffect(() => {
     getUsers().then(setUsers).catch(() => {});
   }, []);
 
   useEffect(() => {
-    if (lead) {
-      setForm(createEmptyForm(lead));
-      setErrors({});
-      setSubmitError('');
-      setSubmitted(false);
-      setDraftReady(true);
-      return;
-    }
-
-    setForm(readDraft() ?? createEmptyForm(null));
     setErrors({});
     setSubmitError('');
     setSubmitted(false);
-    setDraftReady(true);
-  }, [lead]);
-
-  useEffect(() => {
-    if (lead || !draftReady) return;
-
-    try {
-      localStorage.setItem(CREATE_LEAD_DRAFT_KEY, JSON.stringify(form));
-    } catch {}
-  }, [form, lead, draftReady]);
+  }, [lead?.id]);
 
   const upd = <K extends keyof LeadUpsertInput>(key: K, val: LeadUpsertInput[K]) => {
     let nextValue = val;
@@ -145,8 +116,7 @@ export function useLeadForm(lead: Lead | null, onSave: (data: LeadUpsertInput) =
   };
 
   const resetForm = () => {
-    clearDraft();
-    setForm(createEmptyForm(lead));
+    resetDraftForm();
     setErrors({});
     setSubmitError('');
     setSubmitted(false);

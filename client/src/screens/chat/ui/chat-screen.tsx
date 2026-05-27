@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Send, MessageCircle, Search, Users, Plus, Hash, User, Reply, X, AtSign, ChevronLeft, Settings, Pencil, UserMinus, UserPlus, Check, Trash2 } from 'lucide-react';
+import { useFormDraft } from '@/shared/hooks/use-form-draft';
 import { cn } from '@/shared/lib/utils';
 import { useSession } from 'next-auth/react';
 import { formatDateTime, getInitials } from '@/shared/lib/format';
@@ -241,32 +242,65 @@ function CreateGroupDialog({
   users, onClose, onCreate,
 }: {
   users: MentionUser[]; onClose: () => void;
-  onCreate: (name: string, memberIds: string[]) => void;
+  onCreate: (name: string, memberIds: string[]) => void | Promise<void>;
 }) {
   const { t } = useTranslation();
-  const [name, setName] = useState('');
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const createInitialValue = useCallback(() => ({ name: '', memberIds: [] as string[] }), []);
+  const { form, setForm, clearDraft, resetForm } = useFormDraft({
+    storageKey: 'crm_create_group_chat_draft',
+    createInitialValue,
+    draftEnabled: true,
+    resetKey: 'create',
+  });
   const [search, setSearch] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const selected = useMemo(() => new Set(form.memberIds), [form.memberIds]);
 
   const filtered = users.filter(u =>
     !search || u.name?.toLowerCase().includes(search.toLowerCase())
   );
 
   const toggle = (id: string) => {
-    const next = new Set(selected);
-    if (next.has(id)) next.delete(id); else next.add(id);
-    setSelected(next);
+    setForm((prev) => ({
+      ...prev,
+      memberIds: prev.memberIds.includes(id)
+        ? prev.memberIds.filter((memberId) => memberId !== id)
+        : [...prev.memberIds, id],
+    }));
+  };
+
+  const handleDismiss = () => {
+    setSearch('');
+    onClose();
+  };
+
+  const handleCancel = () => {
+    resetForm();
+    setSearch('');
+    onClose();
+  };
+
+  const handleCreate = async () => {
+    setSaving(true);
+    try {
+      await onCreate(form.name, form.memberIds);
+      clearDraft();
+      setSearch('');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={handleDismiss}>
       <div className="bg-card rounded-2xl w-full max-w-[420px] max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="px-5 py-4 border-b border-border flex items-center justify-between">
           <h2 className="font-semibold">{t('chat.createGroup')}</h2>
-          <button onClick={onClose} className="p-1 hover:bg-muted rounded-lg"><X className="w-4 h-4" /></button>
+          <button onClick={handleDismiss} className="p-1 hover:bg-muted rounded-lg"><X className="w-4 h-4" /></button>
         </div>
         <div className="p-5 space-y-4">
-          <input value={name} onChange={e => setName(e.target.value)}
+          <input value={form.name} onChange={e => setForm((prev) => ({ ...prev, name: e.target.value }))}
             placeholder={t('chat.groupName')}
             className="w-full px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
           <div>
@@ -296,11 +330,11 @@ function CreateGroupDialog({
           )}
         </div>
         <div className="px-5 py-3 border-t border-border flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 text-sm rounded-xl border border-border hover:bg-muted transition">{t('common.cancel')}</button>
-          <button onClick={() => onCreate(name, Array.from(selected))}
-            disabled={selected.size === 0}
+          <button onClick={handleCancel} className="px-4 py-2 text-sm rounded-xl border border-border hover:bg-muted transition">{t('common.cancel')}</button>
+          <button onClick={handleCreate}
+            disabled={saving || !form.name.trim() || selected.size === 0}
             className="px-4 py-2 text-sm bg-primary text-white rounded-xl hover:bg-primary/90 transition disabled:opacity-50">
-            {t('common.create')}
+            {saving ? t('common.saving') : t('common.create')}
           </button>
         </div>
       </div>

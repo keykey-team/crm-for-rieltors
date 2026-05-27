@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, BookOpen, Search, FileText, Edit2, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { KB_CATEGORIES } from '@/shared/lib/constants';
 import { formatDate } from '@/shared/lib/format';
+import { useFormDraft } from '@/shared/hooks/use-form-draft';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/lib/i18n/context';
 import { confirmAction } from '@/shared/lib/confirm-action';
@@ -124,15 +125,27 @@ export function KBClient() {
 }
 
 function KBDialog({ article, onSave, onClose, t }: { article: KnowledgeBaseArticle | null; onSave: (d: KnowledgeBaseUpsertInput) => void | Promise<void>; onClose: () => void; t: (k: string) => string }) {
-  const [form, setForm] = useState({ title: article?.title ?? '', content: article?.content ?? '', category: article?.category ?? 'general' });
+  const createInitialValue = useCallback(() => ({ title: article?.title ?? '', content: article?.content ?? '', category: article?.category ?? 'general' }), [article]);
+  const { form, setForm, clearDraft, resetForm } = useFormDraft({
+    storageKey: 'crm_create_kb_article_draft',
+    createInitialValue,
+    draftEnabled: !article,
+    resetKey: article?.id ?? 'create',
+  });
   const [saving, setSaving] = useState(false);
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
   return (
     <>
       <div className="flex items-center justify-between p-6 border-b border-border">
         <h2 className="font-display font-bold text-lg">{article ? t('kb.editArticle') : t('kb.addArticle')}</h2>
-        <button onClick={onClose} className="p-2 rounded-lg hover:bg-muted"><span className="text-lg">×</span></button>
+        <button onClick={handleClose} className="p-2 rounded-lg hover:bg-muted"><span className="text-lg">×</span></button>
       </div>
-      <form onSubmit={async (e) => { e.preventDefault(); setSaving(true); await onSave(form); setSaving(false); }} className="p-6 space-y-4">
+      <form onSubmit={async (e) => { e.preventDefault(); setSaving(true); await onSave(form); if (!article) clearDraft(); setSaving(false); }} className="p-6 space-y-4">
         <div><label className="text-sm font-medium mb-1 block">{t('common.title')} *</label>
           <input value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} required
             className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
@@ -148,7 +161,7 @@ function KBDialog({ article, onSave, onClose, t }: { article: KnowledgeBaseArtic
             className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
         </div>
         <div className="flex justify-end gap-3 pt-2">
-          <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-muted">{t('common.cancel')}</button>
+          <button type="button" onClick={handleClose} className="px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-muted">{t('common.cancel')}</button>
           <button type="submit" disabled={saving}
             className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition disabled:opacity-50">
             {saving ? t('common.saving') : t('common.save')}

@@ -50,6 +50,7 @@ export function useAutomationsPage(t: (k: string) => string) {
       fetchData();
     } catch {
       toast.error(t('common.errorSave'));
+      throw new Error(t('common.errorSave'));
     }
   }, [editing, fetchData, t]);
 

@@ -1,29 +1,67 @@
 'use client';
 import { useTranslation } from '@/shared/lib/i18n/context';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { TASK_TYPES, PRIORITIES } from '@/shared/lib/constants';
+import { useFormDraft } from '@/shared/hooks/use-form-draft';
 import type { Task, TaskUpsertInput } from '@/entities/task';
 import { toast } from 'sonner';
 import { parseForm, taskSchema } from '@/shared/lib/validation';
 
+const CREATE_TASK_DRAFT_KEY = 'crm_create_task_draft';
+
+type TaskFormState = {
+  title: string;
+  description: string;
+  type: string;
+  priority: string;
+  dueDate: string;
+};
+
+function createEmptyForm(task: Task | null): TaskFormState {
+  return {
+    title: task?.title ?? '',
+    description: task?.description ?? '',
+    type: task?.type ?? 'call',
+    priority: task?.priority ?? 'medium',
+    dueDate: task?.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : '',
+  };
+}
+
 export function TaskDialog({ task, onSave, onClose }: { task: Task | null; onSave: (d: TaskUpsertInput) => void | Promise<void>; onClose: () => void }) {
   const { t } = useTranslation();
-  const [form, setForm] = useState({
-    title: task?.title ?? '', description: task?.description ?? '',
-    type: task?.type ?? 'call', priority: task?.priority ?? 'medium',
-    dueDate: task?.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : '',
+  const createInitialValue = useCallback(() => createEmptyForm(task), [task]);
+  const { form, setForm, clearDraft, resetForm } = useFormDraft<TaskFormState>({
+    storageKey: CREATE_TASK_DRAFT_KEY,
+    createInitialValue,
+    draftEnabled: !task,
+    resetKey: task?.id ?? 'create',
   });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const upd = (k: string, v: string) => { setForm((p) => ({ ...p, [k]: v })); setErrors((p) => ({ ...p, [k]: '' })); };
 
+  useEffect(() => {
+    setErrors({});
+  }, [task?.id]);
+
+  const handleDismiss = () => {
+    setErrors({});
+    onClose();
+  };
+
+  const handleCancel = () => {
+    resetForm();
+    setErrors({});
+    onClose();
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={handleDismiss}>
       <div className="bg-card rounded-2xl w-full max-w-md" style={{ boxShadow: 'var(--shadow-lg)' }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 border-b border-border">
           <h2 className="font-display font-bold text-lg">{task ? t('tasks.dialog.editTask') : t('tasks.dialog.newTask')}</h2>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-muted"><X className="w-4 h-4" /></button>
+          <button onClick={handleDismiss} className="p-2 rounded-lg hover:bg-muted"><X className="w-4 h-4" /></button>
         </div>
         <form
           onSubmit={async (e) => {
@@ -38,6 +76,7 @@ export function TaskDialog({ task, onSave, onClose }: { task: Task | null; onSav
                   ? new Date(form.dueDate).toISOString()
                   : undefined;
               await onSave({ ...form, dueDate: normalizedDueDate });
+              if (!task) clearDraft();
             } catch (err: any) {
               toast.error(err?.message || t('common.error'));
             } finally {
@@ -81,7 +120,7 @@ export function TaskDialog({ task, onSave, onClose }: { task: Task | null; onSav
             {errors.description && <p className="text-xs text-destructive mt-1">{errors.description}</p>}
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-muted">{t('common.cancel')}</button>
+            <button type="button" onClick={handleCancel} className="px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-muted">{t('common.cancel')}</button>
             <button type="submit" disabled={saving}
               className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition disabled:opacity-50">
               {saving ? t('common.saving') : t('common.save')}

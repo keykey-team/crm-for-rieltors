@@ -1,28 +1,75 @@
 'use client';
 import { useTranslation } from '@/shared/lib/i18n/context';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { PROPERTY_TYPES, PROPERTY_STATUSES } from '@/shared/lib/constants';
+import { useFormDraft } from '@/shared/hooks/use-form-draft';
 import type { Property, PropertyUpsertInput } from '@/entities/property';
 import { parseForm, propertySchema } from '@/shared/lib/validation';
 
+const CREATE_PROPERTY_DRAFT_KEY = 'crm_create_property_draft';
+
+type PropertyFormState = {
+  title: string;
+  type: string;
+  address: string;
+  district: string;
+  city: string;
+  rooms: string;
+  area: string;
+  floor: string;
+  totalFloors: string;
+  price: string;
+  currency: string;
+  status: string;
+  description: string;
+};
+
+function createEmptyForm(property: Property | null): PropertyFormState {
+  return {
+    title: property?.title ?? '',
+    type: property?.type ?? 'apartment',
+    address: property?.address ?? '',
+    district: property?.district ?? '',
+    city: property?.city ?? 'Київ',
+    rooms: property?.rooms?.toString() ?? '',
+    area: property?.area?.toString() ?? '',
+    floor: property?.floor?.toString() ?? '',
+    totalFloors: property?.totalFloors?.toString() ?? '',
+    price: property?.price?.toString() ?? '',
+    currency: property?.currency ?? 'USD',
+    status: property?.status ?? 'active',
+    description: property?.description ?? '',
+  };
+}
+
 export function PropertyDialog({ property, onSave, onClose }: { property: Property | null; onSave: (d: PropertyUpsertInput) => void | Promise<void>; onClose: () => void }) {
   const { t } = useTranslation();
-  const [form, setForm] = useState({
-    title: property?.title ?? '', type: property?.type ?? 'apartment',
-    address: property?.address ?? '', district: property?.district ?? '',
-    city: property?.city ?? 'Київ', rooms: property?.rooms?.toString() ?? '',
-    area: property?.area?.toString() ?? '', floor: property?.floor?.toString() ?? '',
-    totalFloors: property?.totalFloors?.toString() ?? '', price: property?.price?.toString() ?? '',
-    currency: property?.currency ?? 'USD', status: property?.status ?? 'active',
-    description: property?.description ?? '',
+  const createInitialValue = useCallback(() => createEmptyForm(property), [property]);
+  const { form, setForm, clearDraft, resetForm } = useFormDraft<PropertyFormState>({
+    storageKey: CREATE_PROPERTY_DRAFT_KEY,
+    createInitialValue,
+    draftEnabled: !property,
+    resetKey: property?.id ?? 'create',
   });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState('');
-  const upd = (k: string, v: string) => { setForm((p) => ({ ...p, [k]: v })); setErrors((p) => ({ ...p, [k]: '' })); setSubmitError(''); };
+  const upd = (k: keyof PropertyFormState, v: string) => { setForm((p) => ({ ...p, [k]: v })); setErrors((p) => ({ ...p, [k]: '' })); setSubmitError(''); };
+
+  useEffect(() => {
+    setErrors({});
+    setSubmitError('');
+  }, [property?.id]);
 
   const toNum = (v: string) => (v !== '' ? Number(v) : undefined);
+
+  const handleCancel = () => {
+    resetForm();
+    setErrors({});
+    setSubmitError('');
+    onClose();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +86,7 @@ export function PropertyDialog({ property, onSave, onClose }: { property: Proper
     setSubmitError('');
     try {
       await onSave(form);
+      if (!property) clearDraft();
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : t('common.errorSave'));
     } finally {
@@ -124,7 +172,7 @@ export function PropertyDialog({ property, onSave, onClose }: { property: Proper
               className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-muted">{t('common.cancel')}</button>
+            <button type="button" onClick={handleCancel} className="px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-muted">{t('common.cancel')}</button>
             <button type="submit" disabled={saving}
               className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition disabled:opacity-50">
               {saving ? t('common.saving') : t('common.save')}

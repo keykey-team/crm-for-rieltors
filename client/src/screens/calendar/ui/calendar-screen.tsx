@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { CalendarDays, Plus, ChevronLeft, ChevronRight, Clock, MapPin, Trash2, X, Edit2, Link2, Copy, Check, RefreshCw, ExternalLink } from 'lucide-react';
+import { useFormDraft } from '@/shared/hooks/use-form-draft';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/lib/i18n/context';
 import { HintTooltip } from '@/shared/ui/hint-tooltip';
@@ -647,7 +648,7 @@ function EventDialog({ date, event, onSave, onClose, t }: { date: string | null;
   const initialEnd = event?.endDate ? new Date(event.endDate) : new Date(initialStart.getTime() + 60 * 60000);
   const startParts = toLocalDateParts(initialStart);
   const endParts = toLocalDateParts(initialEnd);
-  const [form, setForm] = useState({
+  const createInitialValue = useCallback(() => ({
     title: event?.title ?? '',
     type: event?.type ?? 'meeting',
     day: startParts.day,
@@ -656,6 +657,12 @@ function EventDialog({ date, event, onSave, onClose, t }: { date: string | null;
     endHour: endParts.hour,
     endMinute: endParts.minute,
     description: event?.description ?? '',
+  }), [endParts.hour, endParts.minute, event?.description, event?.id, event?.title, event?.type, startParts.day, startParts.hour, startParts.minute]);
+  const { form, setForm, clearDraft, resetForm } = useFormDraft({
+    storageKey: 'crm_create_calendar_event_draft',
+    createInitialValue,
+    draftEnabled: !event,
+    resetKey: event?.id ?? 'create',
   });
   const [saving, setSaving] = useState(false);
   const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -663,12 +670,17 @@ function EventDialog({ date, event, onSave, onClose, t }: { date: string | null;
   const startPreview = `${String(form.startHour).padStart(2, '0')}:${String(form.startMinute).padStart(2, '0')}`;
   const endPreview = `${String(form.endHour).padStart(2, '0')}:${String(form.endMinute).padStart(2, '0')}`;
 
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={handleClose}>
       <div className="bg-card rounded-2xl w-full max-w-md" style={{ boxShadow: 'var(--shadow-lg)' }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-border/30">
           <h2 className="font-display font-bold text-lg">{event ? t('calendar.editEvent') : t('calendar.newEvent')}</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted"><X className="w-4 h-4" /></button>
+          <button onClick={handleClose} className="p-1.5 rounded-lg hover:bg-muted"><X className="w-4 h-4" /></button>
         </div>
         <form onSubmit={async (e) => {
           e.preventDefault();
@@ -685,6 +697,7 @@ function EventDialog({ date, event, onSave, onClose, t }: { date: string | null;
             startDate: start.toISOString(),
             endDate: end.toISOString(),
           });
+          if (!event) clearDraft();
           setSaving(false);
         }} className="p-6 space-y-4">
           <div>
@@ -741,7 +754,7 @@ function EventDialog({ date, event, onSave, onClose, t }: { date: string | null;
               className="w-full px-3.5 py-2.5 rounded-xl border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition resize-none" />
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-muted transition">{t('common.cancel')}</button>
+            <button type="button" onClick={handleClose} className="px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-muted transition">{t('common.cancel')}</button>
             <button type="submit" disabled={saving}
               className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition disabled:opacity-50">
               {saving ? t('common.saving') : t('common.save')}

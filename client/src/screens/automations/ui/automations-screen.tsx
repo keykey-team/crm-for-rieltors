@@ -1,6 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Zap, Plus, Edit2, Trash2, ToggleLeft, ToggleRight, ArrowRight, X } from 'lucide-react';
+import { useFormDraft } from '@/shared/hooks/use-form-draft';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/lib/i18n/context';
 import { HintTooltip } from '@/shared/ui/hint-tooltip';
@@ -102,69 +103,97 @@ export function AutomationsClient() {
 }
 
 function AutomationDialog({ automation, onSave, onClose, t, triggers, actions }: { automation: Automation | null; onSave: (d: AutomationUpsertInput) => void | Promise<void>; onClose: () => void; t: (k: string) => string; triggers: { value: string; label: string }[]; actions: { value: string; label: string }[] }) {
-  const [name, setName] = useState(automation?.name ?? '');
-  const [description, setDescription] = useState(automation?.description ?? '');
-  const [trigger, setTrigger] = useState(automation?.trigger ?? 'stage_change');
-  const [triggerValue, setTriggerValue] = useState(automation?.triggerValue ?? '');
-  const [action, setAction] = useState(automation?.action ?? 'create_task');
-  const [actionValue, setActionValue] = useState(automation?.actionValue ?? '');
+  const createInitialValue = useCallback(() => ({
+    name: automation?.name ?? '',
+    description: automation?.description ?? '',
+    trigger: automation?.trigger ?? 'stage_change',
+    triggerValue: automation?.triggerValue ?? '',
+    action: automation?.action ?? 'create_task',
+    actionValue: automation?.actionValue ?? '',
+  }), [automation]);
+  const { form, setForm, clearDraft, resetForm } = useFormDraft({
+    storageKey: 'crm_create_automation_draft',
+    createInitialValue,
+    draftEnabled: !automation,
+    resetKey: automation?.id ?? 'create',
+  });
   const [saving, setSaving] = useState(false);
+
+  const handleDismiss = () => {
+    onClose();
+  };
+
+  const handleCancel = () => {
+    resetForm();
+    onClose();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true);
-    await onSave({ name, description, trigger, triggerValue, action, actionValue });
-    setSaving(false);
+    try {
+      await onSave({
+        name: form.name,
+        description: form.description,
+        trigger: form.trigger,
+        triggerValue: form.triggerValue,
+        action: form.action,
+        actionValue: form.actionValue,
+      });
+      if (!automation) clearDraft();
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4" onClick={handleDismiss}>
       <div className="bg-card rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()} style={{ boxShadow: 'var(--shadow-lg)' }}>
         <div className="flex items-center justify-between p-5 border-b border-border">
           <h2 className="text-lg font-display font-bold">{automation ? t('automations.editAutomation') : t('automations.newAutomation')}</h2>
-          <button onClick={onClose} className="p-1 hover:bg-muted rounded-lg"><X className="w-5 h-5" /></button>
+          <button onClick={handleDismiss} className="p-1 hover:bg-muted rounded-lg"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
             <label className="text-sm font-medium mb-1 block">{t('common.title')} *</label>
-            <input value={name} onChange={e => setName(e.target.value)} required
+            <input value={form.name} onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))} required
               className="w-full px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
           </div>
           <div>
             <label className="text-sm font-medium mb-1 block">{t('common.description')}</label>
-            <input value={description} onChange={e => setDescription(e.target.value)}
+            <input value={form.description} onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))}
               className="w-full px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium mb-1 block">{t('automations.trigger')}</label>
-              <select value={trigger} onChange={e => setTrigger(e.target.value)}
+              <select value={form.trigger} onChange={e => setForm(prev => ({ ...prev, trigger: e.target.value }))}
                 className="w-full px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
                 {triggers.map(tr => <option key={tr.value} value={tr.value}>{tr.label}</option>)}
               </select>
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">{t('automations.triggerValue')}</label>
-              <input value={triggerValue} onChange={e => setTriggerValue(e.target.value)} placeholder={t('common.optional')}
+              <input value={form.triggerValue} onChange={e => setForm(prev => ({ ...prev, triggerValue: e.target.value }))} placeholder={t('common.optional')}
                 className="w-full px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium mb-1 block">{t('automations.action')}</label>
-              <select value={action} onChange={e => setAction(e.target.value)}
+              <select value={form.action} onChange={e => setForm(prev => ({ ...prev, action: e.target.value }))}
                 className="w-full px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
                 {actions.map(ac => <option key={ac.value} value={ac.value}>{ac.label}</option>)}
               </select>
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">{t('automations.actionValue')}</label>
-              <input value={actionValue} onChange={e => setActionValue(e.target.value)} placeholder={t('common.optional')}
+              <input value={form.actionValue} onChange={e => setForm(prev => ({ ...prev, actionValue: e.target.value }))} placeholder={t('common.optional')}
                 className="w-full px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
             </div>
           </div>
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-border rounded-xl text-sm hover:bg-muted transition">{t('common.cancel')}</button>
-            <button type="submit" disabled={saving || !name}
+            <button type="button" onClick={handleCancel} className="flex-1 px-4 py-2.5 border border-border rounded-xl text-sm hover:bg-muted transition">{t('common.cancel')}</button>
+            <button type="submit" disabled={saving || !form.name}
               className="flex-1 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition disabled:opacity-50">
               {saving ? t('common.saving') : t('common.save')}
             </button>

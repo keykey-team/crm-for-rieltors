@@ -50,9 +50,15 @@ export function DealFormDialog({ deal, onSave, onClose }: { deal: Deal | null; o
     resetNewPropFormState,
     createLeadOption,
     createPropertyOption,
+    resetForm,
     upd,
     submit,
   } = useDealForm(deal, onSave, t);
+
+  const handleCancel = () => {
+    resetForm();
+    onClose();
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
@@ -215,7 +221,7 @@ export function DealFormDialog({ deal, onSave, onClose }: { deal: Deal | null; o
             <textarea rows={3} value={form.notes} onChange={(e) => upd('notes', e.target.value)} className={`w-full px-3 py-2.5 rounded-xl border bg-muted/30 text-sm resize-none ${errors.notes ? 'border-destructive/60' : 'border-border'}`} />
             {errors.notes && <p className="text-xs text-destructive mt-1">{errors.notes}</p>}
           </div>
-          <div className="flex justify-end gap-3 pt-2"><button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-muted">{t('common.cancel')}</button><button type="submit" disabled={saving} className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition disabled:opacity-50">{saving ? t('common.saving') : t('common.save')}</button></div>
+          <div className="flex justify-end gap-3 pt-2"><button type="button" onClick={handleCancel} className="px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-muted">{t('common.cancel')}</button><button type="submit" disabled={saving} className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition disabled:opacity-50">{saving ? t('common.saving') : t('common.save')}</button></div>
         </form>
       </div>
     </div>
