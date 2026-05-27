@@ -1,6 +1,7 @@
 'use client';
 
-import { Search, LayoutGrid, List } from 'lucide-react';
+import { useRef, useState, useEffect } from 'react';
+import { Search, LayoutGrid, List, ChevronDown } from 'lucide-react';
 
 import { cn } from '@/shared/lib/utils';
 
@@ -22,6 +23,69 @@ interface Props {
   viewMode: 'table' | 'kanban';
   setViewMode: (mode: 'table' | 'kanban') => void;
   t: (key: string) => string;
+}
+
+interface FilterSelectProps {
+  value: string;
+  onChange: (v: string) => void;
+  options: Option[];
+  allLabel: string;
+}
+
+function FilterSelect({ value, onChange, options, allLabel }: FilterSelectProps) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const current = options.find((o) => o.value === value)?.label ?? allLabel;
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 px-3 py-2 border border-border/60 rounded-xl text-sm bg-card hover:bg-muted/40 transition whitespace-nowrap"
+      >
+        {current}
+        <ChevronDown className={cn('w-3.5 h-3.5 text-muted-foreground transition-transform', open && 'rotate-180')} />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 top-full left-0 mt-1 min-w-full bg-popover border border-border rounded-xl shadow-md overflow-y-auto max-h-48">
+          <button
+            type="button"
+            onClick={() => { onChange(''); setOpen(false); }}
+            className={cn(
+              'w-full text-left px-3 py-2 text-sm hover:bg-muted/60 transition',
+              value === '' && 'text-primary font-medium',
+            )}
+          >
+            {allLabel}
+          </button>
+          {options.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => { onChange(o.value); setOpen(false); }}
+              className={cn(
+                'w-full text-left px-3 py-2 text-sm hover:bg-muted/60 transition',
+                value === o.value && 'text-primary font-medium',
+              )}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function LeadsFiltersBar({
@@ -53,21 +117,27 @@ export function LeadsFiltersBar({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-2 border border-border/60 dark:border-border/40 rounded-xl text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary/20">
-          <option value="">{t('common.allStatuses')}</option>
-          {leadStatuses.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-        </select>
+        <FilterSelect
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={leadStatuses}
+          allLabel={t('common.allStatuses')}
+        />
 
-        <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)} className="px-3 py-2 border border-border/60 dark:border-border/40 rounded-xl text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary/20">
-          <option value="">{t('common.allSources')}</option>
-          {leadSources.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-        </select>
+        <FilterSelect
+          value={sourceFilter}
+          onChange={setSourceFilter}
+          options={leadSources}
+          allLabel={t('common.allSources')}
+        />
 
         {managers.length > 1 && (
-          <select value={managerFilter} onChange={(e) => setManagerFilter(e.target.value)} className="px-3 py-2 border border-border/60 dark:border-border/40 rounded-xl text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary/20">
-            <option value="">{t('common.allManagers')}</option>
-            {managers.map((manager) => <option key={manager.id} value={manager.id}>{manager.name || manager.email}</option>)}
-          </select>
+          <FilterSelect
+            value={managerFilter}
+            onChange={setManagerFilter}
+            options={managers.map((m) => ({ value: m.id, label: m.name || m.email || m.id }))}
+            allLabel={t('common.allManagers')}
+          />
         )}
 
         <div className="flex bg-card rounded-xl border border-border/60 dark:border-border/40 p-0.5 ml-auto">

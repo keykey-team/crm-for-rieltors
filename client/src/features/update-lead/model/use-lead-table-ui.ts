@@ -5,22 +5,33 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Lead } from '@/entities/lead';
 
 type DropdownType = 'status' | 'source' | 'manager';
+type DropdownState = { id: string; type: DropdownType; rect: DOMRect } | null;
 
 export function useLeadTableUi(leads: Lead[], sortBy?: string, sortDir?: 'asc' | 'desc') {
-  const [activeDropdown, setActiveDropdown] = useState<{ id: string; type: DropdownType } | null>(null);
+  const [activeDropdown, setActiveDropdown] = useState<DropdownState>(null);
 
   useEffect(() => {
     if (!activeDropdown) return;
-    const handler = (e: MouseEvent) => {
+    const close = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (!target.closest('[data-inline-dropdown]')) setActiveDropdown(null);
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    const closeOnScroll = (e: Event) => {
+      if ((e.target as HTMLElement).closest?.('[data-inline-dropdown]')) return;
+      setActiveDropdown(null);
+    };
+    document.addEventListener('mousedown', close);
+    window.addEventListener('scroll', closeOnScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      window.removeEventListener('scroll', closeOnScroll, true);
+    };
   }, [activeDropdown]);
 
-  const toggleDropdown = (id: string, type: DropdownType) => {
-    setActiveDropdown((prev) => (prev?.id === id && prev?.type === type ? null : { id, type }));
+  const toggleDropdown = (id: string, type: DropdownType, rect: DOMRect) => {
+    setActiveDropdown((prev) =>
+      prev?.id === id && prev?.type === type ? null : { id, type, rect },
+    );
   };
 
   const sortedLeads = useMemo(() => {
