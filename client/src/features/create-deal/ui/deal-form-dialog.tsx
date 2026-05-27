@@ -8,11 +8,12 @@ import { PhoneInput } from '@/shared/ui/phone-input';
 import type { Deal, DealUpsertInput } from '@/entities/deal';
 import { useDealForm } from '@/features/create-deal/model/use-deal-form';
 
-export function DealFormDialog({ deal, onSave, onClose }: { deal: Deal | null; onSave: (d: DealUpsertInput) => void | Promise<void>; onClose: () => void }) {
+export function DealFormDialog({ deal, onSave, onClose, preferredFunnelId }: { deal: Deal | null; onSave: (d: DealUpsertInput) => void | Promise<void>; onClose: () => void; preferredFunnelId?: string | null }) {
   const { t } = useTranslation();
   const getDealTypeLabel = (value: string) => value === 'sale' ? t('leads.dialog.needSell') : value === 'rent' ? t('leads.dialog.needRent') : value;
   const {
     stages,
+    funnels,
     users,
     form,
     saving,
@@ -55,7 +56,7 @@ export function DealFormDialog({ deal, onSave, onClose }: { deal: Deal | null; o
     resetForm,
     upd,
     submit,
-  } = useDealForm(deal, onSave, t);
+  } = useDealForm(deal, onSave, t, preferredFunnelId);
 
   const handleCancel = () => {
     resetForm();
@@ -212,6 +213,13 @@ export function DealFormDialog({ deal, onSave, onClose }: { deal: Deal | null; o
               </div>
             )}
             </div>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs text-muted-foreground">{t('settings.funnel')}</label>
+            <select value={form.funnelId ?? ''} onChange={(e) => upd('funnelId', e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm">
+              <option value="">{t('deals.selectFunnel')}</option>
+              {funnels.map((funnel) => <option key={funnel.id} value={funnel.id}>{funnel.name}</option>)}
+            </select>
           </div>
           <div>
             <label className="mb-1.5 block text-xs text-muted-foreground">{t('deals.stage')}</label>

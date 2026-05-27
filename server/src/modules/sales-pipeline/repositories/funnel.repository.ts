@@ -16,6 +16,13 @@ export async function findFunnel(id: string) {
   return prisma.funnel.findUnique({ where: { id } });
 }
 
+export async function findDefaultFunnel() {
+  return prisma.funnel.findFirst({
+    where: { isActive: true },
+    orderBy: [{ isDefault: 'desc' }, { order: 'asc' }],
+  });
+}
+
 export async function createFunnel(data: { name: string }) {
   const maxOrder = await prisma.funnel.aggregate({ _max: { order: true } });
   return prisma.funnel.create({

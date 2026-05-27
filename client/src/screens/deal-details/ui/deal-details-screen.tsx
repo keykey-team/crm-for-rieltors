@@ -175,12 +175,12 @@ export function DealDetailClient({ dealId }: { dealId: string }) {
 
   const fetchDeal = useCallback(async () => {
     try {
-      const [dealData, commData, checkData, logData, stagesData, cfData, cfvData] = await Promise.all([
-        getDealById(dealId),
+      const dealData = await getDealById(dealId);
+      const [commData, checkData, logData, stagesData, cfData, cfvData] = await Promise.all([
         getDealComments(dealId),
         getDealChecklist(dealId),
         getActivityLog('deal', dealId),
-        getFunnelStages(),
+        getFunnelStages(dealData?.funnelId),
         getDealCustomFields(),
         getDealCustomFieldValues(dealId),
       ]);
@@ -189,6 +189,7 @@ export function DealDetailClient({ dealId }: { dealId: string }) {
       setChecklist(Array.isArray(checkData) ? checkData : []);
       setLogs(Array.isArray(logData) ? logData : []);
       if (Array.isArray(stagesData) && stagesData.length > 0) setStages(stagesData);
+      else setStages(DEAL_STAGES);
       if (Array.isArray(cfData)) setCustomFields(cfData);
       if (Array.isArray(cfvData)) {
         const vals: Record<string, string> = {};

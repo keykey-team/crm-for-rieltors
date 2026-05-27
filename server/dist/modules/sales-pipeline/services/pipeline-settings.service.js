@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.addDealCustomField = exports.listDealCustomFields = exports.addFunnelStage = exports.listFunnelStages = void 0;
+exports.addDealCustomField = exports.listDealCustomFields = exports.addFunnelStage = void 0;
+exports.listFunnelStages = listFunnelStages;
 exports.changeFunnelStages = changeFunnelStages;
 exports.removeFunnelStage = removeFunnelStage;
 exports.changeDealCustomFields = changeDealCustomFields;
@@ -9,7 +10,9 @@ exports.listDealCustomFieldValues = listDealCustomFieldValues;
 exports.saveDealCustomFieldValue = saveDealCustomFieldValue;
 const errors_1 = require("../../../common/shared-kernel/errors");
 const pipeline_settings_repository_1 = require("../repositories/pipeline-settings.repository");
-exports.listFunnelStages = pipeline_settings_repository_1.findFunnelStages;
+async function listFunnelStages(funnelId) {
+    return (0, pipeline_settings_repository_1.findFunnelStages)(funnelId);
+}
 exports.addFunnelStage = pipeline_settings_repository_1.createFunnelStage;
 async function changeFunnelStages(input) {
     if (Array.isArray(input.stages)) {

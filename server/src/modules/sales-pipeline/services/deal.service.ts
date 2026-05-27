@@ -1,6 +1,7 @@
 import { badRequest } from '../../../common/shared-kernel/errors';
 import { isAdminRole } from '../../../common/shared-kernel/roles';
 import { leadFacade } from '../../lead-management';
+import { findDefaultFunnel } from '../repositories/funnel.repository';
 import {
   createDeal,
   createDealChecklistItem,
@@ -22,14 +23,26 @@ function parseFloatOrNull(value: unknown) {
   return value ? parseFloat(String(value)) : null;
 }
 
+async function resolveDealFunnelId(input: Record<string, unknown>) {
+  if (input.funnelId !== undefined) {
+    return input.funnelId ?? null;
+  }
+
+  const defaultFunnel = await findDefaultFunnel();
+  return defaultFunnel?.id ?? null;
+}
+
 export async function listDeals(userId?: string, role?: string) {
   return findDeals(ownership(role, userId));
 }
 
 export async function addDeal(input: Record<string, unknown>, userId?: string) {
+  const funnelId = await resolveDealFunnelId(input);
+
   return createDeal({
     title: input.title,
     stage: input.stage ?? 'new_lead',
+    funnelId,
     amount: parseFloatOrNull(input.amount),
     commission: parseFloatOrNull(input.commission),
     currency: input.currency ?? 'USD',
@@ -50,6 +63,7 @@ export async function changeDeal(id: string, input: Record<string, unknown>) {
   return updateDeal(id, {
     ...(input.title !== undefined ? { title: input.title } : {}),
     ...(input.stage !== undefined ? { stage: input.stage } : {}),
+    ...(input.funnelId !== undefined ? { funnelId: input.funnelId || null } : {}),
     ...(input.amount !== undefined ? { amount: parseFloatOrNull(input.amount) } : {}),
     ...(input.commission !== undefined ? { commission: parseFloatOrNull(input.commission) } : {}),
     ...(input.currency !== undefined ? { currency: input.currency } : {}),
@@ -67,9 +81,11 @@ export async function removeDeal(id: string) {
 export async function convertLeadToDeal(leadId: string, input: Record<string, unknown>, userId?: string) {
   const lead = await leadFacade.getLeadRecord(leadId);
   if (!lead) throw badRequest('Lead not found');
+  const funnelId = await resolveDealFunnelId(input);
   const deal = await createDeal({
     title: input.title || `Угода: ${lead.firstName} ${lead.lastName || ''}`.trim(),
     stage: 'new_lead',
+    funnelId,
     leadId: lead.id,
     assignedToId: lead.assignedToId || userId || null,
     amount: lead.budget || null,

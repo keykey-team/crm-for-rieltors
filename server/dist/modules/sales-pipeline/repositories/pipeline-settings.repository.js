@@ -14,8 +14,11 @@ exports.deactivateDealCustomField = deactivateDealCustomField;
 exports.findDealCustomFieldValues = findDealCustomFieldValues;
 exports.upsertDealCustomFieldValue = upsertDealCustomFieldValue;
 const prisma_1 = require("../../../common/infrastructure/db/prisma");
-async function findFunnelStages() {
-    return prisma_1.prisma.funnelStage.findMany({ where: { isActive: true }, orderBy: { order: 'asc' } });
+async function findFunnelStages(funnelId) {
+    const where = funnelId
+        ? { isActive: true, funnelId }
+        : { isActive: true };
+    return prisma_1.prisma.funnelStage.findMany({ where, orderBy: { order: 'asc' } });
 }
 async function createFunnelStage(data) {
     const maxOrder = await prisma_1.prisma.funnelStage.aggregate({ _max: { order: true } });

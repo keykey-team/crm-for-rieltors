@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateDealCustomFieldsSchema = exports.addDealCustomFieldSchema = exports.updateFunnelStagesSchema = exports.addFunnelStageSchema = exports.saveCustomFieldValueSchema = exports.updateChecklistItemSchema = exports.addChecklistItemSchema = exports.addDealCommentSchema = exports.convertLeadToDealSchema = exports.updateDealSchema = exports.createDealSchema = void 0;
+exports.updateDealCustomFieldsSchema = exports.addDealCustomFieldSchema = exports.updateFunnelStagesSchema = exports.addFunnelStageSchema = exports.updateFunnelSchema = exports.createFunnelSchema = exports.saveCustomFieldValueSchema = exports.updateChecklistItemSchema = exports.addChecklistItemSchema = exports.addDealCommentSchema = exports.convertLeadToDealSchema = exports.updateDealSchema = exports.createDealSchema = void 0;
 const zod_1 = require("zod");
 const common_1 = require("../../../common/validation/common");
 const CURRENCIES = ['UAH', 'USD', 'EUR'];
@@ -35,6 +35,7 @@ const dealOptionalId = zod_1.z.preprocess((value) => emptyStringToUndefined(valu
 const dealBase = {
     title: (0, common_1.shortText)(150),
     stage: (0, common_1.optionalText)(80),
+    funnelId: dealOptionalId,
     amount: dealOptionalDecimal,
     commission: dealOptionalPercentage,
     currency: zod_1.z.enum(CURRENCIES).optional(),
@@ -51,6 +52,7 @@ exports.convertLeadToDealSchema = zod_1.z
     .object({
     title: (0, common_1.shortText)(150).optional(),
     stage: (0, common_1.optionalText)(80),
+    funnelId: dealOptionalId,
     amount: common_1.optionalPositiveDecimal,
     currency: zod_1.z.enum(CURRENCIES).optional(),
 })
@@ -85,6 +87,13 @@ exports.saveCustomFieldValueSchema = zod_1.z
     value: zod_1.z.union([zod_1.z.string().trim().max(2000), zod_1.z.number().finite(), zod_1.z.boolean(), zod_1.z.null()]),
 })
     .strict();
+// ── Funnels ───────────────────────────────────────────────────────────────────
+exports.createFunnelSchema = zod_1.z
+    .object({ name: (0, common_1.shortText)(80) })
+    .strict();
+exports.updateFunnelSchema = zod_1.z
+    .object({ name: (0, common_1.shortText)(80) })
+    .strict();
 // ── Funnel stages ─────────────────────────────────────────────────────────────
 exports.addFunnelStageSchema = zod_1.z
     .object({
@@ -99,6 +108,7 @@ exports.addFunnelStageSchema = zod_1.z
         .string()
         .regex(/^#[0-9A-Fa-f]{6}$/, 'Must be hex color like #AABBCC'),
     order: zod_1.z.number().int().min(0).optional(),
+    funnelId: common_1.optionalCuid,
 })
     .strict();
 exports.updateFunnelStagesSchema = zod_1.z

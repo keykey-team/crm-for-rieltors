@@ -41,6 +41,7 @@ const dealOptionalId = z.preprocess((value) => emptyStringToUndefined(value), op
 const dealBase = {
   title: shortText(150),
   stage: optionalText(80),
+  funnelId: dealOptionalId,
   amount: dealOptionalDecimal,
   commission: dealOptionalPercentage,
   currency: z.enum(CURRENCIES).optional(),
@@ -60,6 +61,7 @@ export const convertLeadToDealSchema = z
   .object({
     title: shortText(150).optional(),
     stage: optionalText(80),
+    funnelId: dealOptionalId,
     amount: optionalPositiveDecimal,
     currency: z.enum(CURRENCIES).optional(),
   })

@@ -7,10 +7,11 @@ import type { Deal, DealUpsertInput } from '@/entities/deal';
 import type { Lead } from '@/entities/lead';
 import type { Property } from '@/entities/property';
 import type { User as AppUser } from '@/entities/user';
+import type { Funnel } from '@/entities/settings';
 import { getUsers } from '@/entities/user';
 import { createLead, getLeads } from '@/entities/lead';
 import { createProperty, getProperties } from '@/entities/property';
-import { getFunnelStages } from '@/entities/settings';
+import { getFunnels, getFunnelStages } from '@/entities/settings';
 import { useFormDraft } from '@/shared/hooks/use-form-draft';
 import {
   parseForm,
@@ -25,10 +26,11 @@ export type DealStage = { value: string; label: string; color: string };
 
 const CREATE_DEAL_DRAFT_KEY = 'crm_create_deal_draft';
 
-function createEmptyForm(deal: Deal | null): DealUpsertInput {
+function createEmptyForm(deal: Deal | null, preferredFunnelId?: string | null): DealUpsertInput {
   return {
     title: deal?.title ?? '',
     stage: deal?.stage ?? 'new_lead',
+    funnelId: deal?.funnelId ?? preferredFunnelId ?? '',
     amount: deal?.amount?.toString() ?? '',
     commission: deal?.commission?.toString() ?? '',
     currency: deal?.currency ?? 'USD',
@@ -39,8 +41,9 @@ function createEmptyForm(deal: Deal | null): DealUpsertInput {
   };
 }
 
-export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => void | Promise<void>, t: (key: string) => string) {
+export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => void | Promise<void>, t: (key: string) => string, preferredFunnelId?: string | null) {
   const [stages, setStages] = useState<DealStage[]>(DEAL_STAGES as DealStage[]);
+  const [funnels, setFunnels] = useState<Funnel[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [users, setUsers] = useState<AppUser[]>([]);
@@ -61,7 +64,7 @@ export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => v
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState('');
-  const createInitialValue = useCallback(() => createEmptyForm(deal), [deal]);
+  const createInitialValue = useCallback(() => createEmptyForm(deal, preferredFunnelId), [deal, preferredFunnelId]);
   const { form, setForm, clearDraft, resetForm: resetDraftForm } = useFormDraft<DealUpsertInput>({
     storageKey: CREATE_DEAL_DRAFT_KEY,
     createInitialValue,
@@ -70,11 +73,34 @@ export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => v
   });
 
   useEffect(() => {
-    getFunnelStages().then((d) => { if (Array.isArray(d) && d.length > 0) setStages(d as DealStage[]); }).catch(() => {});
+    getFunnels().then((items) => {
+      setFunnels(items);
+      if (!deal && !preferredFunnelId && !form.funnelId && items[0]?.id) {
+        setForm((prev) => ({ ...prev, funnelId: items[0].id }));
+      }
+    }).catch(() => {});
     getLeads().then(setLeads).catch(() => {});
     getProperties().then(setProperties).catch(() => {});
     getUsers().then(setUsers).catch(() => {});
-  }, []);
+  }, [deal, preferredFunnelId, form.funnelId, setForm]);
+
+  useEffect(() => {
+    if (!form.funnelId) {
+      setStages(DEAL_STAGES as DealStage[]);
+      return;
+    }
+
+    getFunnelStages(form.funnelId).then((items) => {
+      const nextStages = Array.isArray(items) && items.length > 0 ? (items as DealStage[]) : (DEAL_STAGES as DealStage[]);
+      setStages(nextStages);
+      setForm((prev) => {
+        if (!prev.stage || !nextStages.some((stage) => stage.value === prev.stage)) {
+          return { ...prev, stage: nextStages[0]?.value ?? prev.stage };
+        }
+        return prev;
+      });
+    }).catch(() => {});
+  }, [form.funnelId, setForm]);
 
   useEffect(() => {
     setErrors({});
@@ -217,7 +243,13 @@ export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => v
     setSaving(true);
     setSubmitError('');
     try {
-      await onSave({ ...form, leadId: form.leadId || null, propertyId: form.propertyId || null, assignedToId: form.assignedToId || null });
+      await onSave({
+        ...form,
+        funnelId: form.funnelId || null,
+        leadId: form.leadId || null,
+        propertyId: form.propertyId || null,
+        assignedToId: form.assignedToId || null,
+      });
       if (!deal) clearDraft();
     } catch (error) {
       setSubmitError(error instanceof Error && error.message ? error.message : t('common.errorSave'));
@@ -240,6 +272,7 @@ export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => v
 
   return {
     stages,
+    funnels,
     users,
     form,
     saving,

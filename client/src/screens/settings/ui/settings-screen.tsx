@@ -12,6 +12,7 @@ import { usePlan } from '@/shared/lib/plan-context';
 import { useBrand } from '@/shared/lib/brand-context';
 import { ROLES_STATIC, TABS_STATIC } from '@/widgets/settings/model/settings-constants';
 import { PhoneInput } from '@/shared/ui/phone-input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui';
 import {
   createDealCustomField,
   createDictionary,
@@ -72,6 +73,7 @@ export function SettingsClient() {
   const [funnels, setFunnels] = useState<Funnel[]>([]);
   const [selectedFunnelId, setSelectedFunnelId] = useState<string | null>(null);
   const [newFunnelName, setNewFunnelName] = useState('');
+  const [showCreateFunnelForm, setShowCreateFunnelForm] = useState(false);
   const [editingFunnelId, setEditingFunnelId] = useState<string | null>(null);
   const [editingFunnelName, setEditingFunnelName] = useState('');
   const [stages, setStages] = useState<any[]>([]);
@@ -233,6 +235,7 @@ export function SettingsClient() {
     try {
       const created = await createFunnel({ name });
       setNewFunnelName('');
+      setShowCreateFunnelForm(false);
       setFunnels(prev => [...prev, created]);
       setSelectedFunnelId(created.id);
       toast.success(t('settings.saved'));
@@ -688,67 +691,78 @@ export function SettingsClient() {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="font-semibold">Воронки</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">Максимум 10 воронок. Кастомні статуси — у кожній своїй.</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t('settings.funnelLimit')}</p>
                 </div>
                 <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-full">{funnels.length} / 10</span>
               </div>
 
-              <div className="flex flex-wrap gap-2 mb-4">
-                {funnels.map(f => (
-                  <div key={f.id} className={cn(
-                    'group flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-medium transition cursor-pointer',
-                    selectedFunnelId === f.id
-                      ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                      : 'bg-muted/40 text-foreground border-border hover:border-primary/40'
-                  )} onClick={() => { setSelectedFunnelId(f.id); setEditingFunnelId(null); }}>
-                    {editingFunnelId === f.id ? (
-                      <>
-                        <input
-                          autoFocus
-                          value={editingFunnelName}
-                          onChange={e => setEditingFunnelName(e.target.value)}
-                          onKeyDown={e => { if (e.key === 'Enter') saveFunnelName(); if (e.key === 'Escape') setEditingFunnelId(null); }}
-                          onClick={e => e.stopPropagation()}
-                          className="w-32 bg-transparent border-b border-current outline-none text-sm"
-                        />
-                        <button onClick={e => { e.stopPropagation(); saveFunnelName(); }} className="hover:opacity-70"><Check className="w-3.5 h-3.5" /></button>
-                        <button onClick={e => { e.stopPropagation(); setEditingFunnelId(null); }} className="hover:opacity-70"><X className="w-3.5 h-3.5" /></button>
-                      </>
-                    ) : (
-                      <>
-                        <span>{f.name}</span>
-                        {!f.isDefault && (
-                          <>
-                            <button onClick={e => { e.stopPropagation(); setEditingFunnelId(f.id); setEditingFunnelName(f.name); }}
-                              className={cn('opacity-0 group-hover:opacity-100 transition hover:scale-110', selectedFunnelId === f.id && 'opacity-60')}>
-                              <Edit2 className="w-3 h-3" />
-                            </button>
-                            <button onClick={e => { e.stopPropagation(); deleteFunnelHandler(f.id); }}
-                              className={cn('opacity-0 group-hover:opacity-100 transition hover:scale-110', selectedFunnelId === f.id && 'opacity-60 text-red-300')}>
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-                          </>
-                        )}
-                      </>
-                    )}
-                  </div>
-                ))}
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,280px)_minmax(0,1fr)]">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground block">{t('settings.selectFunnel')}</label>
+                  <Select value={selectedFunnelId ?? undefined} onValueChange={(value) => { setSelectedFunnelId(value); setEditingFunnelId(null); setShowCreateFunnelForm(false); }}>
+                    <SelectTrigger className="rounded-xl h-11">
+                      <SelectValue placeholder={t('settings.selectFunnel')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {funnels.map((funnel) => (
+                        <SelectItem key={funnel.id} value={funnel.id}>{funnel.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                {funnels.length < 10 && (
-                  <div className="flex items-center gap-1.5">
+                <div className="rounded-xl border border-border/60 bg-muted/20 p-3 flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium mr-auto">{t('settings.funnelManagement')}</span>
+                  {funnels.length < 10 ? (
+                    <button
+                      onClick={() => { setShowCreateFunnelForm(true); setEditingFunnelId(null); setNewFunnelName(''); }}
+                      className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition"
+                    >
+                      <Plus className="w-4 h-4" /> {t('common.create')}
+                    </button>
+                  ) : null}
+                  {selectedFunnel ? (
+                    <button
+                      onClick={() => { setEditingFunnelId(selectedFunnel.id); setEditingFunnelName(selectedFunnel.name); setShowCreateFunnelForm(false); }}
+                      className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-border bg-card text-sm font-medium hover:bg-muted/60 transition"
+                    >
+                      <Edit2 className="w-4 h-4" /> {t('common.edit')}
+                    </button>
+                  ) : null}
+                  {selectedFunnel && !selectedFunnel.isDefault ? (
+                    <button
+                      onClick={() => deleteFunnelHandler(selectedFunnel.id)}
+                      className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-destructive/20 bg-destructive/5 text-destructive text-sm font-medium hover:bg-destructive/10 transition"
+                    >
+                      <Trash2 className="w-4 h-4" /> {t('common.delete')}
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+
+              {(showCreateFunnelForm || editingFunnelId) ? (
+                <div className="mt-4 rounded-xl border border-border/60 bg-muted/20 p-4">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div>
+                      <p className="text-sm font-semibold">{editingFunnelId ? t('settings.renameFunnelAction') : t('settings.createFunnelAction')}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{t('settings.funnelLimit')}</p>
+                    </div>
+                    <button onClick={() => { setShowCreateFunnelForm(false); setEditingFunnelId(null); }} className="p-1.5 rounded-lg hover:bg-muted transition"><X className="w-4 h-4" /></button>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <input
-                      value={newFunnelName}
-                      onChange={e => setNewFunnelName(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') addFunnelHandler(); }}
-                      placeholder="Назва воронки"
-                      className="px-3 py-2 border border-border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 w-40"
+                      value={editingFunnelId ? editingFunnelName : newFunnelName}
+                      onChange={e => editingFunnelId ? setEditingFunnelName(e.target.value) : setNewFunnelName(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') { if (editingFunnelId) saveFunnelName(); else addFunnelHandler(); } }}
+                      placeholder={t('settings.newFunnelName')}
+                      className="flex-1 px-3 py-2.5 border border-border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
-                    <button onClick={addFunnelHandler} className="p-2 bg-primary text-white rounded-xl hover:bg-primary/90 transition active:scale-95">
-                      <Plus className="w-4 h-4" />
+                    <button onClick={editingFunnelId ? saveFunnelName : addFunnelHandler} className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition">
+                      <Check className="w-4 h-4" /> {editingFunnelId ? t('common.save') : t('common.create')}
                     </button>
                   </div>
-                )}
-              </div>
+                </div>
+              ) : null}
             </div>
 
             {/* ── Статуси вибраної воронки ── */}

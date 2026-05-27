@@ -1,11 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { GripVertical, Edit2, Trash2, User, Building, ExternalLink } from 'lucide-react';
+import { GripVertical, Edit2, Trash2, User, Building, ExternalLink, Workflow } from 'lucide-react';
 
 import { useTranslation } from '@/shared/lib/i18n/context';
 import type { Deal } from '@/entities/deal';
+import type { Funnel, FunnelStage } from '@/entities/settings';
 import { formatPrice, getInitials } from '@/shared/lib/format';
 import { useFunnelBoardUi } from '@/features/update-deal-stage';
 
@@ -13,18 +15,27 @@ import { useFunnelBoardUi } from '@/features/update-deal-stage';
 interface Props {
   deals: Deal[];
   loading: boolean;
+  stages: FunnelStage[];
+  funnels: Funnel[];
+  selectedFunnelId: string | null;
   onStageChange: (dealId: string, newStage: string) => void;
+  onFunnelChange: (dealId: string, funnelId: string) => void | Promise<void>;
   onEdit: (deal: Deal) => void;
   onDelete: (id: string) => void;
 }
 
-export function FunnelBoard({ deals, loading, onStageChange, onEdit, onDelete }: Props) {
+export function FunnelBoard({ deals, loading, stages, funnels, selectedFunnelId, onStageChange, onFunnelChange, onEdit, onDelete }: Props) {
   const { t } = useTranslation();
   const router = useRouter();
-  const { dragItem, setDragItem, dragOver, setDragOver, stages, wasDragged } = useFunnelBoardUi();
+  const { dragItem, setDragItem, dragOver, setDragOver, wasDragged } = useFunnelBoardUi();
+  const [moveMenuDealId, setMoveMenuDealId] = useState<string | null>(null);
 
   if (loading) {
     return <div className="flex gap-4 overflow-x-auto pb-4">{[1, 2, 3, 4].map((i) => <div key={i} className="min-w-[260px] h-64 bg-card rounded-2xl animate-pulse" />)}</div>;
+  }
+
+  if (!selectedFunnelId || stages.length === 0) {
+    return <div className="rounded-2xl border border-border/50 bg-card p-8 text-center text-sm text-muted-foreground">{t('deals.noFunnelsAvailable')}</div>;
   }
 
   return (
@@ -103,6 +114,29 @@ export function FunnelBoard({ deals, loading, onStageChange, onEdit, onDelete }:
                     );
                   })()}
                   <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                    {funnels.length > 1 ? (
+                      <div className="relative">
+                        <button onClick={() => setMoveMenuDealId((prev) => prev === deal.id ? null : deal.id)} className="p-1.5 rounded-lg hover:bg-muted" title={t('deals.moveToFunnel')}>
+                          <Workflow className="w-3 h-3 text-muted-foreground" />
+                        </button>
+                        {moveMenuDealId === deal.id ? (
+                          <div className="absolute right-0 bottom-full mb-1 w-52 rounded-xl border border-border bg-card p-1 shadow-lg z-20">
+                            {funnels.filter((funnel) => funnel.id !== deal.funnelId).map((funnel) => (
+                              <button
+                                key={funnel.id}
+                                onClick={async () => {
+                                  await onFunnelChange(deal.id, funnel.id);
+                                  setMoveMenuDealId(null);
+                                }}
+                                className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-muted/60 transition"
+                              >
+                                {funnel.name}
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
                     <Link href={`/deals/${deal.id}`} className="p-1.5 rounded-lg hover:bg-primary/10"><ExternalLink className="w-3 h-3 text-primary" /></Link>
                     <button onClick={() => onEdit(deal)} className="p-1.5 rounded-lg hover:bg-muted"><Edit2 className="w-3 h-3" /></button>
                     <button onClick={() => onDelete(deal.id)} className="p-1.5 rounded-lg hover:bg-destructive/10"><Trash2 className="w-3 h-3 text-destructive" /></button>

@@ -2,6 +2,7 @@ export interface Deal {
   id: string;
   title: string;
   stage: string;
+  funnelId?: string | null;
   amount?: number | null;
   commission?: number | null;
   currency?: string | null;
@@ -19,6 +20,7 @@ export interface Deal {
 export interface DealUpsertInput {
   title: string;
   stage?: string;
+  funnelId?: string | null;
   amount?: string | number;
   commission?: string | number;
   currency?: string;
