@@ -9,42 +9,59 @@ type Country = {
   name: string;
   dialCode: string;
   maxDigits: number;
+  mask: string; // X = digit placeholder, other chars are formatting
 };
 
 const COUNTRIES: Country[] = [
-  { code: 'UA', flag: '🇺🇦', name: 'Україна',          dialCode: '+380', maxDigits: 9  },
-  { code: 'PL', flag: '🇵🇱', name: 'Польща',           dialCode: '+48',  maxDigits: 9  },
-  { code: 'DE', flag: '🇩🇪', name: 'Нiмеччина',        dialCode: '+49',  maxDigits: 11 },
-  { code: 'GB', flag: '🇬🇧', name: 'Велика Британiя',  dialCode: '+44',  maxDigits: 10 },
-  { code: 'FR', flag: '🇫🇷', name: 'Францiя',          dialCode: '+33',  maxDigits: 9  },
-  { code: 'IT', flag: '🇮🇹', name: 'Iталiя',           dialCode: '+39',  maxDigits: 10 },
-  { code: 'ES', flag: '🇪🇸', name: 'Iспанiя',          dialCode: '+34',  maxDigits: 9  },
-  { code: 'AT', flag: '🇦🇹', name: 'Австрiя',          dialCode: '+43',  maxDigits: 10 },
-  { code: 'CZ', flag: '🇨🇿', name: 'Чехiя',            dialCode: '+420', maxDigits: 9  },
-  { code: 'SK', flag: '🇸🇰', name: 'Словаччина',       dialCode: '+421', maxDigits: 9  },
-  { code: 'RO', flag: '🇷🇴', name: 'Румунiя',          dialCode: '+40',  maxDigits: 9  },
-  { code: 'HU', flag: '🇭🇺', name: 'Угорщина',         dialCode: '+36',  maxDigits: 9  },
-  { code: 'MD', flag: '🇲🇩', name: 'Молдова',          dialCode: '+373', maxDigits: 8  },
-  { code: 'BY', flag: '🇧🇾', name: 'Бiлорусь',         dialCode: '+375', maxDigits: 9  },
-  { code: 'GE', flag: '🇬🇪', name: 'Грузiя',           dialCode: '+995', maxDigits: 9  },
-  { code: 'TR', flag: '🇹🇷', name: 'Туреччина',        dialCode: '+90',  maxDigits: 10 },
-  { code: 'IL', flag: '🇮🇱', name: 'Iзраїль',          dialCode: '+972', maxDigits: 9  },
-  { code: 'AE', flag: '🇦🇪', name: 'ОАЕ',              dialCode: '+971', maxDigits: 9  },
-  { code: 'KZ', flag: '🇰🇿', name: 'Казахстан',        dialCode: '+7',   maxDigits: 10 },
-  { code: 'US', flag: '🇺🇸', name: 'США',              dialCode: '+1',   maxDigits: 10 },
+  { code: 'UA', flag: '🇺🇦', name: 'Україна',         dialCode: '+380', maxDigits: 9,  mask: '(XX) XXX XX XX'   },
+  { code: 'PL', flag: '🇵🇱', name: 'Польща',          dialCode: '+48',  maxDigits: 9,  mask: 'XXX XXX XXX'      },
+  { code: 'DE', flag: '🇩🇪', name: 'Нiмеччина',       dialCode: '+49',  maxDigits: 11, mask: 'XXXX XXXXXXX'     },
+  { code: 'GB', flag: '🇬🇧', name: 'Велика Британiя', dialCode: '+44',  maxDigits: 10, mask: 'XXXX XXXXXX'      },
+  { code: 'FR', flag: '🇫🇷', name: 'Францiя',         dialCode: '+33',  maxDigits: 9,  mask: 'X XX XX XX XX'    },
+  { code: 'IT', flag: '🇮🇹', name: 'Iталiя',          dialCode: '+39',  maxDigits: 10, mask: 'XXX XXXX XXX'     },
+  { code: 'ES', flag: '🇪🇸', name: 'Iспанiя',         dialCode: '+34',  maxDigits: 9,  mask: 'XXX XXX XXX'      },
+  { code: 'AT', flag: '🇦🇹', name: 'Австрiя',         dialCode: '+43',  maxDigits: 10, mask: 'XXX XXXXXXX'      },
+  { code: 'CZ', flag: '🇨🇿', name: 'Чехiя',           dialCode: '+420', maxDigits: 9,  mask: 'XXX XXX XXX'      },
+  { code: 'SK', flag: '🇸🇰', name: 'Словаччина',      dialCode: '+421', maxDigits: 9,  mask: 'XXX XXX XXX'      },
+  { code: 'RO', flag: '🇷🇴', name: 'Румунiя',         dialCode: '+40',  maxDigits: 9,  mask: 'XXX XXX XXX'      },
+  { code: 'HU', flag: '🇭🇺', name: 'Угорщина',        dialCode: '+36',  maxDigits: 9,  mask: 'XX XXX XXXX'      },
+  { code: 'MD', flag: '🇲🇩', name: 'Молдова',         dialCode: '+373', maxDigits: 8,  mask: 'XX XXX XXX'       },
+  { code: 'BY', flag: '🇧🇾', name: 'Бiлорусь',        dialCode: '+375', maxDigits: 9,  mask: '(XX) XXX XX XX'   },
+  { code: 'GE', flag: '🇬🇪', name: 'Грузiя',          dialCode: '+995', maxDigits: 9,  mask: 'XXX XX XX XX'     },
+  { code: 'TR', flag: '🇹🇷', name: 'Туреччина',       dialCode: '+90',  maxDigits: 10, mask: '(XXX) XXX XX XX'  },
+  { code: 'IL', flag: '🇮🇱', name: 'Iзраїль',         dialCode: '+972', maxDigits: 9,  mask: 'XX XXX XXXX'      },
+  { code: 'AE', flag: '🇦🇪', name: 'ОАЕ',             dialCode: '+971', maxDigits: 9,  mask: 'XX XXX XXXX'      },
+  { code: 'KZ', flag: '🇰🇿', name: 'Казахстан',       dialCode: '+7',   maxDigits: 10, mask: '(XXX) XXX XX XX'  },
+  { code: 'US', flag: '🇺🇸', name: 'США',             dialCode: '+1',   maxDigits: 10, mask: '(XXX) XXX XXXX'   },
 ];
 
 const DEFAULT = COUNTRIES[0];
 
-function detectCountry(value: string): { country: Country; local: string } {
-  if (!value) return { country: DEFAULT, local: '' };
+/** Applies mask: X is replaced with a digit, everything else is kept as-is */
+function applyMask(digits: string, mask: string): string {
+  let result = '';
+  let di = 0;
+  for (let i = 0; i < mask.length; i++) {
+    if (di >= digits.length) break;
+    if (mask[i] === 'X') {
+      result += digits[di++];
+    } else {
+      result += mask[i];
+    }
+  }
+  return result;
+}
+
+function detectCountry(value: string): { country: Country; digits: string } {
+  if (!value) return { country: DEFAULT, digits: '' };
   const sorted = [...COUNTRIES].sort((a, b) => b.dialCode.length - a.dialCode.length);
   for (const c of sorted) {
     if (value.startsWith(c.dialCode)) {
-      return { country: c, local: value.slice(c.dialCode.length) };
+      const raw = value.slice(c.dialCode.length).replace(/\D/g, '');
+      return { country: c, digits: raw };
     }
   }
-  return { country: DEFAULT, local: value.replace(/[^0-9\s\-()]/g, '') };
+  return { country: DEFAULT, digits: value.replace(/\D/g, '') };
 }
 
 interface PhoneInputProps {
@@ -57,9 +74,21 @@ interface PhoneInputProps {
 export function PhoneInput({ value, onChange, error, className }: PhoneInputProps) {
   const init = detectCountry(value);
   const [country, setCountry] = useState<Country>(init.country);
-  const [local, setLocal] = useState(init.local);
+  const [display, setDisplay] = useState(() => applyMask(init.digits, init.country.mask));
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+
+  // Sync display when value changes externally (e.g. form reset)
+  useEffect(() => {
+    const { country: c, digits } = detectCountry(value);
+    const expected = c.dialCode + digits;
+    const current = country.dialCode + display.replace(/\D/g, '');
+    if (expected !== current) {
+      setCountry(c);
+      setDisplay(applyMask(digits, c.mask));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -70,17 +99,17 @@ export function PhoneInput({ value, onChange, error, className }: PhoneInputProp
   }, []);
 
   const handleLocal = (raw: string) => {
-    // strip everything except digits, space, hyphen, parentheses
-    const filtered = raw.replace(/[^0-9\s\-()]/g, '');
-    const digits = filtered.replace(/\D/g, '');
+    // digits only
+    const digits = raw.replace(/\D/g, '');
     if (digits.length > country.maxDigits) return;
-    setLocal(filtered);
+    const masked = applyMask(digits, country.mask);
+    setDisplay(masked);
     onChange(country.dialCode + digits);
   };
 
   const selectCountry = (c: Country) => {
     setCountry(c);
-    setLocal('');
+    setDisplay('');
     onChange(c.dialCode);
     setOpen(false);
   };
@@ -105,15 +134,15 @@ export function PhoneInput({ value, onChange, error, className }: PhoneInputProp
         {/* Phone number input */}
         <input
           type="tel"
-          inputMode="tel"
-          value={local}
+          inputMode="numeric"
+          value={display}
           onChange={(e) => handleLocal(e.target.value)}
-          placeholder="XX XXX XX XX"
+          placeholder={applyMask('0'.repeat(country.maxDigits), country.mask).replace(/0/g, 'X')}
           className="flex-1 px-3 py-2.5 text-sm bg-transparent outline-none min-w-0"
         />
       </div>
 
-      {/* Dropdown */}
+      {/* Country dropdown */}
       {open && (
         <div className="absolute z-30 top-full left-0 mt-1 w-64 bg-popover border border-border rounded-xl shadow-lg overflow-y-auto max-h-60">
           {COUNTRIES.map((c) => (
