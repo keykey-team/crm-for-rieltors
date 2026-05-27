@@ -15,7 +15,10 @@ import {
   upsertDealCustomFieldValue,
 } from '../repositories/pipeline-settings.repository';
 
-export const listFunnelStages = findFunnelStages;
+export async function listFunnelStages(funnelId?: string) {
+  return findFunnelStages(funnelId);
+}
+
 export const addFunnelStage = createFunnelStage;
 
 export async function changeFunnelStages(input: Record<string, unknown>) {
