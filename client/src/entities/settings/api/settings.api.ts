@@ -4,6 +4,7 @@ import type {
   DealCustomField,
   DictionaryItem,
   DistributionRule,
+  Funnel,
   FunnelStage,
   ProfileSettings,
   TeamUser,
@@ -45,8 +46,30 @@ export async function deleteTeamUser(id: string): Promise<void> {
   if (!res.ok) throw new Error('Failed to delete user');
 }
 
-export async function getFunnelStages(): Promise<FunnelStage[]> {
-  const res = await fetch('/api/funnel-stages');
+export async function getFunnels(): Promise<Funnel[]> {
+  const res = await fetch('/api/funnels');
+  const data = await parseJson<unknown>(res);
+  return Array.isArray(data) ? (data as Funnel[]) : [];
+}
+
+export async function createFunnel(payload: { name: string }): Promise<Funnel> {
+  const res = await fetch('/api/funnels', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  return parseJson<Funnel>(res);
+}
+
+export async function updateFunnel(id: string, payload: { name: string }): Promise<Funnel> {
+  const res = await fetch(`/api/funnels/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  return parseJson<Funnel>(res);
+}
+
+export async function deleteFunnel(id: string): Promise<void> {
+  const res = await fetch(`/api/funnels/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to delete funnel');
+}
+
+export async function getFunnelStages(funnelId?: string): Promise<FunnelStage[]> {
+  const url = funnelId ? `/api/funnel-stages?funnelId=${funnelId}` : '/api/funnel-stages';
+  const res = await fetch(url);
   const data = await parseJson<unknown>(res);
   return Array.isArray(data) ? (data as FunnelStage[]) : [];
 }
@@ -54,6 +77,10 @@ export async function getFunnelStages(): Promise<FunnelStage[]> {
 export async function createFunnelStage(payload: Record<string, unknown>): Promise<FunnelStage> {
   const res = await fetch('/api/funnel-stages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
   return parseJson<FunnelStage>(res);
+}
+
+export async function reorderFunnelStages(items: Array<{ id: string; order: number }>) {
+  await updateFunnelStage({ stages: items });
 }
 
 export async function updateFunnelStage(payload: Record<string, unknown>): Promise<FunnelStage> {
@@ -140,10 +167,6 @@ export async function getUploadPresigned(payload: Record<string, unknown>) {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
   });
   return parseJson<any>(res);
-}
-
-export async function reorderFunnelStages(items: Array<{ id: string; order: number }>) {
-  await updateFunnelStage({ stages: items });
 }
 
 export async function reorderCustomFields(items: Array<{ id: string; order: number }>) {

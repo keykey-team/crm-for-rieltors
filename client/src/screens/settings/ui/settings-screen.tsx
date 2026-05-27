@@ -15,21 +15,25 @@ import { PhoneInput } from '@/shared/ui/phone-input';
 import {
   createDealCustomField,
   createDictionary,
+  createFunnel,
   createFunnelStage,
   deleteAftercarePlan,
   deleteDealCustomField,
   deleteDictionary,
   deleteDistributionRule,
+  deleteFunnel,
   deleteFunnelStage,
   deleteTeamUser,
   getAftercarePlans,
   getDealCustomFields,
   getDictionaries,
   getDistributionRules,
+  getFunnels,
   getFunnelStages,
   getProfileSettings,
   getTeamUsers,
   updateBrandSettings,
+  updateFunnel,
   updateFunnelStage,
   updateProfileSettings,
   upsertAftercarePlan,
@@ -42,6 +46,7 @@ import {
   reorderAftercarePlans,
   updateUserPermissions,
 } from '@/entities/settings';
+import type { Funnel } from '@/entities/settings';
 
 type TabKey = 'profile' | 'users' | 'funnel' | 'customFields' | 'dictionaries' | 'distribution' | 'aftercare' | 'branding';
 
@@ -64,6 +69,11 @@ export function SettingsClient() {
   const [showUserDialog, setShowUserDialog] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [permissionsUser, setPermissionsUser] = useState<any>(null);
+  const [funnels, setFunnels] = useState<Funnel[]>([]);
+  const [selectedFunnelId, setSelectedFunnelId] = useState<string | null>(null);
+  const [newFunnelName, setNewFunnelName] = useState('');
+  const [editingFunnelId, setEditingFunnelId] = useState<string | null>(null);
+  const [editingFunnelName, setEditingFunnelName] = useState('');
   const [stages, setStages] = useState<any[]>([]);
   const [newStage, setNewStage] = useState({ label: '', value: '', color: '#60B5FF' });
   const [editingStageId, setEditingStageId] = useState<string | null>(null);
@@ -100,11 +110,23 @@ export function SettingsClient() {
     setTelegramUrlState(savedUrl);
   }, []);
 
+  const fetchFunnels = useCallback(() => {
+    getFunnels().then(list => {
+      setFunnels(list);
+      setSelectedFunnelId(prev => prev ?? (list[0]?.id ?? null));
+    }).catch(() => {});
+  }, []);
+
+  const fetchStagesForFunnel = useCallback((funnelId: string | null) => {
+    if (!funnelId) { setStages([]); return; }
+    getFunnelStages(funnelId).then(setStages).catch(() => {});
+  }, []);
+
   const fetchTabData = useCallback(() => {
     if (activeTab === 'users') {
       getTeamUsers().then(setUsers).catch(() => {});
     } else if (activeTab === 'funnel') {
-      getFunnelStages().then(setStages).catch(() => {});
+      fetchFunnels();
     } else if (activeTab === 'customFields') {
       getDealCustomFields().then(setCustomFields).catch(() => {});
     } else if (activeTab === 'dictionaries') {
@@ -115,9 +137,13 @@ export function SettingsClient() {
     } else if (activeTab === 'aftercare') {
       getAftercarePlans().then(setAftercarePlans).catch(() => {});
     }
-  }, [activeTab, dictCategory]);
+  }, [activeTab, dictCategory, fetchFunnels]);
 
   useEffect(() => { fetchTabData(); }, [fetchTabData]);
+
+  useEffect(() => {
+    if (activeTab === 'funnel') fetchStagesForFunnel(selectedFunnelId);
+  }, [selectedFunnelId, activeTab, fetchStagesForFunnel]);
 
   // Initialize branding fields from brand context when tab opens
   const brandInitRef = useRef(false);
@@ -200,13 +226,51 @@ export function SettingsClient() {
     setLogoUploading(false);
   };
 
+  const addFunnelHandler = async () => {
+    const name = newFunnelName.trim();
+    if (!name) { toast.error(t('settings.fillFields')); return; }
+    if (funnels.length >= 10) { toast.error('Максимум 10 воронок'); return; }
+    try {
+      const created = await createFunnel({ name });
+      setNewFunnelName('');
+      setFunnels(prev => [...prev, created]);
+      setSelectedFunnelId(created.id);
+      toast.success(t('settings.saved'));
+    } catch (e: any) { toast.error(e?.message ?? t('leads.error')); }
+  };
+
+  const saveFunnelName = async () => {
+    if (!editingFunnelId || !editingFunnelName.trim()) return;
+    try {
+      const updated = await updateFunnel(editingFunnelId, { name: editingFunnelName.trim() });
+      setFunnels(prev => prev.map(f => f.id === editingFunnelId ? { ...f, name: updated.name } : f));
+      setEditingFunnelId(null);
+    } catch (e: any) { toast.error(e?.message ?? t('leads.error')); }
+  };
+
+  const deleteFunnelHandler = async (id: string) => {
+    const ok = await confirmAction('Удалить воронку?');
+    if (!ok) return;
+    try {
+      await deleteFunnel(id);
+      const next = funnels.filter(f => f.id !== id);
+      setFunnels(next);
+      if (selectedFunnelId === id) setSelectedFunnelId(next[0]?.id ?? null);
+      toast.success(t('settings.deleted'));
+    } catch (e: any) { toast.error(e?.message ?? t('leads.error')); }
+  };
+
   const addStage = async () => {
     if (!newStage.label || !newStage.value) { toast.error(t('settings.fillNameValue')); return; }
-    await createFunnelStage(newStage);
-    setNewStage({ label: '', value: '', color: '#60B5FF' }); fetchTabData(); toast.success(t('settings.stageAdded'));
+    await createFunnelStage({ ...newStage, ...(selectedFunnelId ? { funnelId: selectedFunnelId } : {}) });
+    setNewStage({ label: '', value: '', color: '#60B5FF' });
+    fetchStagesForFunnel(selectedFunnelId);
+    toast.success(t('settings.stageAdded'));
   };
   const deleteStage = async (id: string) => {
-    await deleteFunnelStage(id); fetchTabData(); toast.success(t('settings.deleted'));
+    await deleteFunnelStage(id);
+    fetchStagesForFunnel(selectedFunnelId);
+    toast.success(t('settings.deleted'));
   };
   const startEditStage = (s: any) => {
     setEditingStageId(s.id);
@@ -217,7 +281,7 @@ export function SettingsClient() {
     if (!editingStageId || !editingStageData.label.trim()) return;
     await updateFunnelStage({ id: editingStageId, label: editingStageData.label, color: editingStageData.color });
     setEditingStageId(null);
-    fetchTabData();
+    fetchStagesForFunnel(selectedFunnelId);
     toast.success(t('settings.saved'));
   };
 
@@ -548,24 +612,19 @@ export function SettingsClient() {
         </div>
       )}
 
-      {/* FUNNEL STAGES TAB */}
+      {/* FUNNEL TAB */}
       {activeTab === 'funnel' && isAdmin && (() => {
         const isProtected = (val: string) => (PROTECTED_STAGES as readonly string[]).includes(val);
-        const stagesByGroup = STAGE_GROUPS.map(g => ({
-          ...g,
-          items: stages.filter(s => (g.stages as readonly string[]).includes(s.value)),
-        }));
-        const groupedValues = STAGE_GROUPS.flatMap(g => g.stages as readonly string[]);
-        const ungrouped = stages.filter(s => !groupedValues.includes(s.value));
+        const selectedFunnel = funnels.find(f => f.id === selectedFunnelId) ?? null;
 
-        const renderStageRow = (s: any, cardBg: string) => {
+        const renderStageRow = (s: any) => {
           const idx = stages.findIndex((st: any) => st.id === s.id);
-          const prot = isProtected(s.value);
+          const prot = isProtected(s.value) || s.isDefault;
           const isEditing = editingStageId === s.id;
 
           if (isEditing) {
             return (
-              <div key={s.id} className={cn('flex items-center gap-2 p-2.5 rounded-xl transition-all border-2 border-primary/30', cardBg)}>
+              <div key={s.id} className="flex items-center gap-2 p-2.5 rounded-xl transition-all border-2 border-primary/30 bg-muted/30">
                 <div className="relative w-8 h-8 flex-shrink-0">
                   <div className="w-8 h-8 rounded-full border-2 border-border cursor-pointer overflow-hidden" style={{ backgroundColor: editingStageData.color }}>
                     <input type="color" value={editingStageData.color} onChange={e => setEditingStageData(prev => ({ ...prev, color: e.target.value }))}
@@ -595,7 +654,7 @@ export function SettingsClient() {
               onDragOver={handleDragOver(idx)}
               onDrop={handleDropStages(idx)}
               className={cn(
-                'flex items-center gap-3 p-3 rounded-xl transition-all border border-transparent', cardBg,
+                'flex items-center gap-3 p-3 rounded-xl transition-all border border-transparent bg-muted/30',
                 dragOverIdx === idx && dragIdx !== idx && 'ring-2 ring-primary/40 bg-primary/5',
                 prot && 'opacity-90'
               )}
@@ -624,50 +683,117 @@ export function SettingsClient() {
 
         return (
           <div className="space-y-4">
-            {stagesByGroup.map(g => g.items.length > 0 && (
-              <div key={g.key} className="bg-card rounded-2xl border border-border p-5" style={{ boxShadow: 'var(--shadow-sm)' }}>
-                <div className="flex items-center gap-2 mb-3">
-                  <h3 className="text-sm font-semibold text-foreground/80 uppercase tracking-wider">{t(g.labelKey)}</h3>
-                  <span className="text-[10px] text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded-full">{g.items.length}</span>
-                </div>
-                <div className="space-y-1.5">
-                  {g.items.map((s: any) => renderStageRow(s, 'bg-muted/30'))}
-                </div>
-              </div>
-            ))}
-
-            {ungrouped.length > 0 && (
-              <div className="bg-card rounded-2xl border border-border p-5" style={{ boxShadow: 'var(--shadow-sm)' }}>
-                <div className="flex items-center gap-2 mb-3">
-                  <h3 className="text-sm font-semibold text-foreground/80 uppercase tracking-wider">{t('settings.stageGroupOther')}</h3>
-                  <span className="text-[10px] text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded-full">{ungrouped.length}</span>
-                </div>
-                <div className="space-y-1.5">
-                  {ungrouped.map((s: any) => renderStageRow(s, 'bg-muted/30'))}
-                </div>
-              </div>
-            )}
-
-            {/* Add new stage */}
+            {/* ── Список воронок ── */}
             <div className="bg-card rounded-2xl border border-border p-5" style={{ boxShadow: 'var(--shadow-sm)' }}>
-              <h3 className="text-sm font-semibold mb-3">{t('settings.addNewStage')}</h3>
-              <div className="flex gap-2 items-end">
-                <div className="flex-1">
-                  <label className="text-xs font-medium mb-1 block text-muted-foreground">{t('settings.stageLabel')}</label>
-                  <input value={newStage.label} onChange={e => setNewStage({...newStage, label: e.target.value, value: e.target.value.toLowerCase().replace(/[^a-zA-Zа-яА-Я0-9]/g, '_')})}
-                    className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder={t('settings.newStage')} />
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-semibold">Воронки</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">Максимум 10 воронок. Кастомні статуси — у кожній своїй.</p>
                 </div>
-                <div className="w-12">
-                  <label className="text-xs font-medium mb-1 block text-muted-foreground">{t('settings.stageColor')}</label>
-                  <div className="w-10 h-10 p-1 rounded-xl border border-border bg-muted/30 shadow-sm">
-                    <input type="color" value={newStage.color} onChange={e => setNewStage({...newStage, color: e.target.value})} className="w-full h-full rounded-lg border-0 bg-transparent cursor-pointer" />
+                <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-full">{funnels.length} / 10</span>
+              </div>
+
+              <div className="flex flex-wrap gap-2 mb-4">
+                {funnels.map(f => (
+                  <div key={f.id} className={cn(
+                    'group flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-medium transition cursor-pointer',
+                    selectedFunnelId === f.id
+                      ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                      : 'bg-muted/40 text-foreground border-border hover:border-primary/40'
+                  )} onClick={() => { setSelectedFunnelId(f.id); setEditingFunnelId(null); }}>
+                    {editingFunnelId === f.id ? (
+                      <>
+                        <input
+                          autoFocus
+                          value={editingFunnelName}
+                          onChange={e => setEditingFunnelName(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') saveFunnelName(); if (e.key === 'Escape') setEditingFunnelId(null); }}
+                          onClick={e => e.stopPropagation()}
+                          className="w-32 bg-transparent border-b border-current outline-none text-sm"
+                        />
+                        <button onClick={e => { e.stopPropagation(); saveFunnelName(); }} className="hover:opacity-70"><Check className="w-3.5 h-3.5" /></button>
+                        <button onClick={e => { e.stopPropagation(); setEditingFunnelId(null); }} className="hover:opacity-70"><X className="w-3.5 h-3.5" /></button>
+                      </>
+                    ) : (
+                      <>
+                        <span>{f.name}</span>
+                        {!f.isDefault && (
+                          <>
+                            <button onClick={e => { e.stopPropagation(); setEditingFunnelId(f.id); setEditingFunnelName(f.name); }}
+                              className={cn('opacity-0 group-hover:opacity-100 transition hover:scale-110', selectedFunnelId === f.id && 'opacity-60')}>
+                              <Edit2 className="w-3 h-3" />
+                            </button>
+                            <button onClick={e => { e.stopPropagation(); deleteFunnelHandler(f.id); }}
+                              className={cn('opacity-0 group-hover:opacity-100 transition hover:scale-110', selectedFunnelId === f.id && 'opacity-60 text-red-300')}>
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </>
+                        )}
+                      </>
+                    )}
                   </div>
-                </div>
-                <button onClick={addStage} className="px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition active:scale-95">
-                  <Plus className="w-4 h-4" />
-                </button>
+                ))}
+
+                {funnels.length < 10 && (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      value={newFunnelName}
+                      onChange={e => setNewFunnelName(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') addFunnelHandler(); }}
+                      placeholder="Назва воронки"
+                      className="px-3 py-2 border border-border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 w-40"
+                    />
+                    <button onClick={addFunnelHandler} className="p-2 bg-primary text-white rounded-xl hover:bg-primary/90 transition active:scale-95">
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
+
+            {/* ── Статуси вибраної воронки ── */}
+            {selectedFunnel && (
+              <>
+                <div className="bg-card rounded-2xl border border-border p-5" style={{ boxShadow: 'var(--shadow-sm)' }}>
+                  <div className="flex items-center gap-2 mb-4">
+                    <h3 className="font-semibold">Статуси: {selectedFunnel.name}</h3>
+                    <span className="text-[10px] text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded-full">{stages.length}</span>
+                  </div>
+                  {stages.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">{t('settings.empty')}</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {stages.map((s: any) => renderStageRow(s))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Додати статус */}
+                <div className="bg-card rounded-2xl border border-border p-5" style={{ boxShadow: 'var(--shadow-sm)' }}>
+                  <h3 className="text-sm font-semibold mb-3">{t('settings.addNewStage')}</h3>
+                  <div className="flex gap-2 items-end">
+                    <div className="flex-1">
+                      <label className="text-xs font-medium mb-1 block text-muted-foreground">{t('settings.stageLabel')}</label>
+                      <input value={newStage.label} onChange={e => setNewStage({...newStage, label: e.target.value, value: e.target.value.toLowerCase().replace(/[^a-zA-Zа-яА-Я0-9]/g, '_')})}
+                        className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder={t('settings.newStage')} />
+                    </div>
+                    <div className="w-12">
+                      <label className="text-xs font-medium mb-1 block text-muted-foreground">{t('settings.stageColor')}</label>
+                      <div className="w-10 h-10 p-1 rounded-xl border border-border bg-muted/30 shadow-sm">
+                        <input type="color" value={newStage.color} onChange={e => setNewStage({...newStage, color: e.target.value})} className="w-full h-full rounded-lg border-0 bg-transparent cursor-pointer" />
+                      </div>
+                    </div>
+                    <button onClick={addStage} className="px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition active:scale-95">
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {!selectedFunnel && funnels.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-8">Створіть першу воронку вище</p>
+            )}
           </div>
         );
       })()}

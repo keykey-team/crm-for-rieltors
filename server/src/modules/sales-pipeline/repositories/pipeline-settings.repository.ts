@@ -1,7 +1,10 @@
 import { prisma } from '../../../common/infrastructure/db/prisma';
 
-export async function findFunnelStages() {
-  return prisma.funnelStage.findMany({ where: { isActive: true }, orderBy: { order: 'asc' } });
+export async function findFunnelStages(funnelId?: string) {
+  const where = funnelId
+    ? { isActive: true, funnelId }
+    : { isActive: true };
+  return prisma.funnelStage.findMany({ where, orderBy: { order: 'asc' } });
 }
 
 export async function createFunnelStage(data: Record<string, unknown>) {

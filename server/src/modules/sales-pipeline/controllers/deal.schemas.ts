@@ -102,6 +102,16 @@ export const saveCustomFieldValueSchema = z
   })
   .strict();
 
+// ── Funnels ───────────────────────────────────────────────────────────────────
+
+export const createFunnelSchema = z
+  .object({ name: shortText(80) })
+  .strict();
+
+export const updateFunnelSchema = z
+  .object({ name: shortText(80) })
+  .strict();
+
 // ── Funnel stages ─────────────────────────────────────────────────────────────
 
 export const addFunnelStageSchema = z
@@ -117,6 +127,7 @@ export const addFunnelStageSchema = z
       .string()
       .regex(/^#[0-9A-Fa-f]{6}$/, 'Must be hex color like #AABBCC'),
     order: z.number().int().min(0).optional(),
+    funnelId: optionalCuid,
   })
   .strict();
 

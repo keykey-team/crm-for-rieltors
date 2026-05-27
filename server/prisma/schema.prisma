@@ -292,8 +292,23 @@ model PropertyUnit {
   @@index([status])
 }
 
+model Funnel {
+  id        String        @id @default(cuid())
+  name      String
+  isDefault Boolean       @default(false)
+  isActive  Boolean       @default(true)
+  order     Int           @default(0)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  stages    FunnelStage[]
+
+  @@index([order])
+}
+
 model FunnelStage {
   id        String   @id @default(cuid())
+  funnelId  String?
+  funnel    Funnel?  @relation(fields: [funnelId], references: [id])
   value     String   @unique
   label     String
   color     String   @default("#60B5FF")
@@ -304,6 +319,7 @@ model FunnelStage {
   updatedAt DateTime @updatedAt
 
   @@index([order])
+  @@index([funnelId])
 }
 
 model DealCustomField {

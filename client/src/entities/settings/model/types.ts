@@ -16,11 +16,22 @@ export interface BrandSettings {
   gradientBg?: boolean | null;
 }
 
+export interface Funnel {
+  id: string;
+  name: string;
+  isDefault: boolean;
+  isActive: boolean;
+  order: number;
+  stages: FunnelStage[];
+}
+
 export interface FunnelStage {
   id: string;
   label: string;
   value: string;
   color: string;
+  funnelId?: string | null;
+  isDefault?: boolean;
 }
 
 export interface DealCustomField {
