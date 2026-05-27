@@ -135,7 +135,7 @@ export async function executeQuery(params: QueryParams, user: SessionUser): Prom
         if (leads.length === 0) return 'Лідів не знайдено за вказаними критеріями.';
         
         return `Знайдено ${leads.length} лідів:\n` +
-          leads.map((l, i) =>
+          leads.map((l: any, i: number) =>
             `${i + 1}. ${l.firstName} ${l.lastName || ''} | Тел: ${l.phone} | Статус: ${l.status} | Джерело: ${l.source} | Менеджер: ${l.assignedTo?.name || 'не призначено'} | Створено: ${l.createdAt.toLocaleDateString('uk-UA')}`
           ).join('\n');
       }
@@ -175,7 +175,7 @@ export async function executeQuery(params: QueryParams, user: SessionUser): Prom
         if (deals.length === 0) return 'Угод не знайдено за вказаними критеріями.';
 
         return `Знайдено ${deals.length} угод:\n` +
-          deals.map((d, i) =>
+          deals.map((d: any, i: number) =>
             `${i + 1}. "${d.title}" | Стадія: ${d.stage} | Сума: ${d.amount?.toLocaleString('uk-UA') || '—'} ${d.currency} | Клієнт: ${d.lead ? `${d.lead.firstName} ${d.lead.lastName || ''}` : '—'} | Об'єкт: ${d.property?.title || '—'} | Менеджер: ${d.assignedTo?.name || '—'} | Створено: ${d.createdAt.toLocaleDateString('uk-UA')}`
           ).join('\n');
       }
@@ -208,7 +208,7 @@ export async function executeQuery(params: QueryParams, user: SessionUser): Prom
         if (props.length === 0) return "Об'єктів не знайдено за вказаними критеріями.";
 
         return `Знайдено ${props.length} об'єктів:\n` +
-          props.map((p, i) =>
+          props.map((p: any, i: number) =>
             `${i + 1}. "${p.title}" | ${p.type} | ${p.rooms || '—'} кімн. | ${p.area || '—'} м² | ${p.price.toLocaleString('uk-UA')} ${p.currency} | ${p.address} | Статус: ${p.status}`
           ).join('\n');
       }
@@ -241,7 +241,7 @@ export async function executeQuery(params: QueryParams, user: SessionUser): Prom
         if (tasks.length === 0) return 'Задач не знайдено за вказаними критеріями.';
 
         return `Знайдено ${tasks.length} задач:\n` +
-          tasks.map((t, i) =>
+          tasks.map((t: any, i: number) =>
             `${i + 1}. "${t.title}" | ${t.type} | Пріоритет: ${t.priority} | Статус: ${t.status} | Дедлайн: ${t.dueDate?.toLocaleDateString('uk-UA') || 'без дедлайну'} | Виконавець: ${t.assignedTo?.name || '—'}`
           ).join('\n');
       }
@@ -265,7 +265,7 @@ export async function executeQuery(params: QueryParams, user: SessionUser): Prom
         if (events.length === 0) return 'Подій не знайдено за вказаними критеріями.';
 
         return `Знайдено ${events.length} подій:\n` +
-          events.map((e, i) =>
+          events.map((e: any, i: number) =>
             `${i + 1}. "${e.title}" | ${e.type} | ${e.startDate.toLocaleDateString('uk-UA')} ${e.startDate.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })} | ${e.user?.name || '—'}`
           ).join('\n');
       }
@@ -308,7 +308,7 @@ export async function executeQuery(params: QueryParams, user: SessionUser): Prom
           orderBy: { name: 'asc' },
         });
         return `Користувачі (${users.length}):\n` +
-          users.map((u, i) => `${i + 1}. ${u.name || '—'} | ${u.email} | Роль: ${u.role} | План: ${u.plan}`).join('\n');
+          users.map((u: any, i: number) => `${i + 1}. ${u.name || '—'} | ${u.email} | Роль: ${u.role} | План: ${u.plan}`).join('\n');
       }
 
       default:
