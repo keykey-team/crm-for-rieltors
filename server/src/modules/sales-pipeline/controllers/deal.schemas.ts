@@ -10,16 +10,44 @@ import {
 
 const CURRENCIES = ['UAH', 'USD', 'EUR'] as const;
 
+function emptyStringToUndefined(value: unknown) {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value === 'string' && !value.trim()) return undefined;
+  return value;
+}
+
+const dealOptionalDecimal = z.preprocess((value) => {
+  const normalized = emptyStringToUndefined(value);
+  if (normalized === undefined) return undefined;
+  if (typeof normalized === 'string') {
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : normalized;
+  }
+  return normalized;
+}, optionalPositiveDecimal);
+
+const dealOptionalPercentage = z.preprocess((value) => {
+  const normalized = emptyStringToUndefined(value);
+  if (normalized === undefined) return undefined;
+  if (typeof normalized === 'string') {
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : normalized;
+  }
+  return normalized;
+}, z.number().finite().min(0).max(100).optional().nullable());
+
+const dealOptionalId = z.preprocess((value) => emptyStringToUndefined(value), optionalCuid);
+
 const dealBase = {
   title: shortText(150),
   stage: optionalText(80),
-  amount: optionalPositiveDecimal,
-  commission: z.number().finite().min(0).max(100).optional().nullable(),
+  amount: dealOptionalDecimal,
+  commission: dealOptionalPercentage,
   currency: z.enum(CURRENCIES).optional(),
   notes: noteText(),
-  leadId: optionalCuid,
-  propertyId: optionalCuid,
-  assignedToId: optionalCuid,
+  leadId: dealOptionalId,
+  propertyId: dealOptionalId,
+  assignedToId: dealOptionalId,
 };
 
 export const createDealSchema = z.object(dealBase).strict();

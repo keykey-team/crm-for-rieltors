@@ -1,6 +1,7 @@
 import { ZodSchema, ZodError } from 'zod';
 
 export * from './schemas';
+export * from './lead-form';
 
 /** Парсит данные формы через Zod-схему.
  *  Возвращает `{ ok: true, data }` или `{ ok: false, errors }` где errors — объект поле→сообщение. */

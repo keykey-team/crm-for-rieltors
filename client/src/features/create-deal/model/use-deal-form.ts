@@ -8,14 +8,21 @@ import type { Lead } from '@/entities/lead';
 import type { Property } from '@/entities/property';
 import type { User as AppUser } from '@/entities/user';
 import { getUsers } from '@/entities/user';
-import { getLeads } from '@/entities/lead';
-import { getProperties } from '@/entities/property';
+import { createLead, getLeads } from '@/entities/lead';
+import { createProperty, getProperties } from '@/entities/property';
 import { getFunnelStages } from '@/entities/settings';
-import { parseForm, dealSchema } from '@/shared/lib/validation';
+import {
+  parseForm,
+  dealSchema,
+  propertySchema,
+  normalizeEmailInput,
+  normalizePhoneInput,
+  validateLeadForm,
+} from '@/shared/lib/validation';
 
 export type DealStage = { value: string; label: string; color: string };
 
-export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => void | Promise<void>) {
+export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => void | Promise<void>, t: (key: string) => string) {
   const [stages, setStages] = useState<DealStage[]>(DEAL_STAGES as DealStage[]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
@@ -24,8 +31,19 @@ export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => v
   const [propSearch, setPropSearch] = useState('');
   const [leadOpen, setLeadOpen] = useState(false);
   const [propOpen, setPropOpen] = useState(false);
+  const [showNewLeadForm, setShowNewLeadForm] = useState(false);
+  const [showNewPropForm, setShowNewPropForm] = useState(false);
+  const [newLeadForm, setNewLeadForm] = useState({ firstName: '', lastName: '', phone: '', email: '' });
+  const [newPropForm, setNewPropForm] = useState({ title: '', address: '', price: '' });
+  const [creatingLead, setCreatingLead] = useState(false);
+  const [creatingProp, setCreatingProp] = useState(false);
+  const [leadCreateError, setLeadCreateError] = useState('');
+  const [propCreateError, setPropCreateError] = useState('');
+  const [newLeadErrors, setNewLeadErrors] = useState<Record<string, string>>({});
+  const [newPropErrors, setNewPropErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState('');
 
   const [form, setForm] = useState<DealUpsertInput>({
     title: deal?.title ?? '',
@@ -49,6 +67,34 @@ export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => v
   const upd = <K extends keyof DealUpsertInput>(k: K, v: DealUpsertInput[K]) => {
     setForm((p) => ({ ...p, [k]: v }));
     setErrors((p) => ({ ...p, [k as string]: '' }));
+    setSubmitError('');
+  };
+
+  const updateNewLeadField = (key: 'firstName' | 'lastName' | 'phone' | 'email', value: string) => {
+    const nextValue = key === 'phone' ? normalizePhoneInput(value) : key === 'email' ? normalizeEmailInput(value) : value;
+    setNewLeadForm((prev) => ({ ...prev, [key]: nextValue }));
+    setNewLeadErrors((prev) => ({ ...prev, [key]: '' }));
+    setLeadCreateError('');
+  };
+
+  const updateNewPropField = (key: 'title' | 'address' | 'price', value: string) => {
+    setNewPropForm((prev) => ({ ...prev, [key]: value }));
+    setNewPropErrors((prev) => ({ ...prev, [key]: '' }));
+    setPropCreateError('');
+  };
+
+  const resetNewLeadFormState = () => {
+    setShowNewLeadForm(false);
+    setNewLeadForm({ firstName: '', lastName: '', phone: '', email: '' });
+    setNewLeadErrors({});
+    setLeadCreateError('');
+  };
+
+  const resetNewPropFormState = () => {
+    setShowNewPropForm(false);
+    setNewPropForm({ title: '', address: '', price: '' });
+    setNewPropErrors({});
+    setPropCreateError('');
   };
 
   const filteredLeads = useMemo(() => {
@@ -66,6 +112,76 @@ export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => v
   const selectedLead = leads.find((l) => l.id === form.leadId);
   const selectedProp = properties.find((p) => p.id === form.propertyId);
 
+  const createLeadOption = async () => {
+    const normalizedLead = {
+      firstName: newLeadForm.firstName.trim(),
+      lastName: newLeadForm.lastName.trim(),
+      phone: normalizePhoneInput(newLeadForm.phone),
+      email: normalizeEmailInput(newLeadForm.email),
+    };
+    const nextErrors = validateLeadForm(normalizedLead, t);
+    if (Object.keys(nextErrors).length) {
+      setNewLeadErrors(nextErrors);
+      return;
+    }
+
+    setCreatingLead(true);
+    setLeadCreateError('');
+    setNewLeadErrors({});
+    try {
+      const lead = await createLead({
+        firstName: normalizedLead.firstName,
+        lastName: normalizedLead.lastName || undefined,
+        phone: normalizedLead.phone,
+        email: normalizedLead.email || undefined,
+        source: 'manual',
+      });
+      setLeads((prev) => [lead, ...prev.filter((item) => item.id !== lead.id)]);
+      setForm((prev) => ({ ...prev, leadId: lead.id }));
+      setLeadSearch('');
+      setLeadOpen(false);
+      resetNewLeadFormState();
+    } catch (error) {
+      setLeadCreateError(error instanceof Error && error.message ? error.message : t('common.errorSave'));
+    } finally {
+      setCreatingLead(false);
+    }
+  };
+
+  const createPropertyOption = async () => {
+    const price = newPropForm.price.trim() ? Number(newPropForm.price) : undefined;
+    const validation = parseForm(propertySchema, {
+      title: newPropForm.title.trim(),
+      address: newPropForm.address.trim(),
+      price,
+    });
+
+    if (!validation.ok) {
+      setNewPropErrors(validation.errors);
+      return;
+    }
+
+    setCreatingProp(true);
+    setPropCreateError('');
+    setNewPropErrors({});
+    try {
+      const property = await createProperty({
+        title: validation.data.title,
+        address: validation.data.address,
+        price: validation.data.price,
+      });
+      setProperties((prev) => [property, ...prev.filter((item) => item.id !== property.id)]);
+      setForm((prev) => ({ ...prev, propertyId: property.id }));
+      setPropSearch('');
+      setPropOpen(false);
+      resetNewPropFormState();
+    } catch (error) {
+      setPropCreateError(error instanceof Error && error.message ? error.message : t('common.errorSave'));
+    } finally {
+      setCreatingProp(false);
+    }
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const toNum = (v: string | undefined) => (v ? Number(v) : undefined);
@@ -80,8 +196,14 @@ export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => v
     if (!validation.ok) { setErrors(validation.errors); return; }
     setErrors({});
     setSaving(true);
-    await onSave({ ...form, leadId: form.leadId || null, propertyId: form.propertyId || null, assignedToId: form.assignedToId || null });
-    setSaving(false);
+    setSubmitError('');
+    try {
+      await onSave({ ...form, leadId: form.leadId || null, propertyId: form.propertyId || null, assignedToId: form.assignedToId || null });
+    } catch (error) {
+      setSubmitError(error instanceof Error && error.message ? error.message : t('common.errorSave'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return {
@@ -90,8 +212,19 @@ export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => v
     form,
     saving,
     errors,
+    submitError,
     leadOpen,
     propOpen,
+    showNewLeadForm,
+    showNewPropForm,
+    newLeadForm,
+    newPropForm,
+    creatingLead,
+    creatingProp,
+    leadCreateError,
+    propCreateError,
+    newLeadErrors,
+    newPropErrors,
     leadSearch,
     propSearch,
     filteredLeads,
@@ -100,8 +233,20 @@ export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => v
     selectedProp,
     setLeadOpen,
     setPropOpen,
+    setShowNewLeadForm,
+    setShowNewPropForm,
+    setNewLeadForm,
+    setNewPropForm,
+    setLeadCreateError,
+    setPropCreateError,
     setLeadSearch,
     setPropSearch,
+    updateNewLeadField,
+    updateNewPropField,
+    resetNewLeadFormState,
+    resetNewPropFormState,
+    createLeadOption,
+    createPropertyOption,
     upd,
     submit,
   };
