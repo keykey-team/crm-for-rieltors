@@ -11,6 +11,7 @@ import { useHints } from '@/shared/lib/hints-context';
 import { usePlan } from '@/shared/lib/plan-context';
 import { useBrand } from '@/shared/lib/brand-context';
 import { ROLES_STATIC, TABS_STATIC } from '@/widgets/settings/model/settings-constants';
+import { PhoneInput } from '@/shared/ui/phone-input';
 import {
   createDealCustomField,
   createDictionary,
@@ -432,7 +433,7 @@ export function SettingsClient() {
               </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">{t('settings.phone')}</label>
-                <input value={phone} onChange={e => setPhone(e.target.value)} className="w-full px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                <PhoneInput value={phone} onChange={setPhone} />
               </div>
             </div>
           </div>
@@ -1278,7 +1279,7 @@ function UserDialog({ user, roles, t, onSave, onClose }: { user: any; roles: {va
             <select value={role} onChange={e => setRole(e.target.value)} className="w-full px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
               {roles.map((r: {value:string;label:string}) => <option key={r.value} value={r.value}>{r.label}</option>)}</select></div>
           <div><label className="text-sm font-medium mb-1 block">{t('settings.userPhone')}</label>
-            <input value={phone} onChange={e => setPhone(e.target.value)} className="w-full px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" /></div>
+            <PhoneInput value={phone} onChange={setPhone} /></div>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-border rounded-xl text-sm hover:bg-muted transition">{t('common.cancel')}</button>
             <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition disabled:opacity-50">

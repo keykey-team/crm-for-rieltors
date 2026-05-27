@@ -10,6 +10,7 @@ import {
 } from "@/shared/lib/constants";
 import type { Lead, LeadUpsertInput } from "@/entities/lead";
 import { useLeadForm } from "@/features/create-lead/model/use-lead-form";
+import { PhoneInput } from "@/shared/ui/phone-input";
 
 interface Props {
   lead: Lead | null;
@@ -62,10 +63,10 @@ export function LeadFormDialog({ lead, onSave, onClose }: Props) {
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground">{t("common.phone")} *</span>
-              <input
+              <PhoneInput
                 value={form.phone}
-                onChange={(e) => upd("phone", e.target.value)}
-                className={`w-full px-3 py-2.5 rounded-xl border bg-muted/30 text-sm ${errors.phone ? 'border-destructive/60' : 'border-border'}`}
+                onChange={(v) => upd("phone", v)}
+                error={!!errors.phone}
               />
               {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
             </div>
