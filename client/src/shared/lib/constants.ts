@@ -10,12 +10,13 @@ export const DEAL_STAGES = [
   { value: 'closed', label: 'Угода завершена', color: '#30D158' },
   { value: 'aftercare', label: 'Aftercare', color: '#64D2FF' },
   { value: 'cancelled', label: 'Скасовано', color: '#8E8E93' },
+  { value: 'success', label: 'Успішно', color: '#30D158' },
   { value: 'rejected', label: 'Відмова', color: '#FF453A' },
   { value: 'object_cancelled', label: 'Об\'єкт скасовано', color: '#8E8E93' },
 ];
 
 /** Stages that cannot be deleted by the user */
-export const PROTECTED_STAGES = ['new_lead', 'closed', 'rejected', 'object_cancelled'] as const;
+export const PROTECTED_STAGES = ['new_lead', 'success', 'rejected', 'object_cancelled'] as const;
 
 /** Visual groups for funnel stages */
 export const STAGE_GROUPS = [

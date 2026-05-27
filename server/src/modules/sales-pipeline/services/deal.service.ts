@@ -74,12 +74,13 @@ export async function changeDeal(id: string, input: Record<string, unknown>) {
     ...(input.notes !== undefined ? { notes: input.notes } : {}),
   });
 
-  if (input.stage === 'closed') {
+  if (input.stage === 'success') {
     const deal = await findDeal(id);
     if (deal?.propertyId) {
       const otherDealIds = await findDealIdsByPropertyId(deal.propertyId, id);
       if (otherDealIds.length > 0) {
         await bulkSetDealStage(otherDealIds, 'object_cancelled');
+        return { ...result, _affectedCount: otherDealIds.length };
       }
     }
   }

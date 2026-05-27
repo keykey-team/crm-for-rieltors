@@ -23,19 +23,22 @@ export async function findDefaultFunnel() {
   });
 }
 
+const SYSTEM_STAGES = [
+  { value: 'new_lead', label: 'Новий лід', color: '#5AC8FA', order: 0 },
+  { value: 'success', label: 'Успішно', color: '#30D158', order: 997 },
+  { value: 'rejected', label: 'Відмова', color: '#FF453A', order: 998 },
+  { value: 'object_cancelled', label: "Об'єкт скасовано", color: '#8E8E93', order: 999 },
+] as const;
+
 export async function ensureSystemStages() {
-  await prisma.funnelStage.upsert({
-    where: { value: 'object_cancelled' },
-    update: {},
-    create: {
-      value: 'object_cancelled',
-      label: "Об'єкт скасовано",
-      color: '#8E8E93',
-      order: 999,
-      funnelId: null,
-      isDefault: true,
-    },
-  });
+  for (const stage of SYSTEM_STAGES) {
+    await prisma.funnelStage.upsert({
+      where: { value: stage.value },
+      // Make existing stages global (funnelId: null) if they aren't already
+      update: { funnelId: null, label: stage.label, color: stage.color, order: stage.order, isActive: true },
+      create: { ...stage, funnelId: null, isDefault: true },
+    });
+  }
 }
 
 export async function createFunnel(data: { name: string }) {

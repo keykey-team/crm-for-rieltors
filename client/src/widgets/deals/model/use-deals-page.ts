@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
+import { toast } from 'sonner';
 import { confirmAction } from '@/shared/lib/confirm-action';
 import { useTranslation } from '@/shared/lib/i18n/context';
 import type { Deal, DealUpsertInput } from '@/entities/deal';
@@ -97,8 +98,14 @@ export function useDealsPage() {
   const activeFilterCount = [filters.query, filters.stage, filters.managerId, filters.currency].filter(Boolean).length;
 
   const handleStageChange = async (dealId: string, newStage: string) => {
-    await updateDeal(dealId, { stage: newStage });
+    const result = await updateDeal(dealId, { stage: newStage });
     setDeals((prev) => prev.map((deal) => (deal.id === dealId ? { ...deal, stage: newStage } : deal)));
+    if (result._affectedCount && result._affectedCount > 0) {
+      await fetchDeals();
+      toast.info(`${result._affectedCount} угод автоматично переведено в "Об'єкт скасовано"`, {
+        duration: 5000,
+      });
+    }
   };
 
   const handleFunnelChange = async (dealId: string, funnelId: string) => {

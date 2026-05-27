@@ -63,13 +63,13 @@ export async function createDeal(payload: DealUpsertInput): Promise<Deal> {
   return parseJson<Deal>(res);
 }
 
-export async function updateDeal(id: string, payload: Partial<DealUpsertInput>): Promise<Deal> {
+export async function updateDeal(id: string, payload: Partial<DealUpsertInput>): Promise<Deal & { _affectedCount?: number }> {
   const res = await fetch(`/api/deals/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(normalizeDealPayload(payload)),
   });
-  return parseJson<Deal>(res);
+  return parseJson<Deal & { _affectedCount?: number }>(res);
 }
 
 export async function deleteDeal(id: string): Promise<void> {
