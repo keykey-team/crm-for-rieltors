@@ -98,14 +98,14 @@ export function LeadTable({ leads, loading, onEdit, onDelete, onCall, onMessage,
                   <td className="px-4 py-3 text-muted-foreground">{lead.phone}</td>
                   {/* Source dropdown */}
                   <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                    <div className="relative inline-block" data-inline-dropdown>
-                      <button onClick={() => toggleDropdown(lead.id, 'source')}
+                    <div data-inline-dropdown>
+                      <button onClick={(e) => toggleDropdown(lead.id, 'source', e.currentTarget.getBoundingClientRect())}
                         className="text-xs bg-muted px-2 py-0.5 rounded-md cursor-pointer hover:ring-2 hover:ring-primary/20 transition">
                         {t(`const.leadSource.${lead.source}`) || LEAD_SOURCES.find(s => s.value === lead.source)?.label || lead.source}
                       </button>
                       {activeDropdown?.id === lead.id && activeDropdown?.type === 'source' && onSourceChange && (
-                        <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-xl py-1 z-50 min-w-[140px]"
-                          style={{ boxShadow: 'var(--shadow-lg)' }}>
+                        <div data-inline-dropdown className="fixed bg-card border border-border rounded-xl py-1 z-50 min-w-[140px] max-h-48 overflow-y-auto"
+                          style={{ top: activeDropdown.rect.bottom + 4, left: activeDropdown.rect.left, boxShadow: 'var(--shadow-lg)' }}>
                           {LEAD_SOURCES.map(s => (
                             <button key={s.value} onClick={() => { onSourceChange(lead.id, s.value); setActiveDropdown(null); }}
                               className={cn('w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-muted transition',
@@ -119,15 +119,15 @@ export function LeadTable({ leads, loading, onEdit, onDelete, onCall, onMessage,
                   </td>
                   {/* Status dropdown */}
                   <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                    <div className="relative inline-block" data-inline-dropdown>
-                      <button onClick={() => toggleDropdown(lead.id, 'status')}
+                    <div data-inline-dropdown>
+                      <button onClick={(e) => toggleDropdown(lead.id, 'status', e.currentTarget.getBoundingClientRect())}
                         className="text-xs px-2 py-0.5 rounded-full cursor-pointer hover:ring-2 hover:ring-primary/20 transition"
                         style={{ backgroundColor: status?.color + '20', color: status?.color }}>
                         {t(`const.leadStatus.${lead.status}`) || status?.label || lead.status}
                       </button>
                       {activeDropdown?.id === lead.id && activeDropdown?.type === 'status' && onStatusChange && (
-                        <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-xl py-1 z-50 min-w-[140px]"
-                          style={{ boxShadow: 'var(--shadow-lg)' }}>
+                        <div data-inline-dropdown className="fixed bg-card border border-border rounded-xl py-1 z-50 min-w-[140px] max-h-48 overflow-y-auto"
+                          style={{ top: activeDropdown.rect.bottom + 4, left: activeDropdown.rect.left, boxShadow: 'var(--shadow-lg)' }}>
                           {LEAD_STATUSES.map(s => (
                             <button key={s.value} onClick={() => { onStatusChange(lead.id, s.value); setActiveDropdown(null); }}
                               className={cn('w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-muted transition',
@@ -142,8 +142,8 @@ export function LeadTable({ leads, loading, onEdit, onDelete, onCall, onMessage,
                   </td>
                   {/* Manager dropdown */}
                   <td className="px-4 py-3 text-sm" onClick={e => e.stopPropagation()}>
-                    <div className="relative inline-block" data-inline-dropdown>
-                      <button onClick={() => toggleDropdown(lead.id, 'manager')} className="flex items-center gap-2 cursor-pointer hover:ring-2 hover:ring-primary/20 rounded-lg px-1.5 py-0.5 -mx-1.5 transition">
+                    <div data-inline-dropdown>
+                      <button onClick={(e) => toggleDropdown(lead.id, 'manager', e.currentTarget.getBoundingClientRect())} className="flex items-center gap-2 cursor-pointer hover:ring-2 hover:ring-primary/20 rounded-lg px-1.5 py-0.5 -mx-1.5 transition">
                         {lead.assignedTo ? (
                           <>
                             {lead.assignedTo.avatar ? (
@@ -160,8 +160,8 @@ export function LeadTable({ leads, loading, onEdit, onDelete, onCall, onMessage,
                         )}
                       </button>
                       {activeDropdown?.id === lead.id && activeDropdown?.type === 'manager' && onManagerChange && (
-                        <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-xl py-1 z-50 min-w-[160px] max-h-48 overflow-y-auto"
-                          style={{ boxShadow: 'var(--shadow-lg)' }}>
+                        <div data-inline-dropdown className="fixed bg-card border border-border rounded-xl py-1 z-50 min-w-[160px] max-h-48 overflow-y-auto"
+                          style={{ top: activeDropdown.rect.bottom + 4, left: activeDropdown.rect.left, boxShadow: 'var(--shadow-lg)' }}>
                           <button onClick={() => { onManagerChange(lead.id, null); setActiveDropdown(null); }}
                             className={cn('w-full text-left px-3 py-1.5 text-xs hover:bg-muted transition text-muted-foreground',
                               !lead.assignedToId && 'font-semibold')}>
