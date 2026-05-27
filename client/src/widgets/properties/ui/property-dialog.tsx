@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import { PROPERTY_TYPES, PROPERTY_STATUSES } from '@/shared/lib/constants';
 import type { Property, PropertyUpsertInput } from '@/entities/property';
+import { parseForm, propertySchema } from '@/shared/lib/validation';
 
 export function PropertyDialog({ property, onSave, onClose }: { property: Property | null; onSave: (d: PropertyUpsertInput) => void | Promise<void>; onClose: () => void }) {
   const { t } = useTranslation();
@@ -17,10 +18,25 @@ export function PropertyDialog({ property, onSave, onClose }: { property: Proper
     description: property?.description ?? '',
   });
   const [saving, setSaving] = useState(false);
-  const upd = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const upd = (k: string, v: string) => { setForm((p) => ({ ...p, [k]: v })); setErrors((p) => ({ ...p, [k]: '' })); };
+
+  const toNum = (v: string) => (v !== '' ? Number(v) : undefined);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); setSaving(true); await onSave(form); setSaving(false);
+    e.preventDefault();
+    const validation = parseForm(propertySchema, {
+      title: form.title,
+      address: form.address,
+      price: toNum(form.price),
+      floor: toNum(form.floor),
+      totalFloors: toNum(form.totalFloors),
+    });
+    if (!validation.ok) { setErrors(validation.errors); return; }
+    setErrors({});
+    setSaving(true);
+    await onSave(form);
+    setSaving(false);
   };
 
   return (
@@ -33,8 +49,9 @@ export function PropertyDialog({ property, onSave, onClose }: { property: Proper
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
             <label className="text-sm font-medium mb-1 block">{t('common.title')} *</label>
-            <input value={form.title} onChange={(e) => upd('title', e.target.value)} required
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+            <input value={form.title} onChange={(e) => upd('title', e.target.value)}
+              className={`w-full px-3 py-2.5 rounded-xl border bg-muted/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 ${errors.title ? 'border-destructive/60' : 'border-border'}`} />
+            {errors.title && <p className="text-xs text-destructive mt-1">{errors.title}</p>}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -54,8 +71,9 @@ export function PropertyDialog({ property, onSave, onClose }: { property: Proper
           </div>
           <div>
             <label className="text-sm font-medium mb-1 block">{t('common.address')} *</label>
-            <input value={form.address} onChange={(e) => upd('address', e.target.value)} required
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+            <input value={form.address} onChange={(e) => upd('address', e.target.value)}
+              className={`w-full px-3 py-2.5 rounded-xl border bg-muted/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 ${errors.address ? 'border-destructive/60' : 'border-border'}`} />
+            {errors.address && <p className="text-xs text-destructive mt-1">{errors.address}</p>}
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div>
@@ -70,15 +88,17 @@ export function PropertyDialog({ property, onSave, onClose }: { property: Proper
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">{t('common.price')} *</label>
-              <input type="number" value={form.price} onChange={(e) => upd('price', e.target.value)} required
-                className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+              <input type="number" value={form.price} onChange={(e) => upd('price', e.target.value)}
+                className={`w-full px-3 py-2.5 rounded-xl border bg-muted/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 ${errors.price ? 'border-destructive/60' : 'border-border'}`} />
+              {errors.price && <p className="text-xs text-destructive mt-1">{errors.price}</p>}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium mb-1 block">{t('common.floor')}</label>
               <input type="number" value={form.floor} onChange={(e) => upd('floor', e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                className={`w-full px-3 py-2.5 rounded-xl border bg-muted/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 ${errors.floor ? 'border-destructive/60' : 'border-border'}`} />
+              {errors.floor && <p className="text-xs text-destructive mt-1">{errors.floor}</p>}
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">{t('common.totalFloors')}</label>

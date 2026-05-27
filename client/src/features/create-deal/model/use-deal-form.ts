@@ -11,6 +11,7 @@ import { getUsers } from '@/entities/user';
 import { getLeads } from '@/entities/lead';
 import { getProperties } from '@/entities/property';
 import { getFunnelStages } from '@/entities/settings';
+import { parseForm, dealSchema } from '@/shared/lib/validation';
 
 export type DealStage = { value: string; label: string; color: string };
 
@@ -24,6 +25,7 @@ export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => v
   const [leadOpen, setLeadOpen] = useState(false);
   const [propOpen, setPropOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [form, setForm] = useState<DealUpsertInput>({
     title: deal?.title ?? '',
@@ -44,7 +46,10 @@ export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => v
     getUsers().then(setUsers).catch(() => {});
   }, []);
 
-  const upd = <K extends keyof DealUpsertInput>(k: K, v: DealUpsertInput[K]) => setForm((p) => ({ ...p, [k]: v }));
+  const upd = <K extends keyof DealUpsertInput>(k: K, v: DealUpsertInput[K]) => {
+    setForm((p) => ({ ...p, [k]: v }));
+    setErrors((p) => ({ ...p, [k as string]: '' }));
+  };
 
   const filteredLeads = useMemo(() => {
     if (!leadSearch.trim()) return leads;
@@ -63,6 +68,17 @@ export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => v
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const toNum = (v: string | undefined) => (v ? Number(v) : undefined);
+    const amountVal = toNum(form.amount as string | undefined);
+    const commissionVal = toNum(form.commission as string | undefined);
+    const validation = parseForm(dealSchema, {
+      title: form.title,
+      amount: Number.isNaN(amountVal) ? undefined : amountVal,
+      commission: Number.isNaN(commissionVal) ? undefined : commissionVal,
+      notes: form.notes || undefined,
+    });
+    if (!validation.ok) { setErrors(validation.errors); return; }
+    setErrors({});
     setSaving(true);
     await onSave({ ...form, leadId: form.leadId || null, propertyId: form.propertyId || null, assignedToId: form.assignedToId || null });
     setSaving(false);
@@ -73,6 +89,7 @@ export function useDealForm(deal: Deal | null, onSave: (d: DealUpsertInput) => v
     users,
     form,
     saving,
+    errors,
     leadOpen,
     propOpen,
     leadSearch,

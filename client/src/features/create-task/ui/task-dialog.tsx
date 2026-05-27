@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import { TASK_TYPES, PRIORITIES } from '@/shared/lib/constants';
 import type { Task, TaskUpsertInput } from '@/entities/task';
 import { toast } from 'sonner';
+import { parseForm, taskSchema } from '@/shared/lib/validation';
 
 export function TaskDialog({ task, onSave, onClose }: { task: Task | null; onSave: (d: TaskUpsertInput) => void | Promise<void>; onClose: () => void }) {
   const { t } = useTranslation();
@@ -14,7 +15,8 @@ export function TaskDialog({ task, onSave, onClose }: { task: Task | null; onSav
     dueDate: task?.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : '',
   });
   const [saving, setSaving] = useState(false);
-  const upd = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const upd = (k: string, v: string) => { setForm((p) => ({ ...p, [k]: v })); setErrors((p) => ({ ...p, [k]: '' })); };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
@@ -26,6 +28,9 @@ export function TaskDialog({ task, onSave, onClose }: { task: Task | null; onSav
         <form
           onSubmit={async (e) => {
             e.preventDefault();
+            const validation = parseForm(taskSchema, { title: form.title, description: form.description || undefined, dueDate: form.dueDate });
+            if (!validation.ok) { setErrors(validation.errors); return; }
+            setErrors({});
             setSaving(true);
             try {
               const normalizedDueDate =
@@ -43,8 +48,9 @@ export function TaskDialog({ task, onSave, onClose }: { task: Task | null; onSav
         >
           <div>
             <label className="text-sm font-medium mb-1 block">{t('common.title')} *</label>
-            <input value={form.title} onChange={(e) => upd('title', e.target.value)} required
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+            <input value={form.title} onChange={(e) => upd('title', e.target.value)}
+              className={`w-full px-3 py-2.5 rounded-xl border bg-muted/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 ${errors.title ? 'border-destructive/60' : 'border-border'}`} />
+            {errors.title && <p className="text-xs text-destructive mt-1">{errors.title}</p>}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -63,14 +69,16 @@ export function TaskDialog({ task, onSave, onClose }: { task: Task | null; onSav
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium mb-1 block">{t('common.deadline')}</label>
+            <label className="text-sm font-medium mb-1 block">{t('common.deadline')} *</label>
             <input type="datetime-local" value={form.dueDate} onChange={(e) => upd('dueDate', e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+              className={`w-full px-3 py-2.5 rounded-xl border bg-muted/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 ${errors.dueDate ? 'border-destructive/60' : 'border-border'}`} />
+            {errors.dueDate && <p className="text-xs text-destructive mt-1">{errors.dueDate}</p>}
           </div>
           <div>
             <label className="text-sm font-medium mb-1 block">{t('common.description')}</label>
             <textarea rows={3} value={form.description} onChange={(e) => upd('description', e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
+              className={`w-full px-3 py-2.5 rounded-xl border bg-muted/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none ${errors.description ? 'border-destructive/60' : 'border-border'}`} />
+            {errors.description && <p className="text-xs text-destructive mt-1">{errors.description}</p>}
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-muted">{t('common.cancel')}</button>
