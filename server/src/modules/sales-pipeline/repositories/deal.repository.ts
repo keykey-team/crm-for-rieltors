@@ -59,3 +59,30 @@ export async function updateDealChecklistItem(id: string, completed: unknown) {
   return prisma.dealChecklist.update({ where: { id }, data: { completed: completed as any } });
 }
 
+export async function findLeadIdsForProperty(propertyId: string, excludeLeadId?: string) {
+  const leads = await prisma.lead.findMany({
+    where: {
+      deals: { some: { propertyId } },
+      ...(excludeLeadId ? { id: { not: excludeLeadId } } : {}),
+    },
+    select: { id: true },
+  });
+  return leads.map((l: { id: string }) => l.id);
+}
+
+export async function findDealIdsByPropertyId(propertyId: string, excludeDealId?: string) {
+  const deals = await prisma.deal.findMany({
+    where: {
+      propertyId,
+      ...(excludeDealId ? { id: { not: excludeDealId } } : {}),
+    },
+    select: { id: true },
+  });
+  return deals.map((d: { id: string }) => d.id);
+}
+
+export async function bulkSetDealStage(ids: string[], stage: string) {
+  if (ids.length === 0) return;
+  await prisma.deal.updateMany({ where: { id: { in: ids } }, data: { stage } });
+}
+

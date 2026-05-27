@@ -3,6 +3,7 @@ import { isAdminRole } from '../../../common/shared-kernel/roles';
 import { leadFacade } from '../../lead-management';
 import { findDefaultFunnel } from '../repositories/funnel.repository';
 import {
+  bulkSetDealStage,
   createDeal,
   createDealChecklistItem,
   createDealComment,
@@ -10,6 +11,7 @@ import {
   findDeal,
   findDealChecklist,
   findDealComments,
+  findDealIdsByPropertyId,
   findDeals,
   updateDeal,
   updateDealChecklistItem,
@@ -60,7 +62,7 @@ export async function getDeal(id: string) {
 }
 
 export async function changeDeal(id: string, input: Record<string, unknown>) {
-  return updateDeal(id, {
+  const result = await updateDeal(id, {
     ...(input.title !== undefined ? { title: input.title } : {}),
     ...(input.stage !== undefined ? { stage: input.stage } : {}),
     ...(input.funnelId !== undefined ? { funnelId: input.funnelId || null } : {}),
@@ -71,6 +73,18 @@ export async function changeDeal(id: string, input: Record<string, unknown>) {
     ...(input.propertyId !== undefined ? { propertyId: input.propertyId } : {}),
     ...(input.notes !== undefined ? { notes: input.notes } : {}),
   });
+
+  if (input.stage === 'closed') {
+    const deal = await findDeal(id);
+    if (deal?.propertyId) {
+      const otherDealIds = await findDealIdsByPropertyId(deal.propertyId, id);
+      if (otherDealIds.length > 0) {
+        await bulkSetDealStage(otherDealIds, 'object_cancelled');
+      }
+    }
+  }
+
+  return result;
 }
 
 export async function removeDeal(id: string) {

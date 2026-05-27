@@ -1,10 +1,14 @@
 import { prisma } from '../../../common/infrastructure/db/prisma';
 
 export async function findFunnelStages(funnelId?: string) {
-  const where = funnelId
-    ? { isActive: true, funnelId }
-    : { isActive: true };
-  return prisma.funnelStage.findMany({ where, orderBy: { order: 'asc' } });
+  if (funnelId) {
+    // Return funnel-specific stages + global system stages (funnelId: null)
+    return prisma.funnelStage.findMany({
+      where: { isActive: true, OR: [{ funnelId }, { funnelId: null }] },
+      orderBy: { order: 'asc' },
+    });
+  }
+  return prisma.funnelStage.findMany({ where: { isActive: true }, orderBy: { order: 'asc' } });
 }
 
 export async function createFunnelStage(data: Record<string, unknown>) {

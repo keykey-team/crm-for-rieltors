@@ -23,10 +23,29 @@ export async function findDefaultFunnel() {
   });
 }
 
+export async function ensureSystemStages() {
+  await prisma.funnelStage.upsert({
+    where: { value: 'object_cancelled' },
+    update: {},
+    create: {
+      value: 'object_cancelled',
+      label: "Об'єкт скасовано",
+      color: '#8E8E93',
+      order: 999,
+      funnelId: null,
+      isDefault: true,
+    },
+  });
+}
+
 export async function createFunnel(data: { name: string }) {
   const maxOrder = await prisma.funnel.aggregate({ _max: { order: true } });
-  return prisma.funnel.create({
+  const funnel = await prisma.funnel.create({
     data: { name: data.name, order: (maxOrder._max.order ?? -1) + 1 },
+  });
+  await ensureSystemStages();
+  return prisma.funnel.findUnique({
+    where: { id: funnel.id },
     include: { stages: { where: { isActive: true }, orderBy: { order: 'asc' } } },
   });
 }
