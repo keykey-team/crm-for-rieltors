@@ -1,0 +1,1 @@
+export { routes } from '../presentation/http/routes';
