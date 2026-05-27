@@ -1,7 +1,8 @@
-import { findLeadRecord, updateLead } from '../repositories/lead.repository';
+import { findLeadRecord, updateLead, updateLeads } from '../repositories/lead.repository';
 
 export const leadFacade = {
   getLeadRecord: findLeadRecord,
   updateLead,
+  updateLeads,
 };
 

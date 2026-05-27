@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../common/infrastructure/db/prisma';
+import { ensureSystemStages } from '../modules/sales-pipeline/repositories/funnel.repository';
 
 const email = process.env.SUPER_ADMIN_EMAIL || 'superadmin@local.crm';
 const password = process.env.SUPER_ADMIN_PASSWORD || 'SuperAdmin123!';
@@ -39,6 +40,7 @@ async function main() {
   });
 
   console.log(`Super admin ready: ${user.email} (${user.role}, ${user.accountType}, ${user.plan})`);
+  await ensureSystemStages();
 }
 
 main()
