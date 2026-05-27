@@ -1,4 +1,6 @@
 import { createAsyncRouter } from '../../../common/infrastructure/http/async-handler';
+import { validateBody } from '../../../common/validation/middleware';
+import { createEventSchema, updateEventSchema } from './calendar.schemas';
 import {
   addEvent,
   buildIcsFeed,
@@ -16,12 +18,12 @@ router.get('/events', async (req, res) => {
   res.json(await listEvents(typeof req.query.month === 'string' ? req.query.month : '', typeof req.query.year === 'string' ? req.query.year : ''));
 });
 
-router.post('/events', async (req, res) => {
-  res.status(201).json(await addEvent(req.user?.id, req.body ?? {}));
+router.post('/events', validateBody(createEventSchema), async (req, res) => {
+  res.status(201).json(await addEvent(req.user?.id, req.body));
 });
 
-router.put('/events/:id', async (req, res) => {
-  res.json(await changeEvent(req.params.id, req.body ?? {}));
+router.put('/events/:id', validateBody(updateEventSchema), async (req, res) => {
+  res.json(await changeEvent(req.params.id, req.body));
 });
 
 router.delete('/events/:id', async (req, res) => {

@@ -7,6 +7,9 @@ import {
   sendDirectMessage,
   updateChatRoom,
 } from '../services/communication.service';
+import { validateBody } from '../../../common/validation/middleware';
+import { createCommunicationSchema } from '../../lead-management/controllers/lead.schemas';
+import { sendDirectMessageSchema, updateChatRoomSchema } from './communication.schemas';
 
 const router = createAsyncRouter();
 
@@ -14,8 +17,8 @@ router.get('/communications', async (req, res) => {
   res.json(await listLeadCommunications(req.query.leadId));
 });
 
-router.post('/communications', async (req, res) => {
-  res.status(201).json(await addLeadCommunication(req.user?.id, req.body ?? {}));
+router.post('/communications', validateBody(createCommunicationSchema), async (req, res) => {
+  res.status(201).json(await addLeadCommunication(req.user?.id, req.body));
 });
 
 router.get('/chat', async (req, res) => {
@@ -23,12 +26,12 @@ router.get('/chat', async (req, res) => {
   res.json(await getChat(req.user?.id, other));
 });
 
-router.post('/chat', async (req, res) => {
-  res.status(201).json(await sendDirectMessage(req.user?.id, req.body ?? {}));
+router.post('/chat', validateBody(sendDirectMessageSchema), async (req, res) => {
+  res.status(201).json(await sendDirectMessage(req.user?.id, req.body));
 });
 
-router.put('/chat/rooms', async (req, res) => {
-  res.json(await updateChatRoom(req.user!.id, req.body ?? {}));
+router.put('/chat/rooms', validateBody(updateChatRoomSchema), async (req, res) => {
+  res.json(await updateChatRoom(req.user!.id, req.body));
 });
 
 router.delete('/chat/rooms', async (req, res) => {

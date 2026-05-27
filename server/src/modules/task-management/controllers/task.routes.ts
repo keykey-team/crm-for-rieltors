@@ -1,5 +1,7 @@
 import { createAsyncRouter } from '../../../common/infrastructure/http/async-handler';
 import { addTask, changeTask, listTasks, removeTask } from '../services/task.service';
+import { validateBody } from '../../../common/validation/middleware';
+import { createTaskSchema, updateTaskSchema } from './task.schemas';
 
 const router = createAsyncRouter();
 
@@ -15,12 +17,12 @@ router.get('/tasks', async (req, res) => {
   );
 });
 
-router.post('/tasks', async (req, res) => {
-  res.status(201).json(await addTask(req.user!.id, req.body ?? {}));
+router.post('/tasks', validateBody(createTaskSchema), async (req, res) => {
+  res.status(201).json(await addTask(req.user!.id, req.body));
 });
 
-router.put('/tasks/:id', async (req, res) => {
-  res.json(await changeTask(req.params.id, req.body ?? {}));
+router.put('/tasks/:id', validateBody(updateTaskSchema), async (req, res) => {
+  res.json(await changeTask(req.params.id, req.body));
 });
 
 router.delete('/tasks/:id', async (req, res) => {
