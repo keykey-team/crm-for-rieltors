@@ -15,6 +15,7 @@ import { useSidebar } from '@/shared/lib/sidebar-context';
 import { usePlan } from '@/shared/lib/plan-context';
 import { useBrand } from '@/shared/lib/brand-context';
 import { hasPermission, sectionFromPath } from '@/shared/lib/permissions';
+import { AgencySwitcher } from '@/widgets/agency-switcher';
 
 type NavItem = { href: string; labelKey: string; icon: any; minRole?: 'director' | 'admin'; feature?: string };
 type NavGroup = { groupKey?: string; items: NavItem[] };
@@ -31,8 +32,10 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/deals', labelKey: 'nav.deals', icon: Workflow },
       { href: '/leads', labelKey: 'nav.leads', icon: Users },
       { href: '/properties', labelKey: 'nav.properties', icon: Building },
+      { href: '/selections', labelKey: 'nav.selections', icon: Globe },
       { href: '/tasks', labelKey: 'nav.tasks', icon: CheckSquare },
       { href: '/calendar', labelKey: 'nav.calendar', icon: CalendarDays },
+      { href: '/showings', labelKey: 'nav.showings', icon: Building2 },
     ],
   },
   {
@@ -139,6 +142,7 @@ export function Sidebar() {
         </div>
         {/* Nav */}
         <nav className="flex-1 py-2 px-2 overflow-y-auto">
+          {!collapsed && <AgencySwitcher />}
           {NAV_GROUPS.map((group, gi) => {
             const userRole = (session?.user as any)?.role ?? 'agent';
             const visibleItems = group.items.filter((item) => {
