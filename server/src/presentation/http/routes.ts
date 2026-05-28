@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { authMiddleware } from '../../common/infrastructure/middleware/auth.middleware';
+import { agencyMiddleware } from '../../common/infrastructure/middleware/agency.middleware';
 import { accountRoutes } from '../../modules/account-management';
+import { agencyRoutes } from '../../modules/agency';
 import { activityAuditRoutes } from '../../modules/activity-audit';
 import { assistantRoutes } from '../../modules/assistant';
 import { automationRoutes } from '../../modules/automation';
@@ -29,6 +31,8 @@ apiRouter.get('/health', (_req, res) => res.status(200).json({ status: 'ok' }));
 apiRouter.use('/auth', iamRoutes);
 apiRouter.use(publicSelectionsRoutes);
 apiRouter.use(authMiddleware);
+apiRouter.use(agencyMiddleware);
+apiRouter.use(agencyRoutes);
 apiRouter.use(accountRoutes);
 apiRouter.use(userManagementRoutes);
 apiRouter.use(referenceDataRoutes);

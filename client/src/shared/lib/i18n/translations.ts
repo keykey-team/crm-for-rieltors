@@ -1104,7 +1104,14 @@ const uk: Record<string, string> = {
 'selections.notFound': 'Підбірку не знайдено',
 'selections.client': 'Клієнт',
 'selections.shareText': 'ось ваша персональна підбірка:',
-'selections.mailSubject': 'Підбірка об’єктів',
+'selections.mailSubject': 'Підбірка об'єктів',
+  'agency.title': 'Агентство',
+  'agency.switch': 'Перемкнути агентство',
+  'agency.create': 'Створити агентство',
+  'agency.settings': 'Налаштування агентства',
+  'members.invite': 'Запросити учасника',
+  'members.team': 'Команда агентства',
+  'members.inviteByEmail': 'Запросіть колегу за email',
 };
 
 const en: Record<string, string> = {
@@ -2200,6 +2207,13 @@ const en: Record<string, string> = {
   'selections.client': 'Client',
   'selections.shareText': 'here is your personal selection:',
   'selections.mailSubject': 'Property selection',
+  'agency.title': 'Agency',
+  'agency.switch': 'Switch agency',
+  'agency.create': 'Create agency',
+  'agency.settings': 'Agency settings',
+  'members.invite': 'Invite member',
+  'members.team': 'Agency team',
+  'members.inviteByEmail': 'Invite your colleague by email',
 };
 
 const ru: Record<string, string> = {
@@ -3295,6 +3309,13 @@ const ru: Record<string, string> = {
   'selections.client': 'Клиент',
   'selections.shareText': 'вот ваша персональная подборка:',
   'selections.mailSubject': 'Подборка объектов',
+  'agency.title': 'Агентство',
+  'agency.switch': 'Сменить агентство',
+  'agency.create': 'Создать агентство',
+  'agency.settings': 'Настройки агентства',
+  'members.invite': 'Пригласить участника',
+  'members.team': 'Команда агентства',
+  'members.inviteByEmail': 'Пригласите коллегу по email',
 };
 
 export const translations: Record<Locale, Record<string, string>> = { uk, en, ru };

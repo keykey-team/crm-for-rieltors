@@ -30,6 +30,7 @@ model User {
   sidebarOpacity    Float?                 @default(1)
   themeMode         String?                @default("light")
   permissions       String?
+  lastAgencyId      String?
   activityLogs      ActivityLog[]          @relation("ActivityLogUser")
   automations       Automation[]           @relation("AutomationCreator")
   mentionedIn       ChatMention[]          @relation("MentionedUser")
@@ -48,10 +49,60 @@ model User {
   templates         Template[]             @relation("TemplateCreator")
   propertyPriceChanges PropertyPriceHistory[] @relation("PropertyPriceChanges")
   createdSelections    ClientSelection[]      @relation("CreatedSelections")
+  memberships          AgencyMembership[]     @relation("UserMemberships")
+  ownedAgencies        Agency[]               @relation("AgencyOwner")
 
   helperMessages  HelperMessage[]
 
   @@index([email])
+}
+
+model Agency {
+  id             String             @id @default(cuid())
+  name           String
+  slug           String             @unique
+  plan           String             @default("free")
+  ownerId        String
+  brandLogo      String?
+  brandName      String?
+  primaryColor   String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  owner          User               @relation("AgencyOwner", fields: [ownerId], references: [id])
+  memberships    AgencyMembership[]
+  leads          Lead[]
+  properties     Property[]
+  deals          Deal[]
+  tasks          Task[]
+  events         Event[]
+  templates      Template[]
+  automations    Automation[]
+  funnels        Funnel[]
+  chatRooms      ChatRoom[]
+  knowledge      KnowledgeArticle[]
+  communications Communication[]
+  rules          LeadDistributionRule[]
+  aftercarePlans AftercarePlan[]
+  dictionaries   Dictionary[]
+  activityLogs   ActivityLog[]
+
+  @@index([ownerId])
+}
+
+model AgencyMembership {
+  id        String   @id @default(cuid())
+  agencyId  String
+  userId    String
+  role      String   @default("agent")
+  isActive  Boolean  @default(true)
+  invitedBy String?
+  joinedAt  DateTime @default(now())
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  user      User     @relation("UserMemberships", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([agencyId, userId])
+  @@index([userId])
+  @@index([agencyId])
 }
 
 model Lead {
@@ -70,6 +121,7 @@ model Lead {
   notes          String?
   priority       String          @default("medium")
   assignedToId   String?
+  agencyId       String
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   lastContact    DateTime?
@@ -79,10 +131,12 @@ model Lead {
   tasks          Task[]
   showings       Showing[]
   selections     ClientSelection[]
+  agency         Agency          @relation(fields: [agencyId], references: [id])
 
   @@index([status])
   @@index([assignedToId])
   @@index([createdAt])
+  @@index([agencyId])
 }
 
 model Property {
@@ -101,6 +155,7 @@ model Property {
   status      String          @default("active")
   dealTypes   String[]        @default([])
   description String?
+  agencyId    String
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
   deals       Deal[]
@@ -109,10 +164,12 @@ model Property {
   units       PropertyUnit[]
   priceHistory   PropertyPriceHistory[]
   selectionItems SelectionItem[]
+  agency         Agency          @relation(fields: [agencyId], references: [id])
 
   @@index([status])
   @@index([type])
   @@index([price])
+  @@index([agencyId])
 }
 
 model PropertyPriceHistory {
@@ -153,6 +210,7 @@ model Deal {
   leadId            String?
   propertyId        String?
   assignedToId      String?
+  agencyId          String
   notes             String?
   meetingDate       DateTime?
   showDate          DateTime?
@@ -169,11 +227,13 @@ model Deal {
   comments          DealComment[]
   customFieldValues DealCustomFieldValue[]
   showings          Showing[]
+  agency            Agency                 @relation(fields: [agencyId], references: [id])
 
   @@index([stage])
   @@index([funnelId])
   @@index([assignedToId])
   @@index([createdAt])
+  @@index([agencyId])
 }
 
 model Task {
@@ -187,14 +247,17 @@ model Task {
   completedAt  DateTime?
   leadId       String?
   assignedToId String?
+  agencyId     String
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   assignedTo   User?     @relation(fields: [assignedToId], references: [id])
   lead         Lead?     @relation(fields: [leadId], references: [id])
+  agency       Agency    @relation(fields: [agencyId], references: [id])
 
   @@index([status])
   @@index([dueDate])
   @@index([assignedToId])
+  @@index([agencyId])
 }
 
 model Showing {
@@ -234,12 +297,15 @@ model Event {
   endDate     DateTime?
   allDay      Boolean   @default(false)
   userId      String?
+  agencyId    String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   user        User?     @relation(fields: [userId], references: [id])
+  agency      Agency    @relation(fields: [agencyId], references: [id])
 
   @@index([startDate])
   @@index([userId])
+  @@index([agencyId])
 }
 
 model KnowledgeArticle {
@@ -248,12 +314,15 @@ model KnowledgeArticle {
   content   String
   category  String   @default("general")
   authorId  String?
+  agencyId  String
   published Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   author    User?    @relation(fields: [authorId], references: [id])
+  agency    Agency   @relation(fields: [agencyId], references: [id])
 
   @@index([category])
+  @@index([agencyId])
 }
 
 model Automation {
@@ -266,11 +335,15 @@ model Automation {
   actionValue   String?
   isActive      Boolean   @default(true)
   createdById   String?
+  agencyId      String
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   lastRunAt     DateTime?
   lastRunResult String?
   createdBy     User?     @relation("AutomationCreator", fields: [createdById], references: [id])
+  agency        Agency    @relation(fields: [agencyId], references: [id])
+
+  @@index([agencyId])
 }
 
 model Template {
@@ -281,12 +354,15 @@ model Template {
   content     String
   variables   String?
   createdById String?
+  agencyId    String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   createdBy   User?    @relation("TemplateCreator", fields: [createdById], references: [id])
+  agency      Agency   @relation(fields: [agencyId], references: [id])
 
   @@index([type])
   @@index([category])
+  @@index([agencyId])
 }
 
 model DealComment {
@@ -320,12 +396,15 @@ model ActivityLog {
   action     String
   details    String?
   userId     String?
+  agencyId   String
   createdAt  DateTime @default(now())
   user       User?    @relation("ActivityLogUser", fields: [userId], references: [id])
+  agency     Agency   @relation(fields: [agencyId], references: [id])
 
   @@index([entityType, entityId])
   @@index([userId])
   @@index([createdAt])
+  @@index([agencyId])
 }
 
 model PropertyUnit {
@@ -354,12 +433,15 @@ model Funnel {
   isDefault Boolean       @default(false)
   isActive  Boolean       @default(true)
   order     Int           @default(0)
+  agencyId  String
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
   deals     Deal[]
   stages    FunnelStage[]
+  agency    Agency        @relation(fields: [agencyId], references: [id])
 
   @@index([order])
+  @@index([agencyId])
 }
 
 model FunnelStage {
@@ -415,12 +497,15 @@ model Communication {
   direction String?
   content   String
   userId    String?
+  agencyId  String
   createdAt DateTime @default(now())
   lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
   user      User?    @relation("CommunicationUser", fields: [userId], references: [id])
+  agency    Agency   @relation(fields: [agencyId], references: [id])
 
   @@index([leadId])
   @@index([createdAt])
+  @@index([agencyId])
 }
 
 model ClientSelection {
@@ -469,7 +554,11 @@ model AftercarePlan {
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
   order       Int             @default(0)
+  agencyId    String
   steps       AftercareStep[]
+  agency      Agency          @relation(fields: [agencyId], references: [id])
+
+  @@index([agencyId])
 }
 
 model AftercareStep {
@@ -493,11 +582,14 @@ model Dictionary {
   label     String
   order     Int      @default(0)
   isActive  Boolean  @default(true)
+  agencyId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  agency    Agency   @relation(fields: [agencyId], references: [id])
 
-  @@unique([category, value])
+  @@unique([agencyId, category, value])
   @@index([category])
+  @@index([agencyId])
 }
 
 model ChatMessage {
@@ -528,12 +620,15 @@ model ChatRoom {
   name        String?
   type        String           @default("direct")
   createdById String?
+  agencyId    String
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   messages    ChatMessage[]
   members     ChatRoomMember[]
+  agency      Agency           @relation(fields: [agencyId], references: [id])
 
   @@index([type])
+  @@index([agencyId])
 }
 
 model ChatRoomMember {
@@ -569,13 +664,16 @@ model LeadDistributionRule {
   propertyType String?
   needType     String?
   assignToId   String
+  agencyId     String
   priority     Int      @default(0)
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   assignTo     User     @relation("DistributionAssign", fields: [assignToId], references: [id])
+  agency       Agency   @relation(fields: [agencyId], references: [id])
 
   @@index([isActive])
+  @@index([agencyId])
 }
 
 model HelperMessage {
