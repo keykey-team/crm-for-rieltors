@@ -33,6 +33,8 @@ function normalizePropertyPayload(payload: Partial<PropertyUpsertInput>): Partia
     price: normalizeNumber(payload.price),
     currency: normalizeText(payload.currency),
     description: normalizeText(payload.description),
+    priceHistoryReason: normalizeText(payload.priceHistoryReason),
+    priceHistoryNote: normalizeText(payload.priceHistoryNote),
   };
 }
 

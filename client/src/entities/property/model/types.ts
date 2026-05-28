@@ -21,6 +21,13 @@ export interface Property {
   photos?: PropertyPhoto[];
   createdAt?: string;
   updatedAt?: string;
+  priceHistory?: Array<{
+    id: string;
+    price: number;
+    currency: string;
+    createdAt: string;
+    reason?: string | null;
+  }>;
 }
 
 export interface PropertyUpsertInput {
@@ -38,6 +45,8 @@ export interface PropertyUpsertInput {
   price?: string | number;
   currency?: string;
   description?: string;
+  priceHistoryReason?: string;
+  priceHistoryNote?: string;
 }
 
 export interface PropertiesQuery {

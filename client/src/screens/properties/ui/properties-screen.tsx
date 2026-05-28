@@ -1,17 +1,22 @@
 'use client';
+import { useState } from 'react';
 import { Plus, Search, Building, LayoutGrid, List, X, MapPin, Maximize, Layers, DollarSign, Edit2, Grid3X3, Trash2, BedDouble } from 'lucide-react';
 import { PropertyCard } from '@/widgets/properties/ui/property-card';
 import { PropertyDialog } from '@/widgets/properties/ui/property-dialog';
 import { ChessGrid } from '@/widgets/properties/ui/chess-grid';
+import { PropertyPriceHistoryWidget } from '@/widgets/property-price-history';
+import { AddPricePointModal } from '@/features/add-price-point';
 import { PROPERTY_DEAL_TYPES, PROPERTY_TYPES, PROPERTY_STATUSES } from '@/shared/lib/constants';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/lib/i18n/context';
 import { HintTooltip } from '@/shared/ui/hint-tooltip';
 import { formatPrice } from '@/shared/lib/format';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { usePropertiesPage } from '@/widgets/properties/model/use-properties-page';
 
 export function PropertiesClient() {
   const { t } = useTranslation();
+  const [addPointPropertyId, setAddPointPropertyId] = useState<string | null>(null);
   const getDealTypeLabel = (value: string) => value === 'sale' ? t('leads.dialog.needSell') : value === 'rent' ? t('leads.dialog.needRent') : value;
   const {
     properties,
@@ -156,7 +161,7 @@ export function PropertiesClient() {
               )}
               {/* Details */}
               <div className="p-5 space-y-4">
-                <div className="flex items-center gap-2 flex-wrap">
+                 <div className="flex items-center gap-2 flex-wrap">
                   {tp && <span className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary font-semibold">{t(`const.propertyType.${p.type}`) || tp.label}</span>}
                   {st && <span className="text-xs px-2.5 py-1 rounded-full font-semibold" style={{ backgroundColor: st.color + '15', color: st.color }}>{t(`const.propertyStatus.${p.status}`) || st.label}</span>}
                   {p.dealTypes?.map((dealType: string) => (
@@ -165,63 +170,85 @@ export function PropertiesClient() {
                     </span>
                   ))}
                 </div>
-                {/* Info grid */}
-                <div className="grid grid-cols-2 gap-3">
-                  {p.address && (
-                    <div className="col-span-2 flex items-center gap-2 text-sm text-muted-foreground">
-                      <MapPin className="w-4 h-4 flex-shrink-0 text-muted-foreground/60" /> {p.address}
-                    </div>
-                  )}
-                  {p.price && (
-                    <div className="bg-emerald-500/10 dark:bg-emerald-500/15 rounded-xl p-3">
-                      <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wider mb-0.5">{t('common.price')}</p>
-                      <p className="font-mono font-bold text-emerald-700 dark:text-emerald-300">{formatPrice(p.price)}</p>
-                    </div>
-                  )}
-                  {p.area && (
-                    <div className="bg-blue-500/10 dark:bg-blue-500/15 rounded-xl p-3">
-                      <p className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold uppercase tracking-wider mb-0.5">{t('common.area')}</p>
-                      <p className="font-mono font-bold text-blue-700 dark:text-blue-300">{p.area} м²</p>
-                    </div>
-                  )}
-                  {p.rooms != null && (
-                    <div className="bg-[#073B34]/10 dark:bg-emerald-500/15 rounded-xl p-3">
-                      <p className="text-[10px] text-violet-600 dark:text-emerald-400 font-semibold uppercase tracking-wider mb-0.5">{t('common.rooms')}</p>
-                      <p className="font-mono font-bold text-[#073B34] dark:text-emerald-300">{p.rooms}</p>
-                    </div>
-                  )}
-                  {p.floor && (
-                    <div className="bg-amber-500/10 dark:bg-amber-500/15 rounded-xl p-3">
-                      <p className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold uppercase tracking-wider mb-0.5">{t('common.floor')}</p>
-                      <p className="font-mono font-bold text-amber-700 dark:text-amber-300">{p.floor}{p.totalFloors ? `/${p.totalFloors}` : ''}</p>
-                    </div>
+                  <Tabs defaultValue="details">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="details">{t('common.details')}</TabsTrigger>
+                      <TabsTrigger value="priceHistory">{t('priceHistory.tabTitle')}</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="details">
+                      <div className="grid grid-cols-2 gap-3">
+                        {p.address && (
+                          <div className="col-span-2 flex items-center gap-2 text-sm text-muted-foreground">
+                            <MapPin className="w-4 h-4 flex-shrink-0 text-muted-foreground/60" /> {p.address}
+                          </div>
+                        )}
+                        {p.price && (
+                          <div className="bg-emerald-500/10 dark:bg-emerald-500/15 rounded-xl p-3">
+                            <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wider mb-0.5">{t('common.price')}</p>
+                            <p className="font-mono font-bold text-emerald-700 dark:text-emerald-300">{formatPrice(p.price)}</p>
+                          </div>
+                        )}
+                        {p.area && (
+                          <div className="bg-blue-500/10 dark:bg-blue-500/15 rounded-xl p-3">
+                            <p className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold uppercase tracking-wider mb-0.5">{t('common.area')}</p>
+                            <p className="font-mono font-bold text-blue-700 dark:text-blue-300">{p.area} м²</p>
+                          </div>
+                        )}
+                        {p.rooms != null && (
+                          <div className="bg-[#073B34]/10 dark:bg-emerald-500/15 rounded-xl p-3">
+                            <p className="text-[10px] text-violet-600 dark:text-emerald-400 font-semibold uppercase tracking-wider mb-0.5">{t('common.rooms')}</p>
+                            <p className="font-mono font-bold text-[#073B34] dark:text-emerald-300">{p.rooms}</p>
+                          </div>
+                        )}
+                        {p.floor && (
+                          <div className="bg-amber-500/10 dark:bg-amber-500/15 rounded-xl p-3">
+                            <p className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold uppercase tracking-wider mb-0.5">{t('common.floor')}</p>
+                            <p className="font-mono font-bold text-amber-700 dark:text-amber-300">{p.floor}{p.totalFloors ? `/${p.totalFloors}` : ''}</p>
+                          </div>
+                        )}
+                      </div>
+                    </TabsContent>
+                    <TabsContent value="priceHistory">
+                      <PropertyPriceHistoryWidget propertyId={p.id} t={t} />
+                    </TabsContent>
+                  </Tabs>
+                  {p.description && (
+                    <p className="text-sm text-muted-foreground leading-relaxed">{p.description}</p>
                   )}
                 </div>
-                {p.description && (
-                  <p className="text-sm text-muted-foreground leading-relaxed">{p.description}</p>
-                )}
-              </div>
-              {/* Actions */}
-              <div className="flex items-center gap-2 px-4 sm:px-5 py-3 sm:py-4 border-t border-border/60 dark:border-border/40">
-                <button onClick={() => { setPreviewProp(null); setEditProp(p); setDialogOpen(true); }}
-                  className="flex items-center gap-2 px-3 sm:px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:opacity-90 transition shadow-sm active:scale-95">
-                  <Edit2 className="w-3.5 h-3.5" /> {t('common.edit')}
-                </button>
-                {p.totalFloors && (
-                  <button onClick={() => { setPreviewProp(null); setChessGridPropId(p.id); setChessGridFloors(p.totalFloors || 10); setChessGridTitle(p.title || ''); }}
-                    className="flex items-center gap-2 px-3 sm:px-5 py-2.5 bg-card border border-border/60 dark:border-border/40 rounded-xl text-sm font-semibold hover:bg-muted transition active:scale-95">
-                    <Grid3X3 className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t('properties.chessGrid')}</span>
+                {/* Actions */}
+                <div className="flex items-center gap-2 px-4 sm:px-5 py-3 sm:py-4 border-t border-border/60 dark:border-border/40">
+                  <button onClick={() => { setPreviewProp(null); setEditProp(p); setDialogOpen(true); }}
+                    className="flex items-center gap-2 px-3 sm:px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:opacity-90 transition shadow-sm active:scale-95">
+                    <Edit2 className="w-3.5 h-3.5" /> {t('common.edit')}
                   </button>
-                )}
-                <button onClick={() => { setPreviewProp(null); handleDelete(p.id); }}
-                  className="ml-auto flex items-center gap-2 px-3 sm:px-4 py-2.5 text-destructive hover:bg-destructive/10 rounded-xl text-sm font-medium transition active:scale-95">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                  <button onClick={() => setAddPointPropertyId(p.id)}
+                    className="flex items-center gap-2 px-3 sm:px-5 py-2.5 bg-card border border-border/60 dark:border-border/40 rounded-xl text-sm font-semibold hover:bg-muted transition active:scale-95">
+                    <DollarSign className="w-3.5 h-3.5" /> {t('priceHistory.addPoint')}
+                  </button>
+                  {p.totalFloors && (
+                    <button onClick={() => { setPreviewProp(null); setChessGridPropId(p.id); setChessGridFloors(p.totalFloors || 10); setChessGridTitle(p.title || ''); }}
+                      className="flex items-center gap-2 px-3 sm:px-5 py-2.5 bg-card border border-border/60 dark:border-border/40 rounded-xl text-sm font-semibold hover:bg-muted transition active:scale-95">
+                      <Grid3X3 className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t('properties.chessGrid')}</span>
+                    </button>
+                  )}
+                  <button onClick={() => { setPreviewProp(null); handleDelete(p.id); }}
+                    className="ml-auto flex items-center gap-2 px-3 sm:px-4 py-2.5 text-destructive hover:bg-destructive/10 rounded-xl text-sm font-medium transition active:scale-95">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
         );
       })()}
+      {addPointPropertyId ? (
+        <AddPricePointModal
+          propertyId={addPointPropertyId}
+          t={t}
+          onClose={() => setAddPointPropertyId(null)}
+          onSaved={() => setPreviewProp((prev) => prev)}
+        />
+      ) : null}
     </div>
   );
 }
