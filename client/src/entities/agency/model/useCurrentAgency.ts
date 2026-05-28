@@ -17,7 +17,7 @@ function patchAgencyHeader() {
   const isApiRequest = (input: RequestInfo | URL): boolean => {
     if (typeof input === 'string') return input.startsWith('/api/');
     if (input instanceof URL) return input.pathname.startsWith('/api/');
-    if (input instanceof Request) return input.url.startsWith('/api/');
+    if (input instanceof Request) return new URL(input.url).pathname.startsWith('/api/');
     return false;
   };
 

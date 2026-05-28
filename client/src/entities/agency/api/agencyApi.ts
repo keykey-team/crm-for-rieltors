@@ -7,10 +7,11 @@ async function parse<T>(res: Response): Promise<T> {
   return data as T;
 }
 
-function withAgencyHeader(headers: HeadersInit = {}) {
+function withAgencyHeader(headers: HeadersInit = {}): Headers {
+  const result = new Headers(headers);
   const currentAgencyId = getCurrentAgencyId();
-  if (!currentAgencyId) return headers;
-  return { ...headers, 'X-Agency-Id': currentAgencyId };
+  if (currentAgencyId) result.set('X-Agency-Id', currentAgencyId);
+  return result;
 }
 
 export function getAgencies() {
