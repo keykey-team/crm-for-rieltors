@@ -18,6 +18,7 @@ export interface AuthenticatedUserDto {
   accountType: string;
   plan: string;
   permissions: string | null;
+  lastAgencyId: string | null;
 }
 
 export interface SignupResultDto {
@@ -33,4 +34,3 @@ export interface LoginResultDto {
 export interface UserCredentialsRecord extends AuthenticatedUserDto {
   password: string;
 }
-
