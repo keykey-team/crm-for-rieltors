@@ -31,6 +31,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/deals', labelKey: 'nav.deals', icon: Workflow },
       { href: '/leads', labelKey: 'nav.leads', icon: Users },
       { href: '/properties', labelKey: 'nav.properties', icon: Building },
+      { href: '/selections', labelKey: 'nav.selections', icon: Globe },
       { href: '/tasks', labelKey: 'nav.tasks', icon: CheckSquare },
       { href: '/calendar', labelKey: 'nav.calendar', icon: CalendarDays },
     ],

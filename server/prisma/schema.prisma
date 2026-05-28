@@ -45,6 +45,7 @@ model User {
   distributionRules LeadDistributionRule[] @relation("DistributionAssign")
   tasks             Task[]
   templates         Template[]             @relation("TemplateCreator")
+  createdSelections ClientSelection[]      @relation("CreatedSelections")
 
   helperMessages  HelperMessage[]
 
@@ -74,6 +75,7 @@ model Lead {
   deals          Deal[]
   assignedTo     User?           @relation(fields: [assignedToId], references: [id])
   tasks          Task[]
+  selections     ClientSelection[]
 
   @@index([status])
   @@index([assignedToId])
@@ -101,6 +103,7 @@ model Property {
   deals       Deal[]
   photos      PropertyPhoto[]
   units       PropertyUnit[]
+  selectionItems SelectionItem[]
 
   @@index([status])
   @@index([type])
@@ -368,6 +371,44 @@ model Communication {
 
   @@index([leadId])
   @@index([createdAt])
+}
+
+model ClientSelection {
+  id           String          @id @default(cuid())
+  leadId       String
+  createdById  String
+  publicSlug   String          @unique
+  title        String?
+  message      String?
+  expiresAt    DateTime?
+  viewsCount   Int             @default(0)
+  lastViewedAt DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  lead         Lead            @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdBy    User            @relation("CreatedSelections", fields: [createdById], references: [id])
+  items        SelectionItem[]
+
+  @@index([leadId])
+  @@index([createdById])
+  @@index([publicSlug])
+}
+
+model SelectionItem {
+  id             String          @id @default(cuid())
+  selectionId    String
+  propertyId     String
+  order          Int             @default(0)
+  agentComment   String?
+  clientReaction String?
+  clientNote     String?
+  reactedAt      DateTime?
+  createdAt      DateTime        @default(now())
+  selection      ClientSelection @relation(fields: [selectionId], references: [id], onDelete: Cascade)
+  property       Property        @relation(fields: [propertyId], references: [id])
+
+  @@unique([selectionId, propertyId])
+  @@index([selectionId])
 }
 
 model AftercarePlan {
