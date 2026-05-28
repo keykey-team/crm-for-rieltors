@@ -28,6 +28,7 @@ export function usePropertiesPage(t: (k: string) => string) {
     });
     setProperties(data);
     setLoading(false);
+    return data;
   }, [dealTypeFilter, search, statusFilter, typeFilter]);
 
   useEffect(() => {
@@ -74,6 +75,7 @@ export function usePropertiesPage(t: (k: string) => string) {
     setChessGridTitle,
     previewProp,
     setPreviewProp,
+    fetchProps,
     handleSave,
     handleDelete,
   };

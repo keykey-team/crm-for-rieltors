@@ -1,11 +1,20 @@
 import { createAsyncRouter } from '../../../common/infrastructure/http/async-handler';
 import { validateBody } from '../../../common/validation/middleware';
-import { createPropertySchema, updatePropertySchema, createPropertyUnitSchema, updatePropertyUnitSchema } from './property.schemas';
+import {
+  createPropertyPricePointSchema,
+  createPropertySchema,
+  createPropertyUnitSchema,
+  updatePropertySchema,
+  updatePropertyUnitSchema,
+} from './property.schemas';
 import {
   addProperty,
   addPropertyUnit,
   changeProperty,
   changePropertyUnit,
+  createPropertyPriceHistoryPoint,
+  getPropertyPriceStats,
+  listPropertyPriceHistory,
   listProperties,
   listPropertyUnits,
   removeProperty,
@@ -26,11 +35,11 @@ router.get('/properties', async (req, res) => {
 });
 
 router.post('/properties', validateBody(createPropertySchema), async (req, res) => {
-  res.status(201).json(await addProperty(req.body));
+  res.status(201).json(await addProperty(req.body, req.user?.id));
 });
 
 router.put('/properties/:id', validateBody(updatePropertySchema), async (req, res) => {
-  res.json(await changeProperty(req.params.id, req.body));
+  res.json(await changeProperty(req.params.id, req.body, req.user?.id));
 });
 
 router.delete('/properties/:id', async (req, res) => {
@@ -51,6 +60,27 @@ router.put('/property-units', validateBody(updatePropertyUnitSchema), async (req
 
 router.delete('/property-units', async (req, res) => {
   res.json(await removePropertyUnit(req.query.id));
+});
+
+router.get('/properties/:id/price-history', async (req, res) => {
+  res.json(
+    await listPropertyPriceHistory(req.params.id, {
+      page: req.query.page,
+      limit: req.query.limit,
+      from: req.query.from,
+      to: req.query.to,
+    }),
+  );
+});
+
+router.post('/properties/:id/price-history', validateBody(createPropertyPricePointSchema), async (req, res) => {
+  res
+    .status(201)
+    .json(await createPropertyPriceHistoryPoint(req.params.id, req.body, req.user?.id, req.user?.role));
+});
+
+router.get('/properties/:id/price-stats', async (req, res) => {
+  res.json(await getPropertyPriceStats(req.params.id));
 });
 
 export const propertyRoutes = router;
