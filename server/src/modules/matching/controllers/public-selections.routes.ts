@@ -5,9 +5,10 @@ import { reactionSchema } from './matching.schemas';
 import { selectionsService } from '../services/selections.service';
 
 const router = createAsyncRouter();
-const REACTION_WINDOW_MS = 60_000;
+const RATE_LIMIT_WINDOW_MS = 60_000;
 const REACTION_LIMIT = 30;
 const reactionCounter = new Map<string, number[]>();
+let requestsSinceCleanup = 0;
 
 function readIp(req: Request) {
   return (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() || req.ip || 'unknown';
@@ -16,8 +17,18 @@ function readIp(req: Request) {
 function isReactionRateLimited(req: Request) {
   const now = Date.now();
   const key = `${readIp(req)}:${req.params.slug}`;
+  requestsSinceCleanup += 1;
+  if (requestsSinceCleanup >= 200) {
+    requestsSinceCleanup = 0;
+    for (const [mapKey, values] of reactionCounter.entries()) {
+      const active = values.filter((item) => now - item < RATE_LIMIT_WINDOW_MS);
+      if (active.length === 0) reactionCounter.delete(mapKey);
+      else reactionCounter.set(mapKey, active);
+    }
+  }
+
   const history = reactionCounter.get(key) ?? [];
-  const fresh = history.filter((item) => now - item < REACTION_WINDOW_MS);
+  const fresh = history.filter((item) => now - item < RATE_LIMIT_WINDOW_MS);
   if (fresh.length >= REACTION_LIMIT) return true;
   fresh.push(now);
   reactionCounter.set(key, fresh);

@@ -3,8 +3,14 @@
 import { useEffect, useState } from 'react';
 import { getLeadMatches } from '@/entities/client-selection';
 
+interface LeadMatch {
+  id: string;
+  title: string;
+  score: number;
+}
+
 export function useLeadMatches(leadId: string) {
-  const [matches, setMatches] = useState<any[]>([]);
+  const [matches, setMatches] = useState<LeadMatch[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
 
   useEffect(() => {

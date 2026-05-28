@@ -24,7 +24,15 @@ export function EditSelectionItems({ selection, onUpdated }: { selection: Client
               <button onClick={() => move(index, 1)} className="px-2 py-1 border rounded">↓</button>
             </div>
           </div>
-          <textarea defaultValue={item.agentComment || ''} onBlur={async (e) => onUpdated(await updateSelectionItemComment(selection.id, item.id, e.target.value))} className="w-full mt-2 px-2 py-1 border border-border rounded" />
+          <textarea
+            defaultValue={item.agentComment || ''}
+            aria-label={`Agent comment for ${item.property.title}`}
+            onBlur={async (e) => {
+              if ((item.agentComment || '') === e.target.value) return;
+              onUpdated(await updateSelectionItemComment(selection.id, item.id, e.target.value));
+            }}
+            className="w-full mt-2 px-2 py-1 border border-border rounded"
+          />
         </div>
       ))}
     </div>

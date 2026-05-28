@@ -53,6 +53,7 @@ const defaultDeps: SelectionsDependencies = {
   updateSelectionViews,
   deleteSelection,
 };
+const maxSlugGenerationAttempts = 20;
 
 const nanoid = customAlphabet('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', 12);
 
@@ -61,7 +62,7 @@ function buildSlug() {
 }
 
 export async function generateUniquePublicSlug(checkExists: (slug: string) => Promise<boolean>) {
-  for (let i = 0; i < 20; i += 1) {
+  for (let i = 0; i < maxSlugGenerationAttempts; i += 1) {
     const slug = buildSlug();
     if (!(await checkExists(slug))) return slug;
   }
@@ -80,7 +81,12 @@ function parseDateOrNull(value?: string | null) {
 }
 
 function buildReactionContent(reaction: ClientReaction, note?: string) {
-  const label = reaction === 'like' ? '👍 like' : reaction === 'dislike' ? '👎 dislike' : '👁 want_to_view';
+  const labels: Record<ClientReaction, string> = {
+    like: '👍',
+    dislike: '👎',
+    want_to_view: '👁',
+  };
+  const label = labels[reaction];
   return note ? `${label}: ${note}` : label;
 }
 
@@ -197,17 +203,18 @@ export function createSelectionsService(deps: SelectionsDependencies = defaultDe
     async getSelectionPdf(selectionId: string, userId?: string, role?: string): Promise<Buffer> {
       const selection = await deps.findSelectionById(selectionId);
       assertSelectionAccess(selection, userId, role);
+      const safeSelection = selection as NonNullable<typeof selection>;
 
       const doc = new PDFDocument({ margin: 40, size: 'A4' });
       const chunks: Buffer[] = [];
       doc.on('data', (chunk) => chunks.push(chunk));
 
-      const title = selection?.title || `Selection #${selection?.id}`;
+      const title = safeSelection.title || `Selection #${safeSelection.id}`;
       doc.fontSize(18).text(title);
-      if (selection?.message) doc.moveDown().fontSize(11).text(selection.message);
+      if (safeSelection.message) doc.moveDown().fontSize(11).text(safeSelection.message);
       doc.moveDown();
 
-      selection?.items.forEach((item, index) => {
+      safeSelection.items.forEach((item, index) => {
         doc.fontSize(13).text(`${index + 1}. ${item.property.title}`);
         doc.fontSize(11).text(`Price: ${item.property.price} ${item.property.currency}`);
         doc.text(`Area: ${item.property.area ?? '—'} m² | Rooms: ${item.property.rooms ?? '—'}`);

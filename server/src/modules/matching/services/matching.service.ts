@@ -2,6 +2,18 @@ import { badRequest } from '../../../common/shared-kernel/errors';
 import { RankedProperty } from '../models/matching.dto';
 import { findLeadForMatching, findPropertiesForMatching } from '../repositories/matching.repository';
 
+const PRICE_TOLERANCE_MULTIPLIER = 0.25;
+const BUDGET_LOWER_MULTIPLIER = 0.85;
+const BUDGET_UPPER_MULTIPLIER = 1.1;
+const SCORE_WEIGHTS = {
+  propertyType: 0.15,
+  district: 0.15,
+  rooms: 0.1,
+  area: 0.1,
+  needType: 0.1,
+  price: 0.4,
+} as const;
+
 function splitCsv(value: unknown): string[] {
   if (!value || typeof value !== 'string') return [];
   return value
@@ -17,7 +29,7 @@ function numberOrNull(value: unknown): number | null {
 }
 
 function calcPriceScore(price: number, budget: number): number {
-  const tolerance = budget * 0.25;
+  const tolerance = budget * PRICE_TOLERANCE_MULTIPLIER;
   if (tolerance <= 0) return 0;
   return Math.max(0, 1 - Math.abs(price - budget) / tolerance);
 }
@@ -34,8 +46,8 @@ export function rankLeadMatches(lead: Record<string, unknown>, properties: any[]
   const leadTypeSet = new Set(splitCsv(lead.propertyType));
   const leadDistrictSet = new Set(splitCsv(lead.districts));
   const budget = numberOrNull(lead.budget);
-  const minBudget = budget ? budget * 0.85 : null;
-  const maxBudget = budget ? budget * 1.1 : null;
+  const minBudget = budget ? budget * BUDGET_LOWER_MULTIPLIER : null;
+  const maxBudget = budget ? budget * BUDGET_UPPER_MULTIPLIER : null;
   const roomsMin = numberOrNull(lead.roomsMin);
   const roomsMax = numberOrNull(lead.roomsMax);
   const areaMin = numberOrNull(lead.areaMin);
@@ -76,15 +88,15 @@ export function rankLeadMatches(lead: Record<string, unknown>, properties: any[]
         if (value > 0.5) matchedBy.push(reason);
       };
 
-      if (leadTypeSet.size > 0) addWeighted(1, 0.15, 'propertyType');
-      if (leadDistrictSet.size > 0) addWeighted(1, 0.15, 'district');
-      if (roomsMin !== null || roomsMax !== null) addWeighted(1, 0.1, 'rooms');
-      if (areaMin !== null || areaMax !== null) addWeighted(1, 0.1, 'area');
-      if (needType) addWeighted(1, 0.1, 'needType');
+      if (leadTypeSet.size > 0) addWeighted(1, SCORE_WEIGHTS.propertyType, 'propertyType');
+      if (leadDistrictSet.size > 0) addWeighted(1, SCORE_WEIGHTS.district, 'district');
+      if (roomsMin !== null || roomsMax !== null) addWeighted(1, SCORE_WEIGHTS.rooms, 'rooms');
+      if (areaMin !== null || areaMax !== null) addWeighted(1, SCORE_WEIGHTS.area, 'area');
+      if (needType) addWeighted(1, SCORE_WEIGHTS.needType, 'needType');
 
       if (budget !== null) {
         const priceScore = calcPriceScore(property.price, budget);
-        addWeighted(priceScore, 0.4, 'price');
+        addWeighted(priceScore, SCORE_WEIGHTS.price, 'price');
       }
 
       const normalizedScore = totalWeight > 0 ? Math.max(0, Math.min(1, score / totalWeight)) : 0.5;
