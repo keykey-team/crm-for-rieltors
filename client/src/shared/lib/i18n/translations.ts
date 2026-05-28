@@ -1051,6 +1051,13 @@ const uk: Record<string, string> = {
   'capabilities.themes.step1': 'Перейдіть у Налаштування → Профіль.',
   'capabilities.themes.step2': 'Оберіть тему: Світла, Темна або Системна.',
   'capabilities.themes.step3': 'Системна тема автоматично перемикається залежно від налаштувань пристрою.',
+  'agency.title': 'Агентство',
+  'agency.switch': 'Перемкнути агентство',
+  'agency.create': 'Створити агентство',
+  'agency.settings': 'Налаштування агентства',
+  'members.invite': 'Запросити учасника',
+  'members.team': 'Команда агентства',
+  'members.inviteByEmail': 'Запросіть колегу за email',
 };
 
 const en: Record<string, string> = {
@@ -2092,6 +2099,13 @@ const en: Record<string, string> = {
   'capabilities.themes.step1': 'Go to Settings → Profile.',
   'capabilities.themes.step2': 'Choose a theme: Light, Dark, or System.',
   'capabilities.themes.step3': 'System theme automatically switches based on device settings.',
+  'agency.title': 'Agency',
+  'agency.switch': 'Switch agency',
+  'agency.create': 'Create agency',
+  'agency.settings': 'Agency settings',
+  'members.invite': 'Invite member',
+  'members.team': 'Agency team',
+  'members.inviteByEmail': 'Invite your colleague by email',
 };
 
 const ru: Record<string, string> = {
@@ -3133,6 +3147,13 @@ const ru: Record<string, string> = {
   'capabilities.themes.step1': 'Перейдите в Настройки → Профиль.',
   'capabilities.themes.step2': 'Выберите тему: Светлая, Тёмная или Системная.',
   'capabilities.themes.step3': 'Системная тема автоматически переключается в зависимости от настроек устройства.',
+  'agency.title': 'Агентство',
+  'agency.switch': 'Сменить агентство',
+  'agency.create': 'Создать агентство',
+  'agency.settings': 'Настройки агентства',
+  'members.invite': 'Пригласить участника',
+  'members.team': 'Команда агентства',
+  'members.inviteByEmail': 'Пригласите коллегу по email',
 };
 
 export const translations: Record<Locale, Record<string, string>> = { uk, en, ru };

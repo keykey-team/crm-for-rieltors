@@ -10,8 +10,11 @@ import { SearchPalette } from '@/shared/widgets/search-palette';
 import { QuickCreateFab } from '@/shared/widgets/quick-create-fab';
 import { HelperChat } from '@/shared/widgets/helper-chat';
 import { CrmSessionBridge } from '@/shared/widgets/crm-session-bridge';
+import { useCurrentAgency } from '@/entities/agency';
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  useCurrentAgency();
+
   return (
     <SessionProvider>
       <ThemeProvider

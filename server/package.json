@@ -9,7 +9,8 @@
     "start": "node dist/app/server.js",
     "prisma:generate": "prisma generate",
     "db:push": "prisma db push",
-    "seed:super-admin": "tsx src/scripts/ensure-super-admin.ts"
+    "seed:super-admin": "tsx src/scripts/ensure-super-admin.ts",
+    "migrate:multi-tenant": "tsx scripts/migrate-to-multi-tenant.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.0.0",
