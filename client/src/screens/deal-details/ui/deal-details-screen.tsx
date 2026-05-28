@@ -25,6 +25,10 @@ import {
 import { getActivityLog } from '@/entities/activity-log';
 import { getDealCustomFields, getFunnelStages } from '@/entities/settings';
 import { getExchangeRate } from '@/shared/api/exchange-rate';
+import { listShowings, updateShowing, type Showing } from '@/entities/showing';
+import { CreateShowingDialog } from '@/features/create-showing';
+import { UpdateShowingDialog } from '@/features/update-showing';
+import { ShowingCard } from '@/entities/showing';
 
 export function DealDetailClient({ dealId }: { dealId: string }) {
   const { t, locale } = useTranslation();
@@ -40,10 +44,13 @@ export function DealDetailClient({ dealId }: { dealId: string }) {
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionIdx, setMentionIdx] = useState(0);
   const commentInputRef = useRef<HTMLInputElement>(null);
-  const [activeTab, setActiveTab] = useState<'comments' | 'checklist' | 'history' | 'customFields'>('comments');
+  const [activeTab, setActiveTab] = useState<'comments' | 'checklist' | 'history' | 'customFields' | 'showings'>('comments');
   const [stages, setStages] = useState(DEAL_STAGES);
   const [customFields, setCustomFields] = useState<any[]>([]);
   const [cfValues, setCfValues] = useState<Record<string, string>>({});
+  const [showings, setShowings] = useState<Showing[]>([]);
+  const [createShowingOpen, setCreateShowingOpen] = useState(false);
+  const [editShowing, setEditShowing] = useState<Showing | null>(null);
 
   // Lead & Property picker state
   const [allLeads, setAllLeads] = useState<any[]>([]);
@@ -176,13 +183,14 @@ export function DealDetailClient({ dealId }: { dealId: string }) {
   const fetchDeal = useCallback(async () => {
     try {
       const dealData = await getDealById(dealId);
-      const [commData, checkData, logData, stagesData, cfData, cfvData] = await Promise.all([
+      const [commData, checkData, logData, stagesData, cfData, cfvData, showingsData] = await Promise.all([
         getDealComments(dealId),
         getDealChecklist(dealId),
         getActivityLog('deal', dealId),
         getFunnelStages(dealData?.funnelId),
         getDealCustomFields(),
         getDealCustomFieldValues(dealId),
+        listShowings({ dealId, limit: 100 }),
       ]);
       setDeal(dealData);
       setComments(Array.isArray(commData) ? commData : []);
@@ -196,6 +204,7 @@ export function DealDetailClient({ dealId }: { dealId: string }) {
         cfvData.forEach((v: any) => { vals[v.fieldId] = v.value; });
         setCfValues(vals);
       }
+      setShowings(showingsData.items ?? []);
     } catch { /* ignore */ } finally { setLoading(false); }
   }, [dealId]);
 
@@ -278,6 +287,11 @@ export function DealDetailClient({ dealId }: { dealId: string }) {
   const changeStage = async (stage: string) => {
     await updateDealById(dealId, { stage });
     toast.success(t('deals.stageUpdated'));
+    fetchDeal();
+  };
+
+  const handleShowingStatus = async (showing: Showing, status: 'cancelled' | 'no_show') => {
+    await updateShowing(showing.id, { status });
     fetchDeal();
   };
 
@@ -660,6 +674,7 @@ export function DealDetailClient({ dealId }: { dealId: string }) {
             { key: 'comments' as const, label: t('deals.comments'), icon: MessageSquare, count: comments.length },
             { key: 'checklist' as const, label: t('deals.checklist'), icon: CheckSquare, count: `${completedItems}/${checklist.length}` },
             { key: 'history' as const, label: t('deals.history'), icon: Clock, count: logs.length },
+            { key: 'showings' as const, label: t('showings.title'), icon: Building, count: showings.length },
             ...(customFields.length > 0 ? [{ key: 'customFields' as const, label: t('deals.customFields'), icon: Settings, count: customFields.length }] : []),
           ].map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
@@ -792,6 +807,49 @@ export function DealDetailClient({ dealId }: { dealId: string }) {
             </div>
           )}
 
+          {activeTab === 'showings' && (
+            <div className="space-y-3">
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setCreateShowingOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90"
+                >
+                  <Plus className="h-4 w-4" />
+                  {t('showings.create')}
+                </button>
+              </div>
+              {showings.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">{t('showings.empty')}</p>
+              ) : (
+                showings.map((showing) => (
+                  <div key={showing.id} className="space-y-2">
+                    <ShowingCard showing={showing} locale={locale} statusLabel={t(`showings.status.${showing.status}`)} />
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setEditShowing(showing)}
+                        className="rounded-lg border border-border px-2.5 py-1 text-xs hover:bg-muted"
+                      >
+                        {t('showings.complete')}
+                      </button>
+                      <button
+                        onClick={() => handleShowingStatus(showing, 'no_show')}
+                        className="rounded-lg border border-border px-2.5 py-1 text-xs hover:bg-muted"
+                      >
+                        {t('showings.noShow')}
+                      </button>
+                      <button
+                        onClick={() => handleShowingStatus(showing, 'cancelled')}
+                        className="rounded-lg border border-border px-2.5 py-1 text-xs hover:bg-muted"
+                      >
+                        {t('showings.cancel')}
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
           {activeTab === 'customFields' && (
             <div className="space-y-4">
               {customFields.map(field => (
@@ -841,6 +899,26 @@ export function DealDetailClient({ dealId }: { dealId: string }) {
           <p className="text-sm text-muted-foreground whitespace-pre-wrap">{deal.notes}</p>
         </div>
       )}
+      {createShowingOpen ? (
+        <CreateShowingDialog
+          initialValues={{ dealId: deal.id, propertyId: deal.propertyId ?? undefined, leadId: deal.leadId ?? undefined }}
+          onClose={() => setCreateShowingOpen(false)}
+          onSaved={() => {
+            setCreateShowingOpen(false);
+            fetchDeal();
+          }}
+        />
+      ) : null}
+      {editShowing ? (
+        <UpdateShowingDialog
+          showing={editShowing}
+          onClose={() => setEditShowing(null)}
+          onSaved={() => {
+            setEditShowing(null);
+            fetchDeal();
+          }}
+        />
+      ) : null}
     </div>
   );
 }
