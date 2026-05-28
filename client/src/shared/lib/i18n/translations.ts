@@ -1051,6 +1051,20 @@ const uk: Record<string, string> = {
   'capabilities.themes.step1': 'Перейдіть у Налаштування → Профіль.',
   'capabilities.themes.step2': 'Оберіть тему: Світла, Темна або Системна.',
   'capabilities.themes.step3': 'Системна тема автоматично перемикається залежно від налаштувань пристрою.',
+'nav.selections': 'Підбірки',
+'matching.title': "Підходящі об'єкти",
+'selections.title': 'Підбірки',
+'selections.untitled': 'Підбірка без назви',
+'selections.items': "об'єктів",
+'selections.openPublic': 'Відкрити публічну',
+'selections.filterLead': 'Фільтр за leadId',
+'selections.message': 'Повідомлення клієнту',
+'selections.createAndCopy': 'Створити і скопіювати посилання',
+'selections.createdAndCopied': 'Підбірку створено, посилання скопійовано',
+'selections.notFound': 'Підбірку не знайдено',
+'selections.client': 'Клієнт',
+'selections.shareText': 'ось ваша персональна підбірка:',
+'selections.mailSubject': 'Підбірка об’єктів',
 };
 
 const en: Record<string, string> = {
@@ -2092,6 +2106,20 @@ const en: Record<string, string> = {
   'capabilities.themes.step1': 'Go to Settings → Profile.',
   'capabilities.themes.step2': 'Choose a theme: Light, Dark, or System.',
   'capabilities.themes.step3': 'System theme automatically switches based on device settings.',
+  'nav.selections': 'Selections',
+  'matching.title': 'Matched properties',
+  'selections.title': 'Selections',
+  'selections.untitled': 'Untitled selection',
+  'selections.items': 'items',
+  'selections.openPublic': 'Open public page',
+  'selections.filterLead': 'Filter by leadId',
+  'selections.message': 'Client message',
+  'selections.createAndCopy': 'Create and copy link',
+  'selections.createdAndCopied': 'Selection created and link copied',
+  'selections.notFound': 'Selection not found',
+  'selections.client': 'Client',
+  'selections.shareText': 'here is your personal selection:',
+  'selections.mailSubject': 'Property selection',
 };
 
 const ru: Record<string, string> = {
@@ -3133,6 +3161,20 @@ const ru: Record<string, string> = {
   'capabilities.themes.step1': 'Перейдите в Настройки → Профиль.',
   'capabilities.themes.step2': 'Выберите тему: Светлая, Тёмная или Системная.',
   'capabilities.themes.step3': 'Системная тема автоматически переключается в зависимости от настроек устройства.',
+  'nav.selections': 'Подборки',
+  'matching.title': 'Подходящие объекты',
+  'selections.title': 'Подборки',
+  'selections.untitled': 'Подборка без названия',
+  'selections.items': 'объектов',
+  'selections.openPublic': 'Открыть публичную',
+  'selections.filterLead': 'Фильтр по leadId',
+  'selections.message': 'Сообщение клиенту',
+  'selections.createAndCopy': 'Создать и скопировать ссылку',
+  'selections.createdAndCopied': 'Подборка создана, ссылка скопирована',
+  'selections.notFound': 'Подборка не найдена',
+  'selections.client': 'Клиент',
+  'selections.shareText': 'вот ваша персональная подборка:',
+  'selections.mailSubject': 'Подборка объектов',
 };
 
 export const translations: Record<Locale, Record<string, string>> = { uk, en, ru };
