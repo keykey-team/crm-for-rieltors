@@ -46,6 +46,7 @@ model User {
   distributionRules LeadDistributionRule[] @relation("DistributionAssign")
   tasks             Task[]
   templates         Template[]             @relation("TemplateCreator")
+  propertyPriceChanges PropertyPriceHistory[] @relation("PropertyPriceChanges")
 
   helperMessages  HelperMessage[]
 
@@ -104,10 +105,27 @@ model Property {
   photos      PropertyPhoto[]
   showings    Showing[]
   units       PropertyUnit[]
+  priceHistory PropertyPriceHistory[]
 
   @@index([status])
   @@index([type])
   @@index([price])
+}
+
+model PropertyPriceHistory {
+  id         String   @id @default(cuid())
+  propertyId String
+  price      Float
+  currency   String
+  changedBy  String?
+  reason     String?
+  note       String?
+  createdAt  DateTime @default(now())
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  user       User?    @relation("PropertyPriceChanges", fields: [changedBy], references: [id])
+
+  @@index([propertyId])
+  @@index([createdAt])
 }
 
 model PropertyPhoto {

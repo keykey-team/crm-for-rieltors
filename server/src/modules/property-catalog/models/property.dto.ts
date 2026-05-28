@@ -14,6 +14,7 @@ export interface PropertyPayload {
   district?: unknown;
   description?: unknown;
   dealTypes?: unknown;
+  priceHistoryReason?: unknown;
+  priceHistoryNote?: unknown;
   [key: string]: unknown;
 }
-

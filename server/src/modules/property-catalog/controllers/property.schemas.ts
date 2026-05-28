@@ -15,6 +15,7 @@ const PROPERTY_STATUSES = ['active', 'available', 'reserved', 'sold', 'rented', 
 const PROPERTY_DEAL_TYPES = ['sale', 'rent'] as const;
 const CURRENCIES = ['UAH', 'USD', 'EUR'] as const;
 const UNIT_STATUSES = ['available', 'reserved', 'sold'] as const;
+const PRICE_HISTORY_REASONS = ['manual', 'auto-discount', 'market-correction', 'import', 'other'] as const;
 
 function emptyStringToUndefined(value: unknown) {
   if (value === null || value === undefined) return undefined;
@@ -77,6 +78,8 @@ const propertyBase = {
   currency: z.enum(CURRENCIES).optional(),
   dealTypes: propertyDealTypes,
   description: z.string().trim().max(3000).optional(),
+  priceHistoryReason: z.string().trim().min(1).max(120).optional(),
+  priceHistoryNote: noteText(500).optional(),
 };
 
 export const createPropertySchema = z
@@ -112,6 +115,16 @@ export const createPropertyUnitSchema = z
     area: optionalPositiveDecimal,
     price: optionalPositiveDecimal,
     status: z.enum(UNIT_STATUSES).optional(),
+  })
+  .strict();
+
+export const createPropertyPricePointSchema = z
+  .object({
+    price: positiveDecimal,
+    currency: z.enum(CURRENCIES).optional(),
+    reason: z.enum(PRICE_HISTORY_REASONS).optional(),
+    note: noteText(500).optional(),
+    createdAt: z.coerce.date().optional(),
   })
   .strict();
 

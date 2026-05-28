@@ -1,13 +1,17 @@
-import { badRequest } from '../../../common/shared-kernel/errors';
+import { badRequest, forbidden } from '../../../common/shared-kernel/errors';
+import { isAdminRole } from '../../../common/shared-kernel/roles';
 import { PropertyPayload, PropertyQuery } from '../models/property.dto';
 import {
-  createProperty,
+  addPropertyPriceHistoryPoint,
+  createPropertyWithInitialPrice,
   createPropertyUnit,
   deleteProperty,
   deletePropertyUnit,
+  findPropertyPriceHistory,
+  findPropertyPriceStats,
   findProperties,
   findPropertyUnits,
-  updateProperty,
+  updatePropertyWithPriceHistory,
   updatePropertyUnit,
 } from '../repositories/property.repository';
 
@@ -32,12 +36,15 @@ function parseNullableFloat(value: unknown): number | null | undefined {
 }
 
 function normalizePropertyPayload(input: PropertyPayload) {
+  const { priceHistoryReason, priceHistoryNote, ...rest } = input;
+  void priceHistoryReason;
+  void priceHistoryNote;
   const dealTypes = Array.isArray(input.dealTypes)
     ? input.dealTypes.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
     : undefined;
 
   return {
-    ...input,
+    ...rest,
     rooms: parseNullableInt(input.rooms),
     area: parseNullableFloat(input.area),
     floor: parseNullableInt(input.floor),
@@ -47,6 +54,18 @@ function normalizePropertyPayload(input: PropertyPayload) {
     district: input.district === '' ? null : input.district,
     description: input.description === '' ? null : input.description,
   };
+}
+
+function normalizeText(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed || undefined;
+}
+
+function normalizeDate(value: unknown): Date | undefined {
+  if (!value) return undefined;
+  const date = value instanceof Date ? value : new Date(String(value));
+  return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
 export async function listProperties(query: PropertyQuery) {
@@ -63,14 +82,19 @@ export async function listProperties(query: PropertyQuery) {
   return findProperties(where);
 }
 
-export async function addProperty(input: PropertyPayload) {
+export async function addProperty(input: PropertyPayload, userId?: string) {
   const payload = normalizePropertyPayload(input);
   if (payload.price === undefined || payload.price === null) throw badRequest('price is required');
-  return createProperty(payload);
+  const reason = normalizeText(input.priceHistoryReason) ?? 'manual';
+  const note = normalizeText(input.priceHistoryNote);
+  return createPropertyWithInitialPrice(payload, userId, reason, note);
 }
 
-export async function changeProperty(id: string, input: PropertyPayload) {
-  return updateProperty(id, normalizePropertyPayload(input));
+export async function changeProperty(id: string, input: PropertyPayload, userId?: string) {
+  const payload = normalizePropertyPayload(input);
+  const reason = normalizeText(input.priceHistoryReason) ?? 'manual';
+  const note = normalizeText(input.priceHistoryNote);
+  return updatePropertyWithPriceHistory(id, payload, userId, reason, note);
 }
 
 export async function removeProperty(id: string) {
@@ -97,3 +121,45 @@ export async function removePropertyUnit(idInput: unknown) {
   return { ok: true };
 }
 
+export async function listPropertyPriceHistory(
+  propertyIdInput: unknown,
+  query: { page?: unknown; limit?: unknown; from?: unknown; to?: unknown },
+) {
+  const propertyId = getRequiredId(propertyIdInput, 'propertyId');
+  const page = Math.max(1, Number(query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(query.limit) || 20));
+  const from = normalizeDate(query.from);
+  const to = normalizeDate(query.to);
+  const { items, total } = await findPropertyPriceHistory(propertyId, (page - 1) * limit, limit, from, to);
+  return { items, total, page, limit };
+}
+
+export async function createPropertyPriceHistoryPoint(
+  propertyIdInput: unknown,
+  input: Record<string, unknown>,
+  userId?: string,
+  role?: string,
+) {
+  if (!isAdminRole(role)) throw forbidden();
+  const propertyId = getRequiredId(propertyIdInput, 'propertyId');
+  const price = parseNullableFloat(input.price);
+  if (price === undefined || price === null) throw badRequest('price is required');
+  const stats = await findPropertyPriceStats(propertyId);
+  if (!stats) throw badRequest('Not found');
+  return addPropertyPriceHistoryPoint({
+    propertyId,
+    price,
+    currency: normalizeText(input.currency) ?? stats.currency,
+    changedBy: userId ?? null,
+    reason: normalizeText(input.reason) ?? 'manual',
+    note: normalizeText(input.note),
+    createdAt: normalizeDate(input.createdAt),
+  });
+}
+
+export async function getPropertyPriceStats(propertyIdInput: unknown) {
+  const propertyId = getRequiredId(propertyIdInput, 'propertyId');
+  const stats = await findPropertyPriceStats(propertyId);
+  if (!stats) throw badRequest('Not found');
+  return stats;
+}
