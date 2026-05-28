@@ -1,5 +1,6 @@
 export interface PropertyPhoto {
   url: string;
+  cloudStoragePath?: string;
 }
 
 export interface Property {
