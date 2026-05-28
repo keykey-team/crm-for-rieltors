@@ -31,7 +31,14 @@ export function PropertyPriceHistoryWidget({ propertyId, t }: { propertyId: stri
       </div>
       <div className="mt-4 overflow-x-auto">
         <table className="w-full min-w-[520px]">
-          <thead><tr className="text-left text-xs text-muted-foreground"><th>{t('priceHistory.date')}</th><th>{t('priceHistory.price')}</th><th>{t('priceHistory.reason')}</th><th>{t('priceHistory.change')}</th></tr></thead>
+          <thead>
+            <tr className="text-left text-xs text-muted-foreground">
+              <th scope="col">{t('priceHistory.date')}</th>
+              <th scope="col">{t('priceHistory.price')}</th>
+              <th scope="col">{t('priceHistory.reason')}</th>
+              <th scope="col">{t('priceHistory.change')}</th>
+            </tr>
+          </thead>
           <tbody>{loading ? null : items.map((item, index) => <PriceHistoryRow key={item.id} item={item} previous={items[index + 1]} t={t} />)}</tbody>
         </table>
       </div>

@@ -36,7 +36,9 @@ function parseNullableFloat(value: unknown): number | null | undefined {
 }
 
 function normalizePropertyPayload(input: PropertyPayload) {
-  const { priceHistoryReason: _priceHistoryReason, priceHistoryNote: _priceHistoryNote, ...rest } = input;
+  const { priceHistoryReason, priceHistoryNote, ...rest } = input;
+  void priceHistoryReason;
+  void priceHistoryNote;
   const dealTypes = Array.isArray(input.dealTypes)
     ? input.dealTypes.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
     : undefined;

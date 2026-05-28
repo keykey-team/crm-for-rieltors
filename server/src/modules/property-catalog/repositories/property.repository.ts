@@ -171,7 +171,7 @@ export async function findPropertyPriceHistory(
         }
       : {}),
   };
-  const [items, total] = await prisma.$transaction([
+  const [items, total] = await Promise.all([
     prisma.propertyPriceHistory.findMany({
       where,
       orderBy: { createdAt: 'desc' },

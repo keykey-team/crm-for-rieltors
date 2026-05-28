@@ -43,6 +43,7 @@ export function PropertiesClient() {
     setChessGridTitle,
     previewProp,
     setPreviewProp,
+    fetchProps,
     handleSave,
     handleDelete,
   } = usePropertiesPage(t);
@@ -246,7 +247,11 @@ export function PropertiesClient() {
           propertyId={addPointPropertyId}
           t={t}
           onClose={() => setAddPointPropertyId(null)}
-          onSaved={() => setPreviewProp((prev) => prev)}
+          onSaved={async () => {
+            const items = await fetchProps();
+            const selected = items?.find((item) => item.id === addPointPropertyId) ?? null;
+            setPreviewProp(selected);
+          }}
         />
       ) : null}
     </div>

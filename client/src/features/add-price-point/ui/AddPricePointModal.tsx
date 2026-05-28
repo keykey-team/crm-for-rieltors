@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useId } from 'react';
 import { useSession } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -24,9 +25,10 @@ export function AddPricePointModal({
   propertyId: string;
   t: (k: string) => string;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: () => void | Promise<void>;
 }) {
   const { data: session } = useSession();
+  const titleId = useId();
   const role = (session?.user as any)?.role;
   const allowed = role === 'admin' || role === 'director';
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({
@@ -36,15 +38,21 @@ export function AddPricePointModal({
 
   if (!allowed) return null;
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => event.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" role="dialog" aria-modal="true" aria-labelledby={titleId} onClick={onClose}>
       <div className="w-full max-w-md rounded-2xl bg-card p-4" onClick={(e) => e.stopPropagation()}>
-        <h4 className="mb-3 font-semibold">{t('priceHistory.addPoint')}</h4>
+        <h4 id={titleId} className="mb-3 font-semibold">{t('priceHistory.addPoint')}</h4>
         <form
           className="space-y-3"
           onSubmit={handleSubmit(async (values) => {
             await addPropertyPricePoint(propertyId, values);
-            onSaved();
+            await onSaved();
             onClose();
           })}
         >
