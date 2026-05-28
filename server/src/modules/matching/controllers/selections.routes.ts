@@ -22,6 +22,7 @@ router.post('/selections', validateBody(createSelectionSchema), async (req, res)
     title: req.body.title,
     message: req.body.message,
     expiresAt: req.body.expiresAt,
+    agencyId: req.agency?.agencyId,
   });
   res.status(201).json(selection);
 });

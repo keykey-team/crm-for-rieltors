@@ -1,1 +1,1 @@
-export { ClientSelectionsPage } from './ui/client-selections-page';
+export { ClientSelectionsPage } from './ui/ClientSelectionsPage';

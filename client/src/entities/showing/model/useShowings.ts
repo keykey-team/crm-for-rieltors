@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { listShowings } from '../api/showings.api';
+import { listShowings } from '../api/showingsApi';
 import type { Showing, ShowingsQuery } from './types';
 
 export function useShowings(query: ShowingsQuery) {

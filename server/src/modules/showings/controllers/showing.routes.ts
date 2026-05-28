@@ -21,13 +21,13 @@ const router = createAsyncRouter();
 router.get('/showings', async (req, res) => {
   const parsed = listShowingsQuerySchema.safeParse(req.query);
   if (!parsed.success) throw badRequest(parsed.error.issues[0]?.message || 'Invalid query');
-  res.json(await listShowings(parsed.data as Record<string, unknown>, req.user?.id, req.user?.role));
+  res.json(await listShowings(parsed.data as Record<string, unknown>, req.user?.id, req.user?.role, req.agency?.agencyId));
 });
 
 router.get('/showings/duplicates', async (req, res) => {
   const parsed = duplicatesQuerySchema.safeParse(req.query);
   if (!parsed.success) throw badRequest(parsed.error.issues[0]?.message || 'Invalid query');
-  res.json(await listDuplicates(parsed.data.propertyId, parsed.data.leadId, req.user?.id, req.user?.role));
+  res.json(await listDuplicates(parsed.data.propertyId, parsed.data.leadId, req.user?.id, req.user?.role, req.agency?.agencyId));
 });
 
 router.get('/showings/:id', async (req, res) => {
@@ -35,7 +35,7 @@ router.get('/showings/:id', async (req, res) => {
 });
 
 router.post('/showings', validateBody(createShowingSchema), async (req, res) => {
-  res.status(201).json(await addShowing(req.body, req.user?.id));
+  res.status(201).json(await addShowing(req.body, req.user?.id, req.agency?.agencyId));
 });
 
 router.patch('/showings/:id', validateBody(updateShowingSchema), async (req, res) => {

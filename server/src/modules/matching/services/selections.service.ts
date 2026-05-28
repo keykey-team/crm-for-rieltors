@@ -22,6 +22,7 @@ export interface CreateSelectionOptions {
   title?: string;
   message?: string;
   expiresAt?: string | null;
+  agencyId?: string;
 }
 
 export interface SelectionsDependencies {
@@ -104,6 +105,7 @@ export function createSelectionsService(deps: SelectionsDependencies = defaultDe
       const selection = await deps.createSelection({
         leadId,
         createdById: userId,
+        agencyId: options.agencyId,
         publicSlug,
         title: options.title ?? null,
         message: options.message ?? null,
@@ -114,6 +116,7 @@ export function createSelectionsService(deps: SelectionsDependencies = defaultDe
         uniquePropertyIds.map((propertyId, index) => ({
           selectionId: selection.id,
           propertyId,
+          agencyId: options.agencyId,
           order: index,
         })),
       );
@@ -125,7 +128,12 @@ export function createSelectionsService(deps: SelectionsDependencies = defaultDe
       const selection = await deps.findSelectionById(selectionId);
       assertSelectionAccess(selection, userId, role);
       const ids = Array.from(new Set(propertyIds.filter(Boolean)));
-      await deps.createSelectionItems(ids.map((propertyId, index) => ({ selectionId, propertyId, order: 1000 + index })));
+      await deps.createSelectionItems(ids.map((propertyId, index) => ({
+        selectionId,
+        propertyId,
+        agencyId: selection?.agencyId,
+        order: 1000 + index,
+      })));
       return deps.findSelectionById(selectionId);
     },
 

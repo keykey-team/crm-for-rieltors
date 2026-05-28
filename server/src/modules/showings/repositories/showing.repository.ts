@@ -43,9 +43,9 @@ export async function deleteShowing(id: string) {
   return prisma.showing.delete({ where: { id } });
 }
 
-export async function findShowingDuplicates(propertyId: string, leadId: string) {
+export async function findShowingDuplicates(propertyId: string, leadId: string, agencyId?: string) {
   return prisma.showing.findMany({
-    where: { propertyId, leadId },
+    where: { propertyId, leadId, ...(agencyId ? { agencyId } : {}) },
     orderBy: { scheduledAt: 'desc' },
     include: {
       deal: { select: { id: true, title: true } },

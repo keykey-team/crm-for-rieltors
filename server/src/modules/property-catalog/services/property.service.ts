@@ -139,6 +139,7 @@ export async function createPropertyPriceHistoryPoint(
   input: Record<string, unknown>,
   userId?: string,
   role?: string,
+  agencyId?: string,
 ) {
   if (!isAdminRole(role)) throw forbidden();
   const propertyId = getRequiredId(propertyIdInput, 'propertyId');
@@ -148,6 +149,7 @@ export async function createPropertyPriceHistoryPoint(
   if (!stats) throw badRequest('Not found');
   return addPropertyPriceHistoryPoint({
     propertyId,
+    agencyId: agencyId ?? stats.agencyId,
     price,
     currency: normalizeText(input.currency) ?? stats.currency,
     changedBy: userId ?? null,

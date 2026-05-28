@@ -1,1 +1,1 @@
-export { CreateShowingDialog } from './ui/create-showing-dialog';
+export { CreateShowingDialog } from './ui/CreateShowingDialog';

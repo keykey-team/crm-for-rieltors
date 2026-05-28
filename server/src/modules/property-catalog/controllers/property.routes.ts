@@ -76,7 +76,7 @@ router.get('/properties/:id/price-history', async (req, res) => {
 router.post('/properties/:id/price-history', validateBody(createPropertyPricePointSchema), async (req, res) => {
   res
     .status(201)
-    .json(await createPropertyPriceHistoryPoint(req.params.id, req.body, req.user?.id, req.user?.role));
+    .json(await createPropertyPriceHistoryPoint(req.params.id, req.body, req.user?.id, req.user?.role, req.agency?.agencyId));
 });
 
 router.get('/properties/:id/price-stats', async (req, res) => {

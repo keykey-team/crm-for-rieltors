@@ -187,7 +187,7 @@ export async function findPropertyPriceHistory(
 export async function findPropertyPriceStats(propertyId: string) {
   const property = await prisma.property.findUnique({
     where: { id: propertyId },
-    select: { id: true, price: true, currency: true, createdAt: true },
+    select: { id: true, price: true, currency: true, agencyId: true, createdAt: true },
   });
   if (!property) return null;
   const [aggregate, changesCount] = await prisma.$transaction([
@@ -209,6 +209,7 @@ export async function findPropertyPriceStats(propertyId: string) {
     avg: aggregate._avg.price ?? property.price,
     current: property.price,
     currency: property.currency,
+    agencyId: property.agencyId,
     changesCount,
     daysOnMarket,
   };

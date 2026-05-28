@@ -1,1 +1,1 @@
-export { PublicSelectionPage } from './ui/public-selection-page';
+export { PublicSelectionPage } from './ui/PublicSelectionPage';

@@ -1,1 +1,1 @@
-export { AgencySettingsScreen } from './ui/agency-settings-screen';
+export { AgencySettingsScreen } from './ui/AgencySettingsScreen';

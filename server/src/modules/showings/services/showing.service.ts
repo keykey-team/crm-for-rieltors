@@ -55,11 +55,12 @@ function extractUpdateData(input: ShowingInput) {
   };
 }
 
-export async function listShowings(query: ShowingInput, userId?: string, role?: string) {
+export async function listShowings(query: ShowingInput, userId?: string, role?: string, agencyId?: string) {
   const page = Math.max(1, Number(query.page || 1));
   const limit = Math.min(100, Math.max(1, Number(query.limit || 20)));
   const where: Record<string, unknown> = {
     ...ownershipFilter(role, userId),
+    ...(agencyId ? { agencyId } : {}),
     ...(query.dealId ? { dealId: query.dealId } : {}),
     ...(query.propertyId ? { propertyId: query.propertyId } : {}),
     ...(query.leadId ? { leadId: query.leadId } : {}),
@@ -91,7 +92,7 @@ export async function getShowing(id: string, userId?: string, role?: string) {
   return showing;
 }
 
-export async function addShowing(input: ShowingInput, userId?: string) {
+export async function addShowing(input: ShowingInput, userId?: string, agencyId?: string) {
   const status = String(input.status || 'scheduled');
   ensureRatingRule(status, input.clientRating);
 
@@ -100,6 +101,7 @@ export async function addShowing(input: ShowingInput, userId?: string) {
     propertyId: input.propertyId,
     leadId: input.leadId ?? null,
     agentId: input.agentId ?? userId ?? null,
+    agencyId: agencyId ?? input.agencyId,
     scheduledAt: input.scheduledAt,
     durationMin: input.durationMin ?? 30,
     status,
@@ -180,8 +182,8 @@ export async function removeShowing(id: string, userId?: string, role?: string) 
   return { success: true };
 }
 
-export async function listDuplicates(propertyId: string, leadId: string, userId?: string, role?: string) {
-  const duplicates = await findShowingDuplicates(propertyId, leadId);
+export async function listDuplicates(propertyId: string, leadId: string, userId?: string, role?: string, agencyId?: string) {
+  const duplicates = await findShowingDuplicates(propertyId, leadId, agencyId);
   if (isAdminRole(role)) return duplicates;
   return duplicates.filter((item: { agentId: string | null }) => item.agentId === userId);
 }

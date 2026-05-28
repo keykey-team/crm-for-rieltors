@@ -85,6 +85,10 @@ model Agency {
   aftercarePlans AftercarePlan[]
   dictionaries   Dictionary[]
   activityLogs   ActivityLog[]
+  showings       Showing[]
+  priceHistory   PropertyPriceHistory[]
+  selections     ClientSelection[]
+  selectionItems SelectionItem[]
 
   @@index([ownerId])
 }
@@ -175,6 +179,7 @@ model Property {
 model PropertyPriceHistory {
   id         String   @id @default(cuid())
   propertyId String
+  agencyId   String
   price      Float
   currency   String
   changedBy  String?
@@ -182,9 +187,11 @@ model PropertyPriceHistory {
   note       String?
   createdAt  DateTime @default(now())
   property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  agency     Agency   @relation(fields: [agencyId], references: [id])
   user       User?    @relation("PropertyPriceChanges", fields: [changedBy], references: [id])
 
   @@index([propertyId])
+  @@index([agencyId])
   @@index([createdAt])
 }
 
@@ -266,6 +273,7 @@ model Showing {
   propertyId   String
   leadId       String?
   agentId      String?
+  agencyId     String
   scheduledAt  DateTime
   durationMin  Int      @default(30)
   status       String   @default("scheduled")
@@ -279,11 +287,13 @@ model Showing {
   property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   lead     Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
   agent    User?    @relation("ShowingAgent", fields: [agentId], references: [id])
+  agency   Agency   @relation(fields: [agencyId], references: [id])
 
   @@index([dealId])
   @@index([propertyId])
   @@index([leadId])
   @@index([agentId])
+  @@index([agencyId])
   @@index([scheduledAt])
   @@index([status])
 }
@@ -512,6 +522,7 @@ model ClientSelection {
   id           String          @id @default(cuid())
   leadId       String
   createdById  String
+  agencyId     String
   publicSlug   String          @unique
   title        String?
   message      String?
@@ -522,10 +533,12 @@ model ClientSelection {
   updatedAt    DateTime        @updatedAt
   lead         Lead            @relation(fields: [leadId], references: [id], onDelete: Cascade)
   createdBy    User            @relation("CreatedSelections", fields: [createdById], references: [id])
+  agency       Agency          @relation(fields: [agencyId], references: [id])
   items        SelectionItem[]
 
   @@index([leadId])
   @@index([createdById])
+  @@index([agencyId])
   @@index([publicSlug])
 }
 
@@ -533,6 +546,7 @@ model SelectionItem {
   id             String          @id @default(cuid())
   selectionId    String
   propertyId     String
+  agencyId       String
   order          Int             @default(0)
   agentComment   String?
   clientReaction String?
@@ -541,9 +555,11 @@ model SelectionItem {
   createdAt      DateTime        @default(now())
   selection      ClientSelection @relation(fields: [selectionId], references: [id], onDelete: Cascade)
   property       Property        @relation(fields: [propertyId], references: [id])
+  agency         Agency          @relation(fields: [agencyId], references: [id])
 
   @@unique([selectionId, propertyId])
   @@index([selectionId])
+  @@index([agencyId])
 }
 
 model AftercarePlan {

@@ -1,7 +1,7 @@
 import { Clock3, Home, User } from 'lucide-react';
 import { formatDateTime } from '@/shared/lib/format';
 import type { Showing } from '../model/types';
-import { ShowingStatusBadge } from './showing-status-badge';
+import { ShowingStatusBadge } from './ShowingStatusBadge';
 
 type ShowingCardProps = {
   showing: Showing;

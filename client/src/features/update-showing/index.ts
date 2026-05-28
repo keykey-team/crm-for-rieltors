@@ -1,1 +1,1 @@
-export { UpdateShowingDialog } from './ui/update-showing-dialog';
+export { UpdateShowingDialog } from './ui/UpdateShowingDialog';
