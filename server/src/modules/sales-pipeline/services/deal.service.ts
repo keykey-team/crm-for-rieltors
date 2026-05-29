@@ -15,6 +15,7 @@ import {
   findDeals,
   updateDeal,
   updateDealChecklistItem,
+  deleteDealChecklistItem,
 } from '../repositories/deal.repository';
 
 function ownership(role?: string, userId?: string) {
@@ -127,4 +128,8 @@ export async function addDealChecklistItem(dealId: string, input: Record<string,
 
 export async function changeDealChecklistItem(input: Record<string, unknown>) {
   return updateDealChecklistItem(String(input.itemId), input.completed);
+}
+
+export async function removeDealChecklistItem(itemId: string) {
+  return deleteDealChecklistItem(itemId);
 }

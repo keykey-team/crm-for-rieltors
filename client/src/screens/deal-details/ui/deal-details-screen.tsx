@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { User, Building, CheckSquare, MessageSquare, Clock, Plus, Send, Edit2, Trash2, Settings, Search, X, ChevronDown } from 'lucide-react';
+import { User, Building, CheckSquare, MessageSquare, Clock, Plus, Send, Edit2, Settings, Search, X } from 'lucide-react';
 import { Breadcrumbs } from '@/shared/ui/breadcrumbs';
 import Link from 'next/link';
 import { cn } from '@/shared/lib/utils';
@@ -14,6 +14,7 @@ import { getProperties, createProperty } from '@/entities/property';
 import {
   createDealChecklistItem,
   createDealComment,
+  deleteDealChecklistItem,
   getDealById,
   getDealChecklist,
   getDealComments,
@@ -118,7 +119,7 @@ export function DealDetailClient({ dealId }: { dealId: string }) {
         setShowNewLeadForm(false);
         setNewLeadForm({ firstName: '', lastName: '', phone: '', email: '' });
       } else { toast.error(t('common.error')); }
-    } catch { toast.error(t('common.error')); }
+    } catch (err) { toast.error(err instanceof Error ? err.message : t('common.error')); }
     finally { setCreatingLead(false); }
   };
 
@@ -283,6 +284,16 @@ export function DealDetailClient({ dealId }: { dealId: string }) {
     await updateDealChecklistItem(dealId, itemId, !completed);
     fetchDeal();
   };
+
+  const deleteCheckItem = async (itemId: string) => {
+    await deleteDealChecklistItem(dealId, itemId);
+    fetchDeal();
+  };
+
+  const sortedChecklist = useMemo(
+    () => [...checklist].sort((a, b) => Number(a.completed) - Number(b.completed)),
+    [checklist],
+  );
 
   const changeStage = async (stage: string) => {
     await updateDealById(dealId, { stage });
@@ -758,20 +769,31 @@ export function DealDetailClient({ dealId }: { dealId: string }) {
                     style={{ width: `${checklist.length > 0 ? (completedItems / checklist.length) * 100 : 0}%` }} />
                 </div>
               )}
-              {checklist.length === 0 ? (
+              {sortedChecklist.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-6">{t('deals.emptyChecklist')}</p>
               ) : (
-                checklist.map(item => (
-                  <button key={item.id} onClick={() => toggleCheckItem(item.id, item.completed)}
-                    className="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-muted/30 transition text-left">
-                    <div className={cn(
-                      'w-5 h-5 rounded-md border-2 flex items-center justify-center transition',
-                      item.completed ? 'bg-primary border-primary text-white' : 'border-border'
-                    )}>
-                      {item.completed && <span className="text-xs">✓</span>}
-                    </div>
-                    <span className={cn('text-sm', item.completed && 'line-through text-muted-foreground')}>{item.title}</span>
-                  </button>
+                sortedChecklist.map(item => (
+                  <div key={item.id} className="flex items-center gap-1 group rounded-lg hover:bg-muted/30 transition">
+                    <button
+                      onClick={() => toggleCheckItem(item.id, item.completed)}
+                      className="flex items-center gap-3 flex-1 p-3 text-left"
+                    >
+                      <div className={cn(
+                        'w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition',
+                        item.completed ? 'bg-primary border-primary text-white' : 'border-border'
+                      )}>
+                        {item.completed && <span className="text-xs">✓</span>}
+                      </div>
+                      <span className={cn('text-sm', item.completed && 'line-through text-muted-foreground')}>{item.title}</span>
+                    </button>
+                    <button
+                      onClick={() => deleteCheckItem(item.id)}
+                      className="mr-2 p-1 opacity-0 group-hover:opacity-100 transition text-muted-foreground hover:text-destructive"
+                      title={t('common.delete')}
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 ))
               )}
             </div>

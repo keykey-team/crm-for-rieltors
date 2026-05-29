@@ -59,6 +59,10 @@ export async function updateDealChecklistItem(id: string, completed: unknown) {
   return prisma.dealChecklist.update({ where: { id }, data: { completed: completed as any } });
 }
 
+export async function deleteDealChecklistItem(id: string) {
+  return prisma.dealChecklist.delete({ where: { id } });
+}
+
 export async function findLeadIdsForProperty(propertyId: string, excludeLeadId?: string) {
   const leads = await prisma.lead.findMany({
     where: {

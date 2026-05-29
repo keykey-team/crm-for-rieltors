@@ -170,8 +170,8 @@ export function SettingsClient() {
       await updateProfileSettings({ name, phone, ...(newPassword && { newPassword }) });
       toast.success(t('settings.profileSaved'));
       setNewPassword('');
-    } catch {
-      toast.error(t('settings.saveError'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('settings.saveError'));
     }
     // Save telegram URL to localStorage
     localStorage.setItem('crm_telegram_bot_url', telegramUrl.trim());
@@ -191,7 +191,7 @@ export function SettingsClient() {
       await updateProfileSettings({ avatar: storagePath });
       setProfile((p: any) => ({ ...p, avatar: storagePath }));
       toast.success(t('settings.photoUpdated'));
-    } catch { toast.error(t('settings.uploadError')); }
+    } catch (err) { toast.error(err instanceof Error ? err.message : t('settings.uploadError')); }
     setAvatarUploading(false);
   };
 
@@ -209,7 +209,7 @@ export function SettingsClient() {
       });
       toast.success(t('settings.brandSaved'));
       refreshBrand();
-    } catch { toast.error(t('settings.saveError')); }
+    } catch (err) { toast.error(err instanceof Error ? err.message : t('settings.saveError')); }
     setBrandSaving(false);
   };
 
@@ -224,7 +224,7 @@ export function SettingsClient() {
       await fetch(uploadUrl, { method: 'PUT', headers, body: file });
       setBrandLogo(publicUrl);
       toast.success(t('settings.logoUploaded'));
-    } catch { toast.error(t('settings.saveError')); }
+    } catch (err) { toast.error(err instanceof Error ? err.message : t('settings.saveError')); }
     setLogoUploading(false);
   };
 

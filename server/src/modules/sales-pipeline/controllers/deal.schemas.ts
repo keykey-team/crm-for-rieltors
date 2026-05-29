@@ -86,12 +86,12 @@ export const addDealCommentSchema = z
 // ── Checklist ─────────────────────────────────────────────────────────────────
 
 export const addChecklistItemSchema = z
-  .object({ title: shortText(200) })
+  .object({ title: shortText(200), order: z.number().int().min(0).optional() })
   .strict();
 
 export const updateChecklistItemSchema = z
   .object({
-    id: cuid,
+    itemId: cuid,
     title: shortText(200).optional(),
     completed: z.boolean().optional(),
   })

@@ -231,6 +231,9 @@ const uk: Record<string, string> = {
   'showings.cancel': 'Скасувати',
   'showings.allAgents': 'Усі агенти',
   'showings.duplicateWarning': 'Цей обʼєкт уже показували цьому клієнту {count} раз(и). Останній раз: {date}.',
+  'showings.confirmDelete': 'Видалити цей показ?',
+  'showings.deleted': 'Показ видалено',
+  'showings.ratingOnlyForCompleted': 'Оцінку можна виставити лише для завершених показів',
   // Calendar
   'calendar.title': 'Календар',
   'calendar.addEvent': 'Додати подію',
@@ -1339,6 +1342,9 @@ const en: Record<string, string> = {
   'showings.cancel': 'Cancel',
   'showings.allAgents': 'All agents',
   'showings.duplicateWarning': 'This property has already been shown to this client {count} time(s). Last time: {date}.',
+  'showings.confirmDelete': 'Delete this showing?',
+  'showings.deleted': 'Showing deleted',
+  'showings.ratingOnlyForCompleted': 'Client rating is allowed only for completed showings',
   // Calendar
   'calendar.title': 'Calendar',
   'calendar.addEvent': 'Add Event',
@@ -2441,6 +2447,9 @@ const ru: Record<string, string> = {
   'showings.cancel': 'Отменить',
   'showings.allAgents': 'Все агенты',
   'showings.duplicateWarning': 'Этот объект уже показывали этому клиенту {count} раз(а). Последний раз: {date}.',
+  'showings.confirmDelete': 'Удалить этот показ?',
+  'showings.deleted': 'Показ удалён',
+  'showings.ratingOnlyForCompleted': 'Оценку можно выставить только для завершённых показов',
   // Calendar
   'calendar.title': 'Календарь',
   'calendar.addEvent': 'Добавить событие',

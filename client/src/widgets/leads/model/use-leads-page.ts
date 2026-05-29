@@ -155,8 +155,8 @@ export function useLeadsPage() {
       toast.success(`${t('common.updated')}: ${count}`);
       clearSelection();
       fetchLeads();
-    } catch {
-      toast.error(t('common.error'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('common.error'));
     }
   };
 
@@ -188,8 +188,8 @@ export function useLeadsPage() {
       toast.success(`${t('leads.importExcel')}: ${result.imported}`);
       if (result.errors?.length) result.errors.forEach((error: string) => toast.error(error));
       fetchLeads();
-    } catch {
-      toast.error(t('common.error'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('common.error'));
     }
     setImporting(false);
     event.target.value = '';
