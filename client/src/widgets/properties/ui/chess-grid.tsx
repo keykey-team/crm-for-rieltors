@@ -52,6 +52,16 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [roomsFilter, setRoomsFilter] = useState<number | ''>('');
 
+  const [editingUnit, setEditingUnit] = useState(false);
+  const [editValues, setEditValues] = useState({ unitNumber: '', floor: 1, section: 1, rooms: 1, area: '', price: '' });
+  const [editSaving, setEditSaving] = useState(false);
+
+  const [sectionEditOpen, setSectionEditOpen] = useState<number | null>(null);
+  const [sectionEditRooms, setSectionEditRooms] = useState('');
+  const [sectionEditArea, setSectionEditArea] = useState('');
+  const [sectionEditPrice, setSectionEditPrice] = useState('');
+  const [sectionEditSaving, setSectionEditSaving] = useState(false);
+
   const [bulkSaving, setBulkSaving] = useState(false);
   const [bulkSections, setBulkSections] = useState(1);
   const [bulkFloorFrom, setBulkFloorFrom] = useState(1);
@@ -148,9 +158,65 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
   };
 
   const updateStatus = async (unitId: string, status: string) => {
-    await updatePropertyUnit(unitId, status);
+    try {
+      await updatePropertyUnit(unitId, { status });
+      fetchUnits();
+      if (selectedUnit?.id === unitId) setSelectedUnit(prev => prev ? { ...prev, status } : null);
+    } catch (err) { toast.error(err instanceof Error ? err.message : t('common.error')); }
+  };
+
+  const startEditUnit = () => {
+    if (!selectedUnit) return;
+    setEditValues({
+      unitNumber: selectedUnit.unitNumber,
+      floor: selectedUnit.floor,
+      section: selectedUnit.section,
+      rooms: selectedUnit.rooms ?? 1,
+      area: selectedUnit.area?.toString() ?? '',
+      price: selectedUnit.price?.toString() ?? '',
+    });
+    setEditingUnit(true);
+  };
+
+  const saveUnitEdit = async () => {
+    if (!selectedUnit) return;
+    setEditSaving(true);
+    try {
+      await updatePropertyUnit(selectedUnit.id, {
+        unitNumber: editValues.unitNumber,
+        floor: editValues.floor,
+        section: editValues.section,
+        rooms: editValues.rooms,
+        area: editValues.area ? Number(editValues.area) : null,
+        price: editValues.price ? Number(editValues.price) : null,
+      });
+      setEditingUnit(false);
+      fetchUnits();
+      toast.success(t('deals.saved'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('common.error'));
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const saveSectionEdit = async () => {
+    if (sectionEditOpen === null) return;
+    const sectionUnits = units.filter(u => u.section === sectionEditOpen);
+    const data: Record<string, unknown> = {};
+    if (sectionEditRooms !== '') data.rooms = Number(sectionEditRooms);
+    if (sectionEditArea !== '') data.area = Number(sectionEditArea);
+    if (sectionEditPrice !== '') data.price = Number(sectionEditPrice);
+    if (Object.keys(data).length === 0) { setSectionEditOpen(null); return; }
+    setSectionEditSaving(true);
+    let ok = 0;
+    for (const unit of sectionUnits) {
+      try { await updatePropertyUnit(unit.id, data); ok++; } catch { /* skip */ }
+    }
+    setSectionEditSaving(false);
+    setSectionEditOpen(null);
     fetchUnits();
-    if (selectedUnit?.id === unitId) setSelectedUnit(prev => prev ? { ...prev, status } : null);
+    toast.success(`${t('deals.saved')}: ${ok} ${t('chess.unitsCount')}`);
   };
 
   const deleteUnit = async (unitId: string) => {
@@ -331,11 +397,19 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
               <div className="flex gap-8 min-w-fit">
                 {sections.map(section => (
                   <div key={section} className="shrink-0">
-                    <div className="text-center mb-4">
+                    <div className="text-center mb-4 flex items-center justify-center gap-1.5">
                       <span className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-primary/10 text-primary text-xs font-bold rounded-full">
                         <Layers className="w-3 h-3" />
                         {t('chess.sectionLabel')} {section}
                       </span>
+                      <button
+                        type="button"
+                        onClick={() => { setSectionEditOpen(section); setSectionEditRooms(''); setSectionEditArea(''); setSectionEditPrice(''); }}
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition"
+                        title={t('chess.editSection')}
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </button>
                     </div>
                     <div className="space-y-1.5">
                       {floors.map(floor => {
@@ -528,90 +602,200 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
             const unitStatus = UNIT_STATUSES.find(s => s.value === selectedUnit.status);
             return (
               <>
+                {/* Header */}
                 <div className="p-5 border-b border-border/60 dark:border-border/40">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">{t('chess.apartment')}</p>
                       <h3 className="text-2xl font-display font-bold mt-0.5">№ {selectedUnit.unitNumber}</h3>
                     </div>
-                    <button type="button" onClick={() => setSelectedUnit(null)} className="p-1.5 hover:bg-muted rounded-xl transition">
-                      <X className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button type="button"
+                        onClick={() => { if (editingUnit) setEditingUnit(false); else startEditUnit(); }}
+                        className={cn('p-1.5 rounded-xl transition', editingUnit ? 'bg-primary/10 text-primary' : 'hover:bg-muted text-muted-foreground')}
+                        title={editingUnit ? t('common.cancel') : t('common.edit')}>
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button type="button" onClick={() => { setSelectedUnit(null); setEditingUnit(false); }} className="p-1.5 hover:bg-muted rounded-xl transition">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                {/* Price card */}
-                <div className="p-5 border-b border-border/60 dark:border-border/40">
-                  {selectedUnit.price ? (
-                    <div className="bg-gradient-to-br from-primary/10 to-emerald-800/5 rounded-2xl p-5 text-center">
-                      <p className="text-2xl font-bold text-primary font-mono">{formatPrice(selectedUnit.price)}</p>
-                      {selectedUnit.area ? (
-                        <p className="text-xs text-muted-foreground mt-1">{formatPrice(Math.round(selectedUnit.price / selectedUnit.area))}/{t('chess.pricePerM2')}</p>
-                      ) : null}
+                {editingUnit ? (
+                  /* ── Edit mode ── */
+                  <div className="flex-1 overflow-y-auto p-5 space-y-3">
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground">{t('common.number')}</label>
+                      <input value={editValues.unitNumber} onChange={e => setEditValues(v => ({ ...v, unitNumber: e.target.value }))}
+                        className="w-full mt-1 px-3 py-2 border border-border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
                     </div>
-                  ) : (
-                    <div className="bg-muted/50 dark:bg-muted/30 rounded-2xl p-5 text-center text-muted-foreground text-sm">{t('common.priceNotSet')}</div>
-                  )}
-                </div>
-
-                {/* Properties */}
-                <div className="p-5 border-b border-border/60 dark:border-border/40">
-                  <div className="space-y-3">
-                    {[
-                      { label: t('common.floor'), value: selectedUnit.floor },
-                      { label: t('common.section'), value: selectedUnit.section },
-                      { label: t('common.rooms'), value: selectedUnit.rooms != null ? ROOM_LABELS[Math.min(selectedUnit.rooms, 5)] || selectedUnit.rooms : '—' },
-                      { label: t('common.area'), value: selectedUnit.area ? `${selectedUnit.area} ${t('chess.pricePerM2')}` : '—' },
-                    ].map((row, i) => (
-                      <div key={i} className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">{row.label}</span>
-                        <span className="text-sm font-semibold">{row.value}</span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">{t('common.floor')}</label>
+                        <input type="number" value={editValues.floor} onChange={e => setEditValues(v => ({ ...v, floor: +e.target.value }))}
+                          className="w-full mt-1 px-3 py-2 border border-border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
                       </div>
-                    ))}
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">{t('common.status')}</span>
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
-                        style={{ backgroundColor: ss.solid + '15', color: ss.solid }}>
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: ss.solid }} />
-                        {unitStatus?.label || selectedUnit.status}
-                      </span>
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">{t('common.section')}</label>
+                        <input type="number" value={editValues.section} onChange={e => setEditValues(v => ({ ...v, section: +e.target.value }))}
+                          className="w-full mt-1 px-3 py-2 border border-border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground">{t('common.rooms')}</label>
+                      <select value={editValues.rooms} onChange={e => setEditValues(v => ({ ...v, rooms: +e.target.value }))}
+                        className="w-full mt-1 px-3 py-2 border border-border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20">
+                        {Object.entries(ROOM_LABELS).map(([rv, rl]) => <option key={rv} value={rv}>{rl}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground">{t('common.area')} (м²)</label>
+                      <input type="number" value={editValues.area} onChange={e => setEditValues(v => ({ ...v, area: e.target.value }))}
+                        className="w-full mt-1 px-3 py-2 border border-border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground">{t('common.price')} ($)</label>
+                      <input type="number" value={editValues.price} onChange={e => setEditValues(v => ({ ...v, price: e.target.value }))}
+                        className="w-full mt-1 px-3 py-2 border border-border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                      <button type="button" onClick={() => setEditingUnit(false)}
+                        className="flex-1 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-muted border border-border transition">
+                        {t('common.cancel')}
+                      </button>
+                      <button type="button" onClick={saveUnitEdit} disabled={editSaving}
+                        className="flex-1 px-3 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition">
+                        {editSaving ? t('common.saving') : t('common.save')}
+                      </button>
+                    </div>
+                    <div className="pt-1">
+                      <button type="button" onClick={() => deleteUnit(selectedUnit.id)}
+                        className="flex items-center justify-center gap-2 w-full px-3 py-2.5 text-destructive bg-destructive/10 hover:bg-destructive/15 rounded-xl text-sm font-semibold transition">
+                        <Trash2 className="w-4 h-4" /> {t('chess.deleteUnit')}
+                      </button>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  /* ── View mode ── */
+                  <>
+                    {/* Price card */}
+                    <div className="p-5 border-b border-border/60 dark:border-border/40">
+                      {selectedUnit.price ? (
+                        <div className="bg-gradient-to-br from-primary/10 to-emerald-800/5 rounded-2xl p-5 text-center">
+                          <p className="text-2xl font-bold text-primary font-mono">{formatPrice(selectedUnit.price)}</p>
+                          {selectedUnit.area ? (
+                            <p className="text-xs text-muted-foreground mt-1">{formatPrice(Math.round(selectedUnit.price / selectedUnit.area))}/{t('chess.pricePerM2')}</p>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <div className="bg-muted/50 dark:bg-muted/30 rounded-2xl p-5 text-center text-muted-foreground text-sm">{t('common.priceNotSet')}</div>
+                      )}
+                    </div>
 
-                {/* Status change */}
-                <div className="p-5 border-b border-border/60 dark:border-border/40">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-3">{t('chess.changeStatus')}</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {UNIT_STATUSES.map(s => {
-                      const sSS = STATUS_STYLES[s.value] || STATUS_STYLES.available;
-                      const isActive = selectedUnit.status === s.value;
-                      return (
-                        <button key={s.value} type="button"
-                          onClick={() => updateStatus(selectedUnit.id, s.value)}
-                          className={cn('flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all',
-                            isActive ? 'ring-2 ring-offset-2 ring-offset-background text-white shadow-sm' : 'bg-muted/50 dark:bg-muted/30 hover:bg-muted')}
-                          style={isActive ? { backgroundColor: sSS.solid, ['--tw-ring-color' as any]: sSS.solid } : { color: sSS.solid }}>
-                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: isActive ? '#fff' : sSS.solid }} />
-                          {s.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                    {/* Properties */}
+                    <div className="p-5 border-b border-border/60 dark:border-border/40">
+                      <div className="space-y-3">
+                        {[
+                          { label: t('common.floor'), value: selectedUnit.floor },
+                          { label: t('common.section'), value: selectedUnit.section },
+                          { label: t('common.rooms'), value: selectedUnit.rooms != null ? ROOM_LABELS[Math.min(selectedUnit.rooms, 5)] || selectedUnit.rooms : '—' },
+                          { label: t('common.area'), value: selectedUnit.area ? `${selectedUnit.area} ${t('chess.pricePerM2')}` : '—' },
+                        ].map((row, i) => (
+                          <div key={i} className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">{row.label}</span>
+                            <span className="text-sm font-semibold">{row.value}</span>
+                          </div>
+                        ))}
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">{t('common.status')}</span>
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+                            style={{ backgroundColor: ss.solid + '15', color: ss.solid }}>
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: ss.solid }} />
+                            {unitStatus?.label || selectedUnit.status}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
 
-                {/* Delete */}
-                <div className="p-5 mt-auto">
-                  <button type="button" onClick={() => deleteUnit(selectedUnit.id)}
-                    className="flex items-center justify-center gap-2 w-full px-3 py-2.5 text-destructive bg-destructive/10 hover:bg-destructive/15 rounded-xl text-sm font-semibold transition">
-                    <Trash2 className="w-4 h-4" /> {t('chess.deleteUnit')}
-                  </button>
-                </div>
+                    {/* Status change */}
+                    <div className="p-5 border-b border-border/60 dark:border-border/40">
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-3">{t('chess.changeStatus')}</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {UNIT_STATUSES.map(s => {
+                          const sSS = STATUS_STYLES[s.value] || STATUS_STYLES.available;
+                          const isActive = selectedUnit.status === s.value;
+                          return (
+                            <button key={s.value} type="button"
+                              onClick={() => updateStatus(selectedUnit.id, s.value)}
+                              className={cn('flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all',
+                                isActive ? 'ring-2 ring-offset-2 ring-offset-background text-white shadow-sm' : 'bg-muted/50 dark:bg-muted/30 hover:bg-muted')}
+                              style={isActive ? { backgroundColor: sSS.solid, ['--tw-ring-color' as any]: sSS.solid } : { color: sSS.solid }}>
+                              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: isActive ? '#fff' : sSS.solid }} />
+                              {s.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Delete */}
+                    <div className="p-5 mt-auto">
+                      <button type="button" onClick={() => deleteUnit(selectedUnit.id)}
+                        className="flex items-center justify-center gap-2 w-full px-3 py-2.5 text-destructive bg-destructive/10 hover:bg-destructive/15 rounded-xl text-sm font-semibold transition">
+                        <Trash2 className="w-4 h-4" /> {t('chess.deleteUnit')}
+                      </button>
+                    </div>
+                  </>
+                )}
               </>
             );
           })()}
         </div>
       </div>
+      {/* ═══════ Section edit modal ═══════ */}
+      {sectionEditOpen !== null && (
+        <div className="absolute inset-0 z-30 bg-black/30 backdrop-blur-sm flex items-center justify-center" onClick={() => setSectionEditOpen(null)}>
+          <div className="bg-card rounded-2xl border border-border/60 p-6 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-display font-bold text-base">{t('chess.sectionLabel')} {sectionEditOpen} — {t('chess.editSection')}</h3>
+              <button type="button" onClick={() => setSectionEditOpen(null)} className="p-1.5 hover:bg-muted rounded-xl transition"><X className="w-4 h-4" /></button>
+            </div>
+            <p className="text-xs text-muted-foreground mb-4">{t('chess.sectionEditHint')}</p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">{t('common.rooms')}</label>
+                <select value={sectionEditRooms} onChange={e => setSectionEditRooms(e.target.value)}
+                  className="w-full mt-1 px-3 py-2.5 border border-border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20">
+                  <option value="">{t('chess.noChange')}</option>
+                  {Object.entries(ROOM_LABELS).map(([rv, rl]) => <option key={rv} value={rv}>{rl}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">{t('common.area')} (м²)</label>
+                <input type="number" placeholder={t('chess.noChange')} value={sectionEditArea} onChange={e => setSectionEditArea(e.target.value)}
+                  className="w-full mt-1 px-3 py-2.5 border border-border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">{t('common.price')} ($)</label>
+                <input type="number" placeholder={t('chess.noChange')} value={sectionEditPrice} onChange={e => setSectionEditPrice(e.target.value)}
+                  className="w-full mt-1 px-3 py-2.5 border border-border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button type="button" onClick={() => setSectionEditOpen(null)}
+                className="flex-1 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-muted border border-border transition">
+                {t('common.cancel')}
+              </button>
+              <button type="button" onClick={saveSectionEdit} disabled={sectionEditSaving}
+                className="flex-1 px-3 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition">
+                {sectionEditSaving ? t('common.saving') : t('common.save')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   ), document.body);
 }
