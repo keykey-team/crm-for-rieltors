@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { useTranslation } from '@/shared/lib/i18n/context';
 import { getLeadCommunications, createLeadCommunication } from '@/entities/communication';
 import { getLeadById, createDealFromLead } from '@/entities/lead/api/lead-detail.api';
+import { LeadMatches } from '@/widgets/lead-matches';
 
 const COMM_TYPES_RAW = [
   { value: 'note', labelKey: 'const.commType.note', icon: FileText, color: 'text-gray-500' },
@@ -110,6 +111,8 @@ export function LeadDetailClient({ leadId }: { leadId: string }) {
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition disabled:opacity-50">
             <Workflow className="w-4 h-4" /> {creatingDeal ? t('common.saving') : t('leads.createDeal')}
           </button>
+
+          <LeadMatches leadId={leadId} />
 
           {lead.deals?.length > 0 && (
             <div className="bg-card rounded-xl border border-border p-4" style={{ boxShadow: 'var(--shadow-sm)' }}>

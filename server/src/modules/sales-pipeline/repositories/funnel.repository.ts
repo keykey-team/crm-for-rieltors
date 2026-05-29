@@ -44,7 +44,7 @@ export async function ensureSystemStages() {
 export async function createFunnel(data: { name: string }) {
   const maxOrder = await prisma.funnel.aggregate({ _max: { order: true } });
   const funnel = await prisma.funnel.create({
-    data: { name: data.name, order: (maxOrder._max.order ?? -1) + 1 },
+    data: { name: data.name, order: (maxOrder._max.order ?? -1) + 1 } as any,
   });
   await ensureSystemStages();
   return prisma.funnel.findUnique({

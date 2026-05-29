@@ -43,9 +43,9 @@ export async function deleteShowing(id: string) {
   return prisma.showing.delete({ where: { id } });
 }
 
-export async function findShowingDuplicates(propertyId: string, leadId: string) {
+export async function findShowingDuplicates(propertyId: string, leadId: string, agencyId?: string) {
   return prisma.showing.findMany({
-    where: { propertyId, leadId },
+    where: { propertyId, leadId, ...(agencyId ? { agencyId } : {}) },
     orderBy: { scheduledAt: 'desc' },
     include: {
       deal: { select: { id: true, title: true } },
@@ -58,6 +58,7 @@ export async function findShowingDuplicates(propertyId: string, leadId: string) 
 
 export async function createShowingActivityLog(data: {
   entityId: string;
+  agencyId: string;
   action: string;
   details?: string;
   userId?: string;
@@ -66,6 +67,7 @@ export async function createShowingActivityLog(data: {
     data: {
       entityType: 'showing',
       entityId: data.entityId,
+      agencyId: data.agencyId,
       action: data.action,
       details: data.details,
       userId: data.userId ?? null,
@@ -75,6 +77,7 @@ export async function createShowingActivityLog(data: {
 
 export async function createShowingEvent(data: {
   title: string;
+  agencyId: string;
   description?: string;
   userId?: string;
   startDate: Date;
@@ -83,6 +86,7 @@ export async function createShowingEvent(data: {
   return prisma.event.create({
     data: {
       title: data.title,
+      agencyId: data.agencyId,
       description: data.description ?? null,
       type: 'showing',
       userId: data.userId ?? null,

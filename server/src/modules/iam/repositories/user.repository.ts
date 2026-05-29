@@ -9,6 +9,7 @@ const publicUserSelect = {
   accountType: true,
   plan: true,
   permissions: true,
+  lastAgencyId: true,
 };
 
 export async function findUserCredentialsByEmail(email: string): Promise<UserCredentialsRecord | null> {

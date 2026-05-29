@@ -5,6 +5,7 @@ import { formatPrice } from '@/shared/lib/format';
 import { PROPERTY_TYPES, PROPERTY_STATUSES } from '@/shared/lib/constants';
 import type { Property } from '@/entities/property';
 import { PropertyStatusBadge, PropertyTypeBadge } from '@/entities/property';
+import { PriceHistoryBadge } from '@/entities/property-price-history';
 import { cn } from '@/shared/lib/utils';
 
 interface Props {
@@ -46,7 +47,10 @@ export function PropertyCard({ property: p, view, onEdit, onDelete, onChessGrid 
             {p?.rooms && <span className="flex items-center gap-1"><BedDouble className="w-3.5 h-3.5" />{p.rooms}</span>}
             {p?.dealTypes?.length ? <span>{p.dealTypes.map(getDealTypeLabel).join(', ')}</span> : null}
           </div>
-          <span className="font-display font-bold text-sm text-primary">{formatPrice(p?.price, p?.currency ?? undefined)}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-display font-bold text-sm text-primary">{formatPrice(p?.price, p?.currency ?? undefined)}</span>
+            {p?.priceHistory?.length ? <PriceHistoryBadge items={p.priceHistory} t={t} /> : null}
+          </div>
           <PropertyStatusBadge status={p?.status} t={t} />
           <div className="flex gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity">
             {onChessGrid && <button onClick={onChessGrid} className="p-2 rounded-xl hover:bg-[#073B34]/10 transition"><Grid3X3 className="w-4 h-4 text-[#073B34] dark:text-emerald-400" /></button>}
@@ -127,7 +131,10 @@ export function PropertyCard({ property: p, view, onEdit, onDelete, onChessGrid 
         ) : null}
         {/* Price */}
         <div className="flex items-center justify-between">
-          <span className="font-display font-bold text-base text-primary">{formatPrice(p?.price, p?.currency ?? undefined)}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-display font-bold text-base text-primary">{formatPrice(p?.price, p?.currency ?? undefined)}</span>
+            {p?.priceHistory?.length ? <PriceHistoryBadge items={p.priceHistory} t={t} /> : null}
+          </div>
           <ArrowUpRight className="w-4 h-4 text-muted-foreground/40 group-hover/card:text-primary group-hover/card:translate-x-0.5 group-hover/card:-translate-y-0.5 transition-all" />
         </div>
       </div>
