@@ -235,6 +235,9 @@ const uk: Record<string, string> = {
   'showings.confirmDelete': 'Видалити цей показ?',
   'showings.deleted': 'Показ видалено',
   'showings.ratingOnlyForCompleted': 'Оцінку можна виставити лише для завершених показів',
+  'showings.filterToday': 'Сьогодні',
+  'showings.filterTomorrow': 'Завтра',
+  'showings.filterWeek': 'На тиждень',
   // Calendar
   'calendar.title': 'Календар',
   'calendar.addEvent': 'Додати подію',
@@ -1346,6 +1349,9 @@ const en: Record<string, string> = {
   'showings.confirmDelete': 'Delete this showing?',
   'showings.deleted': 'Showing deleted',
   'showings.ratingOnlyForCompleted': 'Client rating is allowed only for completed showings',
+  'showings.filterToday': 'Today',
+  'showings.filterTomorrow': 'Tomorrow',
+  'showings.filterWeek': 'This week',
   // Calendar
   'calendar.title': 'Calendar',
   'calendar.addEvent': 'Add Event',
@@ -2451,6 +2457,9 @@ const ru: Record<string, string> = {
   'showings.confirmDelete': 'Удалить этот показ?',
   'showings.deleted': 'Показ удалён',
   'showings.ratingOnlyForCompleted': 'Оценку можно выставить только для завершённых показов',
+  'showings.filterToday': 'Сегодня',
+  'showings.filterTomorrow': 'Завтра',
+  'showings.filterWeek': 'На неделю',
   // Calendar
   'calendar.title': 'Календарь',
   'calendar.addEvent': 'Добавить событие',

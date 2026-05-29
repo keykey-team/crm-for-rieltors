@@ -23,8 +23,11 @@ export function ShowingsClient() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editShowing, setEditShowing] = useState<Showing | null>(null);
 
+  // Date-only strings (YYYY-MM-DD) are treated as midnight by Prisma — extend to end of day
+  const toEndOfDay = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) ? `${s}T23:59:59` : s;
+
   const query = useMemo(
-    () => ({ status: status || undefined, agentId: agentId || undefined, from: from || undefined, to: to || undefined, limit: 100 }),
+    () => ({ status: status || undefined, agentId: agentId || undefined, from: from || undefined, to: to ? toEndOfDay(to) : undefined, limit: 100 }),
     [agentId, from, status, to],
   );
 
@@ -33,6 +36,36 @@ export function ShowingsClient() {
   useEffect(() => {
     getUsers().then(setAgents).catch(() => {});
   }, []);
+
+  const toDateStr = (d: Date) => d.toISOString().slice(0, 10);
+
+  const applyQuickFilter = (type: 'today' | 'tomorrow' | 'week') => {
+    const today = new Date();
+    if (type === 'today') {
+      const s = toDateStr(today);
+      if (from === s && to === s) { setFrom(''); setTo(''); }
+      else { setFrom(s); setTo(s); }
+    } else if (type === 'tomorrow') {
+      const tmr = new Date(today); tmr.setDate(tmr.getDate() + 1);
+      const s = toDateStr(tmr);
+      if (from === s && to === s) { setFrom(''); setTo(''); }
+      else { setFrom(s); setTo(s); }
+    } else {
+      const end = new Date(today); end.setDate(end.getDate() + 6);
+      const s = toDateStr(today); const e = toDateStr(end);
+      if (from === s && to === e) { setFrom(''); setTo(''); }
+      else { setFrom(s); setTo(e); }
+    }
+  };
+
+  const todayStr = toDateStr(new Date());
+  const tomorrowStr = toDateStr(new Date(new Date().setDate(new Date().getDate() + 1)));
+  const weekEndStr = toDateStr(new Date(new Date().setDate(new Date().getDate() + 6)));
+  const activeFilter =
+    from === todayStr && to === todayStr ? 'today'
+    : from === tomorrowStr && to === tomorrowStr ? 'tomorrow'
+    : from === todayStr && to === weekEndStr ? 'week'
+    : null;
 
   const handleDelete = async (showing: Showing) => {
     const confirmed = await confirmAction(t('showings.confirmDelete'));
@@ -74,6 +107,26 @@ export function ShowingsClient() {
         </select>
         <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="px-3 py-2.5 rounded-xl border border-border bg-card text-sm" />
         <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="px-3 py-2.5 rounded-xl border border-border bg-card text-sm" />
+      </div>
+
+      <div className="flex gap-2">
+        {([
+          { key: 'today', label: t('showings.filterToday') },
+          { key: 'tomorrow', label: t('showings.filterTomorrow') },
+          { key: 'week', label: t('showings.filterWeek') },
+        ] as const).map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => applyQuickFilter(key)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition border ${
+              activeFilter === key
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-card text-muted-foreground border-border hover:text-foreground hover:border-primary/50'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       <div className="rounded-xl border border-border overflow-hidden bg-card" style={{ boxShadow: 'var(--shadow-sm)' }}>
