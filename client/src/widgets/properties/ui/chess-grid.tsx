@@ -71,6 +71,15 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
   const [bulkArea, setBulkArea] = useState(0);
   const [bulkPrice, setBulkPrice] = useState(0);
 
+  const [showAddSection, setShowAddSection] = useState(false);
+  const [newSectionNum, setNewSectionNum] = useState(1);
+  const [newSectionFloorFrom, setNewSectionFloorFrom] = useState(1);
+  const [newSectionFloorTo, setNewSectionFloorTo] = useState(10);
+  const [newSectionUnitsPerFloor, setNewSectionUnitsPerFloor] = useState(4);
+  const [newSectionRooms, setNewSectionRooms] = useState(1);
+  const [newSectionArea, setNewSectionArea] = useState(0);
+  const [newSectionPrice, setNewSectionPrice] = useState(0);
+
   const [newUnit, setNewUnit] = useState({ unitNumber: '', floor: 1, section: 1, rooms: 1, area: 0, price: 0 });
 
   const fetchUnits = useCallback(async () => {
@@ -103,6 +112,10 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
     const floorSet = new Set(units.map(u => u.floor));
     return Array.from(floorSet).sort((a, b) => b - a);
   }, [units]);
+
+  const selectableSections = useMemo(() => {
+    return sections.length === 0 ? [1] : sections;
+  }, [sections]);
 
   const stats = useMemo(() => {
     const total = units.length;
@@ -217,6 +230,40 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
     setSectionEditOpen(null);
     fetchUnits();
     toast.success(`${t('deals.saved')}: ${ok} ${t('chess.unitsCount')}`);
+  };
+
+  const deleteSection = async (section: number) => {
+    const ok = await confirmAction(t('chess.deleteSectionConfirm'));
+    if (!ok) return;
+    const toDelete = units.filter(u => u.section === section);
+    for (const unit of toDelete) {
+      try { await deletePropertyUnit(unit.id); } catch { /* skip */ }
+    }
+    if (selectedUnit?.section === section) setSelectedUnit(null);
+    fetchUnits();
+    toast.success(t('common.deleted'));
+  };
+
+  const addSection = async () => {
+    setBulkSaving(true);
+    const toCreate = [];
+    for (let f = newSectionFloorFrom; f <= newSectionFloorTo; f++) {
+      for (let u = 1; u <= newSectionUnitsPerFloor; u++) {
+        const num = `${newSectionNum}${String(f).padStart(2, '0')}${String(u).padStart(2, '0')}`;
+        toCreate.push({ unitNumber: num, floor: f, section: newSectionNum, rooms: newSectionRooms, area: newSectionArea || null, price: newSectionPrice || null, propertyId });
+      }
+    }
+    let ok = 0; let skipped = 0;
+    for (const item of toCreate) {
+      try { await createPropertyUnit(item); ok++; }
+      catch (err) { if (err instanceof Error && err.message === 'Already exists') skipped++; }
+    }
+    setBulkSaving(false);
+    setShowAddSection(false);
+    fetchUnits();
+    if (skipped > 0 && ok === 0) toast.error(t('chess.allExist'));
+    else if (skipped > 0) toast.success(`${t('chess.addedN')} ${ok} ${t('chess.unitsCount')} (${skipped} ${t('chess.skippedExist')})`);
+    else toast.success(`${t('chess.addedN')} ${ok} ${t('chess.unitsCount')}`);
   };
 
   const deleteUnit = async (unitId: string) => {
@@ -397,7 +444,7 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
               <div className="flex gap-8 min-w-fit">
                 {sections.map(section => (
                   <div key={section} className="shrink-0">
-                    <div className="text-center mb-4 flex items-center justify-center gap-1.5">
+                    <div className="text-center mb-4 flex items-center justify-center gap-1">
                       <span className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-primary/10 text-primary text-xs font-bold rounded-full">
                         <Layers className="w-3 h-3" />
                         {t('chess.sectionLabel')} {section}
@@ -409,6 +456,14 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
                         title={t('chess.editSection')}
                       >
                         <Edit2 className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteSection(section)}
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition"
+                        title={t('chess.deleteSection')}
+                      >
+                        <Trash2 className="w-3 h-3" />
                       </button>
                     </div>
                     <div className="space-y-1.5">
@@ -484,6 +539,27 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
                     </div>
                   </div>
                 ))}
+                {/* ── Add new section button ── */}
+                <div className="shrink-0 flex flex-col items-start pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextSection = sections.length > 0 ? Math.max(...sections) + 1 : 1;
+                      setNewSectionNum(nextSection);
+                      setNewSectionFloorFrom(1);
+                      setNewSectionFloorTo(10);
+                      setNewSectionUnitsPerFloor(4);
+                      setNewSectionRooms(1);
+                      setNewSectionArea(0);
+                      setNewSectionPrice(0);
+                      setShowAddSection(true);
+                    }}
+                    className="flex flex-col items-center justify-center gap-2 w-[88px] rounded-2xl border-2 border-dashed border-border/40 text-muted-foreground hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-all py-6"
+                  >
+                    <Plus className="w-5 h-5" />
+                    <span className="text-[10px] font-semibold text-center leading-tight px-1">{t('chess.addSection')}</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -509,8 +585,12 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
                   </div>
                   <div>
                     <label className="text-xs font-medium text-muted-foreground">{t('common.section')}</label>
-                    <input type="number" value={newUnit.section || ''} onChange={e => setNewUnit({...newUnit, section: +e.target.value})}
-                      className="w-full px-3 py-2.5 border border-border/60 dark:border-border/40 rounded-xl text-sm mt-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                    <select value={newUnit.section} onChange={e => setNewUnit({...newUnit, section: +e.target.value})}
+                      className="w-full px-3 py-2.5 border border-border/60 dark:border-border/40 rounded-xl text-sm mt-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20">
+                      {selectableSections.map(s => (
+                        <option key={s} value={s}>{t('chess.sectionLabel')} {s}</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="text-xs font-medium text-muted-foreground">{t('common.rooms')}</label>
@@ -585,6 +665,63 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
                   </p>
                 </div>
                 <button type="button" onClick={bulkAdd} disabled={bulkSaving} className="w-full mt-4 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:opacity-90 transition shadow-sm disabled:opacity-50">
+                  {bulkSaving ? t('common.saving') : t('common.create')}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ─── Add section modal ─── */}
+          {showAddSection && (
+            <div className="absolute inset-0 bg-black/30 backdrop-blur-sm z-30 flex items-center justify-center" onClick={() => setShowAddSection(false)}>
+              <div className="bg-card rounded-2xl border border-border/60 dark:border-border/40 p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="font-display font-bold text-base">{t('chess.addSection')}</h3>
+                  <button type="button" onClick={() => setShowAddSection(false)} className="p-1.5 hover:bg-muted rounded-xl transition"><X className="w-4 h-4" /></button>
+                </div>
+                <p className="text-xs text-muted-foreground mb-5">
+                  {t('chess.sectionLabel')} <span className="font-bold text-primary">{newSectionNum}</span>
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">{t('chess.floorFrom')}</label>
+                    <input type="number" min={1} value={newSectionFloorFrom} onChange={e => setNewSectionFloorFrom(+e.target.value)}
+                      className="w-full px-3 py-2.5 border border-border/60 dark:border-border/40 rounded-xl text-sm mt-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">{t('chess.floorTo')}</label>
+                    <input type="number" min={1} value={newSectionFloorTo} onChange={e => setNewSectionFloorTo(+e.target.value)}
+                      className="w-full px-3 py-2.5 border border-border/60 dark:border-border/40 rounded-xl text-sm mt-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">{t('chess.unitsPerFloor')}</label>
+                    <input type="number" min={1} value={newSectionUnitsPerFloor} onChange={e => setNewSectionUnitsPerFloor(+e.target.value)}
+                      className="w-full px-3 py-2.5 border border-border/60 dark:border-border/40 rounded-xl text-sm mt-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">{t('chess.defaultRooms')}</label>
+                    <select value={newSectionRooms} onChange={e => setNewSectionRooms(+e.target.value)}
+                      className="w-full px-3 py-2.5 border border-border/60 dark:border-border/40 rounded-xl text-sm mt-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20">
+                      {Object.entries(ROOM_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">{t('common.area')} ({t('chess.pricePerM2')})</label>
+                    <input type="number" value={newSectionArea || ''} onChange={e => setNewSectionArea(+e.target.value)}
+                      className="w-full px-3 py-2.5 border border-border/60 dark:border-border/40 rounded-xl text-sm mt-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">{t('common.price')} ($)</label>
+                    <input type="number" value={newSectionPrice || ''} onChange={e => setNewSectionPrice(+e.target.value)}
+                      className="w-full px-3 py-2.5 border border-border/60 dark:border-border/40 rounded-xl text-sm mt-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                  </div>
+                </div>
+                <div className="mt-4 p-3 bg-primary/5 rounded-xl text-center">
+                  <p className="text-xs text-muted-foreground">
+                    {t('chess.willCreate')}: <span className="font-bold text-primary">{(newSectionFloorTo - newSectionFloorFrom + 1) * newSectionUnitsPerFloor}</span> {t('chess.unitsCount')}
+                  </p>
+                </div>
+                <button type="button" onClick={addSection} disabled={bulkSaving} className="w-full mt-4 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:opacity-90 transition shadow-sm disabled:opacity-50">
                   {bulkSaving ? t('common.saving') : t('common.create')}
                 </button>
               </div>
