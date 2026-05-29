@@ -52,6 +52,7 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [roomsFilter, setRoomsFilter] = useState<number | ''>('');
 
+  const [bulkSaving, setBulkSaving] = useState(false);
   const [bulkSections, setBulkSections] = useState(1);
   const [bulkFloorFrom, setBulkFloorFrom] = useState(1);
   const [bulkFloorTo, setBulkFloorTo] = useState(10);
@@ -113,6 +114,8 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
   };
 
   const bulkAdd = async () => {
+    if (bulkSaving) return;
+    setBulkSaving(true);
     const toCreate: any[] = [];
     for (let s = 1; s <= bulkSections; s++) {
       for (let f = bulkFloorFrom; f <= bulkFloorTo; f++) {
@@ -123,14 +126,25 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
       }
     }
     let ok = 0;
+    let skipped = 0;
     for (const item of toCreate) {
       try {
         await createPropertyUnit(item);
         ok++;
-      } catch { /* ignore one item */ }
+      } catch (err) {
+        if (err instanceof Error && err.message === 'Already exists') skipped++;
+      }
     }
-    toast.success(`${t('chess.addedN')} ${ok} ${t('chess.unitsCount')}`);
-    setShowBulkAdd(false); fetchUnits();
+    setBulkSaving(false);
+    setShowBulkAdd(false);
+    fetchUnits();
+    if (skipped > 0 && ok === 0) {
+      toast.error(t('chess.allExist'));
+    } else if (skipped > 0) {
+      toast.success(`${t('chess.addedN')} ${ok} ${t('chess.unitsCount')} (${skipped} ${t('chess.skippedExist')})`);
+    } else {
+      toast.success(`${t('chess.addedN')} ${ok} ${t('chess.unitsCount')}`);
+    }
   };
 
   const updateStatus = async (unitId: string, status: string) => {
@@ -155,6 +169,12 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
 
   return createPortal((
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex" onClick={onClose}>
+      {bulkSaving && (
+        <div className="absolute inset-0 z-[80] backdrop-blur-sm bg-black/50 flex flex-col items-center justify-center gap-4">
+          <div className="w-14 h-14 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+          <p className="text-white text-sm font-medium">{t('common.saving')}…</p>
+        </div>
+      )}
       <div className="flex w-full h-full" onClick={e => e.stopPropagation()}>
 
         {/* ═══════ LEFT PANEL ═══════ */}
@@ -490,8 +510,8 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
                     {t('chess.willCreate')}: <span className="font-bold text-primary">{bulkSections * (bulkFloorTo - bulkFloorFrom + 1) * bulkUnitsPerFloor}</span> {t('chess.unitsCount')}
                   </p>
                 </div>
-                <button type="button" onClick={bulkAdd} className="w-full mt-4 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:opacity-90 transition shadow-sm">
-                  {t('common.create')}
+                <button type="button" onClick={bulkAdd} disabled={bulkSaving} className="w-full mt-4 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:opacity-90 transition shadow-sm disabled:opacity-50">
+                  {bulkSaving ? t('common.saving') : t('common.create')}
                 </button>
               </div>
             </div>
