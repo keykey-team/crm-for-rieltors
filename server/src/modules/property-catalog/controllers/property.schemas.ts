@@ -14,7 +14,7 @@ const PROPERTY_TYPES = ['apartment', 'house', 'commercial', 'land', 'garage', 'o
 const PROPERTY_STATUSES = ['active', 'available', 'reserved', 'sold', 'rented', 'inactive'] as const;
 const PROPERTY_DEAL_TYPES = ['sale', 'rent'] as const;
 const CURRENCIES = ['UAH', 'USD', 'EUR'] as const;
-const UNIT_STATUSES = ['available', 'reserved', 'sold'] as const;
+const UNIT_STATUSES = ['available', 'reserved', 'sold', 'unavailable'] as const;
 const PRICE_HISTORY_REASONS = ['manual', 'auto-discount', 'market-correction', 'import', 'other'] as const;
 
 function emptyStringToUndefined(value: unknown) {

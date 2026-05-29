@@ -17,8 +17,8 @@ export async function createPropertyUnit(payload: Record<string, unknown>): Prom
   return parseJson<PropertyUnit>(res);
 }
 
-export async function updatePropertyUnit(id: string, status: string): Promise<PropertyUnit> {
-  const res = await fetch('/api/property-units', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status }) });
+export async function updatePropertyUnit(id: string, data: Record<string, unknown>): Promise<PropertyUnit> {
+  const res = await fetch('/api/property-units', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, ...data }) });
   return parseJson<PropertyUnit>(res);
 }
 
