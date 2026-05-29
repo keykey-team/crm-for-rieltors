@@ -274,6 +274,16 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
     fetchUnits(); toast.success(t('common.deleted'));
   };
 
+  const getNextUnitNumber = useCallback((floor: number, section: number): string => {
+    const floorUnits = units.filter(u => u.floor === floor && u.section === section);
+    if (floorUnits.length === 0) {
+      return `${section}${String(floor).padStart(2, '0')}01`;
+    }
+    const nums = floorUnits.map(u => parseInt(u.unitNumber, 10)).filter(n => !isNaN(n));
+    if (nums.length === 0) return '';
+    return String(Math.max(...nums) + 1);
+  }, [units]);
+
   const getUnitsForCell = (section: number, floor: number) => {
     return filteredUnits.filter(u => u.section === section && u.floor === floor);
   };
@@ -378,7 +388,11 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
 
           {/* Actions */}
           <div className="p-4 mt-auto space-y-2">
-            <button type="button" onClick={() => { setShowAdd(true); setShowBulkAdd(false); }}
+            <button type="button" onClick={() => {
+              const floor = 1; const section = sections[0] ?? 1;
+              setNewUnit({ unitNumber: getNextUnitNumber(floor, section), floor, section, rooms: 1, area: 0, price: 0 });
+              setShowAdd(true); setShowBulkAdd(false);
+            }}
               className="flex items-center justify-center gap-2 w-full px-3 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:opacity-90 transition shadow-sm">
               <Plus className="w-4 h-4" /> {t('chess.addUnit')}
             </button>
@@ -580,12 +594,18 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
                   </div>
                   <div>
                     <label className="text-xs font-medium text-muted-foreground">{t('common.floor')}</label>
-                    <input type="number" value={newUnit.floor || ''} onChange={e => setNewUnit({...newUnit, floor: +e.target.value})}
+                    <input type="number" value={newUnit.floor || ''} onChange={e => {
+                      const floor = +e.target.value;
+                      setNewUnit(prev => ({ ...prev, floor, unitNumber: getNextUnitNumber(floor, prev.section) }));
+                    }}
                       className="w-full px-3 py-2.5 border border-border/60 dark:border-border/40 rounded-xl text-sm mt-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20" />
                   </div>
                   <div>
                     <label className="text-xs font-medium text-muted-foreground">{t('common.section')}</label>
-                    <select value={newUnit.section} onChange={e => setNewUnit({...newUnit, section: +e.target.value})}
+                    <select value={newUnit.section} onChange={e => {
+                      const section = +e.target.value;
+                      setNewUnit(prev => ({ ...prev, section, unitNumber: getNextUnitNumber(prev.floor, section) }));
+                    }}
                       className="w-full px-3 py-2.5 border border-border/60 dark:border-border/40 rounded-xl text-sm mt-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/20">
                       {selectableSections.map(s => (
                         <option key={s} value={s}>{t('chess.sectionLabel')} {s}</option>
