@@ -107,7 +107,7 @@ export function ChessGrid({ propertyId, propertyTitle, totalFloors = 10, onClose
     if (!newUnit.unitNumber) { toast.error(t('chess.enterNumber')); return; }
     try {
       await createPropertyUnit({ ...newUnit, propertyId, area: newUnit.area || null, price: newUnit.price || null });
-    } catch { toast.error(t('common.addError')); return; }
+    } catch (err) { toast.error(err instanceof Error ? err.message : t('common.addError')); return; }
     setNewUnit({ unitNumber: '', floor: 1, section: 1, rooms: 1, area: 0, price: 0 });
     setShowAdd(false); fetchUnits(); toast.success(t('chess.unitAdded'));
   };

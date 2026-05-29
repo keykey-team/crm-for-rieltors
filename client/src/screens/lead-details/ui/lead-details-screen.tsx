@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { Phone, MessageSquare, Mail, Plus, Send, Clock, Workflow, FileText, User } from 'lucide-react';
+import { Phone, MessageSquare, Mail, Send, Clock, Workflow, FileText, User } from 'lucide-react';
 import { Breadcrumbs } from '@/shared/ui/breadcrumbs';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -61,7 +61,7 @@ export function LeadDetailClient({ leadId }: { leadId: string }) {
       const deal = await createDealFromLead(leadId);
       toast.success(t('leads.dealCreated'));
       router.push(`/deals/${deal.id}`);
-    } catch { toast.error(t('leads.error')); }
+    } catch (err) { toast.error(err instanceof Error ? err.message : t('leads.error')); }
     setCreatingDeal(false);
   };
 

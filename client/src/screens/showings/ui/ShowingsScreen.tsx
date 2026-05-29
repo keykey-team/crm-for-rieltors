@@ -2,12 +2,15 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Edit2, Plus, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useTranslation } from '@/shared/lib/i18n/context';
-import { useShowings } from '@/entities/showing';
+import { deleteShowing, type Showing, useShowings } from '@/entities/showing';
 import { CreateShowingDialog } from '@/features/create-showing';
+import { UpdateShowingDialog } from '@/features/update-showing';
 import { ShowingStatusBadge } from '@/entities/showing';
 import { formatDateTime } from '@/shared/lib/format';
+import { confirmAction } from '@/shared/lib/confirm-action';
 import { getUsers } from '@/entities/user';
 
 export function ShowingsClient() {
@@ -18,6 +21,7 @@ export function ShowingsClient() {
   const [to, setTo] = useState('');
   const [agents, setAgents] = useState<any[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editShowing, setEditShowing] = useState<Showing | null>(null);
 
   const query = useMemo(
     () => ({ status: status || undefined, agentId: agentId || undefined, from: from || undefined, to: to || undefined, limit: 100 }),
@@ -29,6 +33,18 @@ export function ShowingsClient() {
   useEffect(() => {
     getUsers().then(setAgents).catch(() => {});
   }, []);
+
+  const handleDelete = async (showing: Showing) => {
+    const confirmed = await confirmAction(t('showings.confirmDelete'));
+    if (!confirmed) return;
+    try {
+      await deleteShowing(showing.id);
+      toast.success(t('showings.deleted'));
+      reload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('common.error'));
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -66,8 +82,8 @@ export function ShowingsClient() {
           <div className="col-span-2">{t('deals.contact')}</div>
           <div className="col-span-2">{t('showings.agent')}</div>
           <div className="col-span-2">{t('showings.scheduledAt')}</div>
-          <div className="col-span-2">{t('showings.status')}</div>
-          <div className="col-span-1">{t('common.open')}</div>
+          <div className="col-span-1">{t('showings.status')}</div>
+          <div className="col-span-2"></div>
         </div>
         {loading ? (
           <div className="p-4 text-sm text-muted-foreground">{t('common.loading')}</div>
@@ -75,14 +91,30 @@ export function ShowingsClient() {
           <div className="p-4 text-sm text-muted-foreground">{t('showings.empty')}</div>
         ) : (
           items.map((item) => (
-            <div key={item.id} className="grid grid-cols-12 gap-2 px-4 py-3 text-sm border-b border-border/60 last:border-b-0">
+            <div key={item.id} className="grid grid-cols-12 gap-2 px-4 py-3 text-sm border-b border-border/60 last:border-b-0 group">
               <div className="col-span-3 truncate">{item.property?.title || item.property?.address || item.propertyId}</div>
               <div className="col-span-2 truncate">{item.lead ? `${item.lead.firstName || ''} ${item.lead.lastName || ''}`.trim() : '—'}</div>
               <div className="col-span-2 truncate">{item.agent?.name || item.agent?.email || '—'}</div>
               <div className="col-span-2 truncate">{formatDateTime(item.scheduledAt, locale)}</div>
-              <div className="col-span-2"><ShowingStatusBadge status={item.status} label={t(`showings.status.${item.status}`)} /></div>
-              <div className="col-span-1">
-                {item.dealId ? <Link className="text-primary hover:underline" href={`/deals/${item.dealId}`}>↗</Link> : '—'}
+              <div className="col-span-1"><ShowingStatusBadge status={item.status} label={t(`showings.status.${item.status}`)} /></div>
+              <div className="col-span-2 flex items-center justify-end gap-1">
+                {item.dealId && (
+                  <Link className="text-primary hover:underline px-1" href={`/deals/${item.dealId}`} title={t('common.open')}>↗</Link>
+                )}
+                <button
+                  onClick={() => setEditShowing(item)}
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted opacity-0 group-hover:opacity-100 transition"
+                  title={t('common.edit')}
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => handleDelete(item)}
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition"
+                  title={t('common.delete')}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
               </div>
             </div>
           ))
@@ -94,6 +126,19 @@ export function ShowingsClient() {
           onClose={() => setCreateOpen(false)}
           onSaved={() => {
             setCreateOpen(false);
+            toast.success(t('deals.saved'));
+            reload();
+          }}
+        />
+      ) : null}
+
+      {editShowing ? (
+        <UpdateShowingDialog
+          showing={editShowing}
+          onClose={() => setEditShowing(null)}
+          onSaved={() => {
+            setEditShowing(null);
+            toast.success(t('deals.saved'));
             reload();
           }}
         />

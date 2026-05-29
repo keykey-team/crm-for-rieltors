@@ -49,6 +49,11 @@ export async function updateDealChecklistItem(dealId: string, itemId: string, co
   return parseJson<any>(res);
 }
 
+export async function deleteDealChecklistItem(dealId: string, itemId: string) {
+  const res = await fetch(`/api/deals/${dealId}/checklist/${itemId}`, { method: 'DELETE' });
+  return parseJson<any>(res);
+}
+
 export async function getDealCustomFieldValues(dealId: string) {
   const res = await fetch(`/api/deals/custom-field-values?dealId=${dealId}`);
   const data = await parseJson<unknown>(res);

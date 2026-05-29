@@ -5,6 +5,7 @@ import {
   addDealComment,
   changeDeal,
   changeDealChecklistItem,
+  removeDealChecklistItem,
   convertLeadToDeal,
   getDeal,
   listDealChecklist,
@@ -32,6 +33,7 @@ router.post('/deals/:id/comments', validateBody(addDealCommentSchema), async (re
 router.get('/deals/:id/checklist', async (req, res) => res.json(await listDealChecklist(req.params.id)));
 router.post('/deals/:id/checklist', validateBody(addChecklistItemSchema), async (req, res) => res.status(201).json(await addDealChecklistItem(req.params.id, req.body)));
 router.put('/deals/:id/checklist', validateBody(updateChecklistItemSchema), async (req, res) => res.json(await changeDealChecklistItem(req.body)));
+router.delete('/deals/:id/checklist/:itemId', async (req, res) => res.json(await removeDealChecklistItem(req.params.itemId)));
 
 router.get('/deals', async (req, res) => res.json(await listDeals(req.user?.id, req.user?.role)));
 router.post('/deals', validateBody(createDealSchema), async (req, res) => res.status(201).json(await addDeal(req.body, req.user?.id)));

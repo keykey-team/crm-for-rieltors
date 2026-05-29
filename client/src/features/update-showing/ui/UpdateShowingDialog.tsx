@@ -37,8 +37,13 @@ export function UpdateShowingDialog({ showing, onClose, onSaved }: Props) {
               clientRating: clientRating ? Number(clientRating) : undefined,
             });
             await onSaved(updated);
-          } catch (err: any) {
-            toast.error(err?.message || t('common.error'));
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : '';
+            toast.error(
+              msg.toLowerCase().includes('clientrating') || msg.toLowerCase().includes('completed showing')
+                ? t('showings.ratingOnlyForCompleted')
+                : msg || t('common.error'),
+            );
           } finally {
             setSaving(false);
           }
