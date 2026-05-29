@@ -6,6 +6,7 @@ export const LOCALE_LABELS: Record<Locale, string> = {
   ru: 'Русский',
 };
 
+
 const uk: Record<string, string> = {
   // Sidebar
   'nav.dashboard': 'Дашборд',
