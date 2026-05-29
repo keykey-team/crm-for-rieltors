@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [develop, main, feature/spark-suite-integration, feature/spark-adding-realtor-suite]
   push:
-    branches: [develop, main]
+    branches: [develop, main, feature/spark-suite-integration]
 
 jobs:
   client-checks:
@@ -48,3 +48,41 @@ jobs:
         run: npx tsc --noEmit
       - name: Run tests
         run: npm test
+
+  migration-checks:
+    name: Server — Prisma migrations
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: crm_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d crm_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: server
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/crm_ci?schema=public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+      - name: Apply Prisma migrations
+        run: npx prisma migrate deploy
+      - name: Verify multi-tenant backfill script is idempotent
+        run: npm run migrate:multi-tenant

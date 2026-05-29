@@ -41,14 +41,17 @@ export async function agencyMiddleware(req: Request, res: Response, next: NextFu
   }
 
   const fallbackAgencyId = user.lastAgencyId ?? user.memberships[0]?.agencyId;
-  const agencyId = requestedAgencyId || fallbackAgencyId;
+  const requestedMembership = requestedAgencyId
+    ? user.memberships.find((item) => item.agencyId === requestedAgencyId)
+    : undefined;
+  const agencyId = requestedMembership?.agencyId ?? fallbackAgencyId;
 
   if (!agencyId) {
     res.status(403).json({ error: 'No active agency membership' });
     return;
   }
 
-  const membership = user.memberships.find((item) => item.agencyId === agencyId);
+  const membership = requestedMembership ?? user.memberships.find((item) => item.agencyId === agencyId);
   if (!membership) {
     res.status(403).json({ error: 'Access denied for agency' });
     return;

@@ -41,8 +41,24 @@ export async function createUser(data: {
   accountType: string;
   plan: string;
 }): Promise<SignupResultDto> {
-  return prisma.user.create({
-    data,
-    select: { id: true, email: true },
+  return prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data,
+      select: { id: true, email: true, name: true, role: true },
+    });
+    const agency = await tx.agency.create({
+      data: {
+        name: `${user.name || user.email} Agency`,
+        slug: `agency-${user.id}`,
+        ownerId: user.id,
+        plan: data.plan,
+      },
+      select: { id: true },
+    });
+    await tx.agencyMembership.create({
+      data: { agencyId: agency.id, userId: user.id, role: data.role === 'admin' ? 'owner' : data.role, isActive: true },
+    });
+    await tx.user.update({ where: { id: user.id }, data: { lastAgencyId: agency.id } });
+    return { id: user.id, email: user.email };
   });
 }

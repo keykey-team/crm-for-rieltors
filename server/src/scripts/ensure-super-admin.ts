@@ -39,7 +39,27 @@ async function main() {
     },
   });
 
-  console.log(`Super admin ready: ${user.email} (${user.role}, ${user.accountType}, ${user.plan})`);
+  const agency = await prisma.agency.upsert({
+    where: { slug: 'default' },
+    update: { ownerId: user.id },
+    create: {
+      id: 'default-agency',
+      name: 'Default Agency',
+      slug: 'default',
+      ownerId: user.id,
+      plan: 'free',
+    },
+  });
+
+  await prisma.agencyMembership.upsert({
+    where: { agencyId_userId: { agencyId: agency.id, userId: user.id } },
+    update: { role: 'owner', isActive: true },
+    create: { agencyId: agency.id, userId: user.id, role: 'owner', isActive: true },
+  });
+
+  await prisma.user.update({ where: { id: user.id }, data: { lastAgencyId: agency.id } });
+
+  console.log(`Super admin ready: ${user.email} (${user.role}, ${user.accountType}, ${user.plan}, agency ${agency.slug})`);
   await ensureSystemStages();
 }
 
