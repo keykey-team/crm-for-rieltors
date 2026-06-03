@@ -10,13 +10,14 @@ import { confirmAction } from '@/shared/lib/confirm-action';
 import {
   createChatRoom,
   deleteChatRoom,
+  getChatUsers,
   getChatMessages,
   getChatRooms,
   getThreadMessages,
   sendChatMessage,
   updateChatRoom,
 } from '@/entities/chat';
-import { getUsers } from '@/entities/user';
+import { useCurrentAgency } from '@/entities/agency';
 
 interface MentionUser {
   id: string;
@@ -515,6 +516,8 @@ export function ChatClient() {
   const { t } = useTranslation();
   const { data: session } = useSession() || {};
   const userId = (session?.user as any)?.id;
+  const userRole = String((session?.user as any)?.role ?? 'agent');
+  const canCreateGroupChats = userRole === 'admin' || userRole === 'director';
   const [rooms, setRooms] = useState<any[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
@@ -528,11 +531,15 @@ export function ChatClient() {
   const [showGroupSettings, setShowGroupSettings] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { currentAgencyId } = useCurrentAgency();
 
-  const fetchRooms = useCallback(async () => {
+  const fetchRooms = useCallback(async (withLoading = false) => {
     try {
+      if (withLoading) setLoading(true);
       setRooms(await getChatRooms());
-    } catch { /* ignore */ } finally { setLoading(false); }
+    } catch { /* ignore */ } finally {
+      if (withLoading) setLoading(false);
+    }
   }, []);
 
   const fetchMessages = useCallback(async () => {
@@ -544,7 +551,7 @@ export function ChatClient() {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const data = await getUsers();
+      const data = await getChatUsers();
       setAllUsers(
         data
           .filter((u: any) => u.id !== userId)
@@ -553,7 +560,7 @@ export function ChatClient() {
     } catch { /* ignore */ }
   }, [userId]);
 
-  useEffect(() => { fetchRooms(); fetchUsers(); }, [fetchRooms, fetchUsers]);
+  useEffect(() => { fetchRooms(true); fetchUsers(); }, [fetchRooms, fetchUsers, currentAgencyId]);
   useEffect(() => { fetchMessages(); }, [fetchMessages]);
 
   useEffect(() => {
@@ -593,6 +600,7 @@ export function ChatClient() {
   };
 
   const createGroup = async (name: string, memberIds: string[]) => {
+    if (!canCreateGroupChats) return;
     const room = await createChatRoom({ name, memberIds });
     setShowCreateGroup(false);
     fetchRooms();
@@ -629,9 +637,15 @@ export function ChatClient() {
     !search || getRoomDisplayName(r).toLowerCase().includes(search.toLowerCase())
   );
 
-  // Users not yet in any DM
+  const personalRooms = filteredRooms.filter((room) => room.type === 'direct');
+  const groupRooms = filteredRooms.filter((room) => room.type === 'group');
+
   const availableForDM = allUsers.filter(u =>
     !rooms.some(r => r.type === 'direct' && r.members.some((m: any) => m.id === u.id))
+  );
+
+  const filteredDmCandidates = availableForDM.filter(
+    (u) => !search || u.name?.toLowerCase().includes(search.toLowerCase()),
   );
 
   const totalUnread = rooms.reduce((sum, r) => sum + (r.unreadCount || 0), 0);
@@ -667,71 +681,103 @@ export function ChatClient() {
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('common.search')}
                 className="w-full pl-9 pr-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
             </div>
-            <button onClick={() => setShowCreateGroup(true)}
-              className="p-2 hover:bg-muted rounded-xl transition" title={t('chat.createGroup')}>
-              <Plus className="w-4 h-4" />
-            </button>
+            {canCreateGroupChats && (
+              <button onClick={() => setShowCreateGroup(true)}
+                className="p-2 hover:bg-muted rounded-xl transition" title={t('chat.createGroup')}>
+                <Plus className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            {/* Available users for new DM — always visible */}
-            {(() => {
-              const filtered = availableForDM.filter(u => !search || u.name?.toLowerCase().includes(search.toLowerCase()));
-              return filtered.length > 0 ? (
-                <div className="px-3 pt-2">
-                  <p className="text-[10px] text-muted-foreground font-medium uppercase mb-1">{t('chat.contacts')}</p>
-                  {filtered.map(u => (
-                    <button key={u.id} onClick={() => startDM(u)}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted/50 transition text-left text-sm">
-                      <div className="w-8 h-8 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-green-600 text-xs font-bold">
-                        {getInitials(u.name ?? '?')}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm truncate">{u.name}</p>
-                        <p className="text-[10px] text-muted-foreground">{t('chat.newConversation')}</p>
-                      </div>
-                    </button>
-                  ))}
-                  <div className="border-b border-border mt-1 mb-1" />
-                </div>
-              ) : null;
-            })()}
-
             {loading ? (
               <div className="space-y-2 p-3">{[1,2,3].map(i => <div key={i} className="h-14 bg-muted animate-pulse rounded-xl" />)}</div>
-            ) : filteredRooms.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">{t('chat.noConversations')}</p>
             ) : (
-              filteredRooms.map(room => (
-                <button key={room.id} onClick={() => { setSelectedRoom(room); setThreadMsg(null); setShowGroupSettings(false); setShowMobileSidebar(false); }}
-                  className={cn('w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition text-left',
-                    selectedRoom?.id === room.id && 'bg-primary/5')}>
-                  <div className={cn('w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0',
-                    room.type === 'group' ? 'bg-violet-50 text-violet-600' : 'bg-primary/10 text-primary')}>
-                    {getRoomAvatar(room)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium truncate">{getRoomDisplayName(room)}</p>
-                      {room.unreadCount > 0 && (
-                        <span className="w-5 h-5 bg-primary text-white text-[10px] rounded-full flex items-center justify-center flex-shrink-0">
-                          {room.unreadCount}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {room.lastMessage ? (
-                        <>
-                          {room.type === 'group' && room.lastMessage.sender?.name && (
-                            <span className="font-medium">{room.lastMessage.sender.name.split(' ')[0]}: </span>
-                          )}
-                          {room.lastMessage.text}
-                        </>
-                      ) : t('chat.noMessages')}
-                    </p>
-                  </div>
-                </button>
-              ))
+              <>
+                <div className="px-3 pt-2">
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase mb-1">{t('chat.directMessage')}</p>
+                  {personalRooms.length === 0 && filteredDmCandidates.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-2 px-1">{t('chat.noConversations')}</p>
+                  ) : (
+                    <>
+                      {personalRooms.map(room => (
+                        <button key={room.id} onClick={() => { setSelectedRoom(room); setThreadMsg(null); setShowGroupSettings(false); setShowMobileSidebar(false); }}
+                          className={cn('w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition text-left rounded-xl',
+                            selectedRoom?.id === room.id && 'bg-primary/5')}>
+                          <div className={cn('w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0',
+                            room.type === 'group' ? 'bg-violet-50 text-violet-600' : 'bg-primary/10 text-primary')}>
+                            {getRoomAvatar(room)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-medium truncate">{getRoomDisplayName(room)}</p>
+                              {room.unreadCount > 0 && (
+                                <span className="w-5 h-5 bg-primary text-white text-[10px] rounded-full flex items-center justify-center flex-shrink-0">
+                                  {room.unreadCount}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {room.lastMessage?.text ?? t('chat.noMessages')}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+
+                      {filteredDmCandidates.map((u) => (
+                        <button key={u.id} onClick={() => startDM(u)}
+                          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition text-left rounded-xl">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                            <span className="text-xs font-bold">{getInitials(u.name ?? '?')}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{u.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{t('chat.noMessages')}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </>
+                  )}
+                </div>
+
+                <div className="px-3 pt-2 pb-2 border-t border-border mt-1">
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase mb-1">{t('chat.group')}</p>
+                  {groupRooms.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-2 px-1">{t('chat.noConversations')}</p>
+                  ) : (
+                    groupRooms.map(room => (
+                      <button key={room.id} onClick={() => { setSelectedRoom(room); setThreadMsg(null); setShowGroupSettings(false); setShowMobileSidebar(false); }}
+                        className={cn('w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition text-left rounded-xl',
+                          selectedRoom?.id === room.id && 'bg-primary/5')}>
+                        <div className={cn('w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0',
+                          room.type === 'group' ? 'bg-violet-50 text-violet-600' : 'bg-primary/10 text-primary')}>
+                          {getRoomAvatar(room)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium truncate">{getRoomDisplayName(room)}</p>
+                            {room.unreadCount > 0 && (
+                              <span className="w-5 h-5 bg-primary text-white text-[10px] rounded-full flex items-center justify-center flex-shrink-0">
+                                {room.unreadCount}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {room.lastMessage ? (
+                              <>
+                                {room.lastMessage.sender?.name && (
+                                  <span className="font-medium">{room.lastMessage.sender.name.split(' ')[0]}: </span>
+                                )}
+                                {room.lastMessage.text}
+                              </>
+                            ) : t('chat.noMessages')}
+                          </p>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -743,10 +789,12 @@ export function ChatClient() {
             <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
               <MessageCircle className="w-12 h-12 mb-3 opacity-30" />
               <p className="text-sm">{t('chat.selectChat')}</p>
-              <button onClick={() => setShowCreateGroup(true)}
-                className="mt-3 px-4 py-2 bg-primary text-white rounded-xl text-sm hover:bg-primary/90 transition flex items-center gap-2">
-                <Plus className="w-4 h-4" /> {t('chat.createGroup')}
-              </button>
+              {canCreateGroupChats && (
+                <button onClick={() => setShowCreateGroup(true)}
+                  className="mt-3 px-4 py-2 bg-primary text-white rounded-xl text-sm hover:bg-primary/90 transition flex items-center gap-2">
+                  <Plus className="w-4 h-4" /> {t('chat.createGroup')}
+                </button>
+              )}
             </div>
           ) : (
             <>
@@ -847,7 +895,7 @@ export function ChatClient() {
       </div>
 
       {/* Create Group Dialog */}
-      {showCreateGroup && (
+      {showCreateGroup && canCreateGroupChats && (
         <CreateGroupDialog users={allUsers} onClose={() => setShowCreateGroup(false)} onCreate={createGroup} />
       )}
     </div>

@@ -5,12 +5,12 @@ import { createUserSchema, updateUserSchema } from './user-admin.schemas';
 
 const router = createAsyncRouter();
 
-router.get('/users', async (_req, res) => {
-  res.json(await listUsers());
+router.get('/users', async (req, res) => {
+  res.json(await listUsers(req.agency?.agencyId));
 });
 
 router.post('/users', validateBody(createUserSchema), async (req, res) => {
-  res.status(201).json(await addUser(req.body, req.user?.role));
+  res.status(201).json(await addUser(req.body, req.user?.role, req.agency?.agencyId));
 });
 
 router.put('/users/:id', validateBody(updateUserSchema), async (req, res) => {

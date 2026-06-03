@@ -7,11 +7,11 @@ function assertCanManageUsers(role?: string): void {
   if (!isAdminRole(role)) throw forbidden();
 }
 
-export async function listUsers() {
-  return findManagedUsers();
+export async function listUsers(agencyId?: string) {
+  return findManagedUsers(agencyId);
 }
 
-export async function addUser(input: Record<string, unknown>, role?: string) {
+export async function addUser(input: Record<string, unknown>, role?: string, agencyId?: string) {
   assertCanManageUsers(role);
   return createManagedUser({
     name: input.name,
@@ -20,7 +20,7 @@ export async function addUser(input: Record<string, unknown>, role?: string) {
     role: input.role ?? 'agent',
     phone: input.phone ?? null,
     permissions: input.permissions ?? null,
-  });
+  }, agencyId);
 }
 
 export async function changeUser(id: string, input: Record<string, unknown>, role?: string) {
