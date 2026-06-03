@@ -14,7 +14,7 @@ interface PlanContextType {
 
 // Features gated by plan
 const PLAN_FEATURES: Record<string, PlanType[]> = {
-  chat: ['business'],
+  chat: ['free', 'pro', 'business'],
   team: ['business'],
   distribution: ['business'],
   aftercare: ['business'],

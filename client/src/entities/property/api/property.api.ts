@@ -39,13 +39,25 @@ function normalizePropertyPayload(payload: Partial<PropertyUpsertInput>): Partia
 }
 
 async function parseJson<T>(res: Response): Promise<T> {
-  const data = await res.json();
+  const raw = await res.text();
+  let data: any = null;
+  try {
+    data = raw ? JSON.parse(raw) : null;
+  } catch {
+    data = raw;
+  }
   if (!res.ok) {
     const fieldMessage =
       data && typeof data === 'object' && data.fields && typeof data.fields === 'object'
         ? Object.values(data.fields).find((value): value is string => typeof value === 'string' && value.length > 0)
         : undefined;
-    throw new Error(fieldMessage || (data && (data.error || data.message)) || 'Request failed');
+    const serverMessage =
+      typeof data === 'string'
+        ? data
+        : data && typeof data === 'object'
+          ? (data.error || data.message)
+          : undefined;
+    throw new Error(fieldMessage || serverMessage || 'Request failed');
   }
   return data as T;
 }
