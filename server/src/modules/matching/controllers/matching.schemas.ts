@@ -38,6 +38,8 @@ export const reorderSelectionItemsSchema = z
 export const updateSelectionItemSchema = z
   .object({
     agentComment: optionalText(2000),
+    clientReaction: reaction.optional().nullable(),
+    clientNote: optionalText(1000),
   })
   .strict();
 

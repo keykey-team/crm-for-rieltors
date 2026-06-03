@@ -10,7 +10,6 @@ import { DealFormDialog } from '@/features/create-deal/ui/deal-form-dialog';
 export function DealsClient() {
   const { t } = useTranslation();
   const {
-    deals,
     funnels,
     selectedFunnelId,
     setSelectedFunnelId,
@@ -24,6 +23,8 @@ export function DealsClient() {
     loading,
     dialogOpen,
     editDeal,
+    stageBuckets,
+    loadMoreStage,
     handleStageChange,
     handleFunnelChange,
     handleSave,
@@ -39,17 +40,23 @@ export function DealsClient() {
         onCreate={openCreateDialog}
         onOpenFilters={() => setFiltersOpen(true)}
         activeFilterCount={activeFilterCount}
+        searchValue={filters.query}
+        onSearchChange={(value) => setFilters((prev) => ({ ...prev, query: value }))}
         funnels={funnels}
         selectedFunnelId={selectedFunnelId}
         onSelectFunnel={setSelectedFunnelId}
         t={t}
       />
       <FunnelBoard
-        deals={deals}
         loading={loading}
         stages={selectedStages}
         funnels={funnels}
         selectedFunnelId={selectedFunnelId}
+        stageDeals={Object.fromEntries(selectedStages.map((stage) => [stage.value, stageBuckets[stage.value]?.items ?? []]))}
+        stageTotals={Object.fromEntries(selectedStages.map((stage) => [stage.value, stageBuckets[stage.value]?.total ?? 0]))}
+        stageHasMore={Object.fromEntries(selectedStages.map((stage) => [stage.value, stageBuckets[stage.value]?.hasMore ?? false]))}
+        loadingMoreStages={Object.fromEntries(selectedStages.map((stage) => [stage.value, stageBuckets[stage.value]?.loadingMore ?? false]))}
+        onLoadMoreStage={loadMoreStage}
         onStageChange={handleStageChange}
         onFunnelChange={handleFunnelChange}
         onEdit={openEditDialog}

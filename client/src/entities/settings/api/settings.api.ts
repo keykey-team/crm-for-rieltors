@@ -109,8 +109,10 @@ export async function deleteDealCustomField(id: string): Promise<void> {
   if (!res.ok) throw new Error('Failed to delete custom field');
 }
 
-export async function getDictionaries(category: string): Promise<DictionaryItem[]> {
-  const res = await fetch(`/api/dictionaries?category=${category}`);
+export async function getDictionaries(category: string, includeInactive = false): Promise<DictionaryItem[]> {
+  const params = new URLSearchParams({ category });
+  if (includeInactive) params.set('includeInactive', '1');
+  const res = await fetch(`/api/dictionaries?${params.toString()}`);
   const data = await parseJson<unknown>(res);
   return Array.isArray(data) ? (data as DictionaryItem[]) : [];
 }
@@ -118,6 +120,15 @@ export async function getDictionaries(category: string): Promise<DictionaryItem[
 export async function createDictionary(payload: Record<string, unknown>): Promise<DictionaryItem> {
   const res = await fetch('/api/dictionaries', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
   return parseJson<DictionaryItem>(res);
+}
+
+export async function updateDictionaryItem(payload: Record<string, unknown>): Promise<DictionaryItem | { ok: true }> {
+  const res = await fetch('/api/dictionaries', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return parseJson<DictionaryItem | { ok: true }>(res);
 }
 
 export async function deleteDictionary(id: string): Promise<void> {

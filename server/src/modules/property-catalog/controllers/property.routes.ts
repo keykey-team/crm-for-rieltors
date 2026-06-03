@@ -13,6 +13,7 @@ import {
   changeProperty,
   changePropertyUnit,
   createPropertyPriceHistoryPoint,
+  getPropertyProfile,
   getPropertyPriceStats,
   listPropertyPriceHistory,
   listProperties,
@@ -81,6 +82,10 @@ router.post('/properties/:id/price-history', validateBody(createPropertyPricePoi
 
 router.get('/properties/:id/price-stats', async (req, res) => {
   res.json(await getPropertyPriceStats(req.params.id));
+});
+
+router.get('/properties/:id/profile', async (req, res) => {
+  res.json(await getPropertyProfile(req.params.id));
 });
 
 export const propertyRoutes = router;

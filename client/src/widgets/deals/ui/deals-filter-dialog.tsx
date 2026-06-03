@@ -45,16 +45,6 @@ export function DealsFilterDialog({ filters, stages, managers, onApply, onClose,
         </div>
 
         <div className="p-6 space-y-4">
-          <div>
-            <label className="mb-1.5 block text-xs text-muted-foreground">{t('common.search')}</label>
-            <input
-              value={draft.query}
-              onChange={(event) => setDraft((prev) => ({ ...prev, query: event.target.value }))}
-              placeholder={t('deals.searchPlaceholder')}
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm"
-            />
-          </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="mb-1.5 block text-xs text-muted-foreground">{t('deals.stage')}</label>

@@ -21,5 +21,13 @@ export function useSelections(leadId?: string) {
     reload();
   }, [reload]);
 
-  return { items, loading, reload };
+  const replaceSelection = useCallback((updated: ClientSelection) => {
+    setItems((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+  }, []);
+
+  const removeSelectionFromList = useCallback((selectionId: string) => {
+    setItems((current) => current.filter((item) => item.id !== selectionId));
+  }, []);
+
+  return { items, loading, reload, replaceSelection, removeSelectionFromList };
 }

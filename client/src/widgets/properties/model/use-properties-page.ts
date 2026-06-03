@@ -3,8 +3,19 @@ import { confirmAction } from '@/shared/lib/confirm-action';
 import { createProperty, deleteProperty, getProperties, updateProperty } from '@/entities/property';
 import type { Property, PropertyUpsertInput } from '@/entities/property';
 
+export type PropertyOwnershipSegment = 'my' | 'potential';
+
+function isPotentialStatus(status?: string | null) {
+  return status === 'inactive';
+}
+
+function toStatusByOwnership(target: PropertyOwnershipSegment): string {
+  return target === 'potential' ? 'inactive' : 'active';
+}
+
 export function usePropertiesPage(t: (k: string) => string) {
-  const [properties, setProperties] = useState<Property[]>([]);
+  const [allProperties, setAllProperties] = useState<Property[]>([]);
+  const [ownershipSegment, setOwnershipSegment] = useState<PropertyOwnershipSegment>('my');
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -26,10 +37,15 @@ export function usePropertiesPage(t: (k: string) => string) {
       status: statusFilter || undefined,
       dealType: dealTypeFilter || undefined,
     });
-    setProperties(data);
+    setAllProperties(data);
     setLoading(false);
     return data;
   }, [dealTypeFilter, search, statusFilter, typeFilter]);
+
+  const properties = allProperties.filter((item) => {
+    const isPotential = isPotentialStatus(item.status);
+    return ownershipSegment === 'potential' ? isPotential : !isPotential;
+  });
 
   useEffect(() => {
     fetchProps();
@@ -50,8 +66,17 @@ export function usePropertiesPage(t: (k: string) => string) {
     fetchProps();
   }, [fetchProps, t]);
 
+  const handleOwnershipChange = useCallback(async (property: Property, target: PropertyOwnershipSegment) => {
+    const nextStatus = toStatusByOwnership(target);
+    if (property.status === nextStatus) return;
+    await updateProperty(property.id, { status: nextStatus });
+    await fetchProps();
+  }, [fetchProps]);
+
   return {
     properties,
+    ownershipSegment,
+    setOwnershipSegment,
     loading,
     search,
     setSearch,
@@ -78,5 +103,6 @@ export function usePropertiesPage(t: (k: string) => string) {
     fetchProps,
     handleSave,
     handleDelete,
+    handleOwnershipChange,
   };
 }

@@ -4,6 +4,7 @@ import { leadFacade } from '../../lead-management';
 import { findDefaultFunnel } from '../repositories/funnel.repository';
 import {
   bulkSetDealStage,
+  countDeals,
   createDeal,
   createDealChecklistItem,
   createDealComment,
@@ -26,6 +27,64 @@ function parseFloatOrNull(value: unknown) {
   return value ? parseFloat(String(value)) : null;
 }
 
+function normalizeText(value: unknown) {
+  const text = String(value ?? '').trim();
+  return text.length > 0 ? text : undefined;
+}
+
+function buildDealWhere(query: Record<string, unknown>, userId?: string, role?: string) {
+  const where: Record<string, unknown> = { ...ownership(role, userId) };
+  const funnelId = normalizeText(query.funnelId);
+  const stage = normalizeText(query.stage);
+  const managerId = normalizeText(query.managerId);
+  const currency = normalizeText(query.currency);
+  const search = normalizeText(query.query);
+
+  if (funnelId) where.funnelId = funnelId;
+  if (stage) where.stage = stage;
+  if (managerId) where.assignedToId = managerId;
+  if (currency) where.currency = currency;
+
+  if (search) {
+    where.OR = [
+      { title: { contains: search, mode: 'insensitive' } },
+      {
+        lead: {
+          is: {
+            OR: [
+              { firstName: { contains: search, mode: 'insensitive' } },
+              { lastName: { contains: search, mode: 'insensitive' } },
+              { phone: { contains: search, mode: 'insensitive' } },
+            ],
+          },
+        },
+      },
+      {
+        property: {
+          is: {
+            OR: [
+              { title: { contains: search, mode: 'insensitive' } },
+              { address: { contains: search, mode: 'insensitive' } },
+            ],
+          },
+        },
+      },
+      {
+        assignedTo: {
+          is: {
+            OR: [
+              { name: { contains: search, mode: 'insensitive' } },
+              { email: { contains: search, mode: 'insensitive' } },
+            ],
+          },
+        },
+      },
+    ];
+  }
+
+  return where;
+}
+
 async function resolveDealFunnelId(input: Record<string, unknown>) {
   if (input.funnelId !== undefined) {
     return input.funnelId ?? null;
@@ -35,8 +94,17 @@ async function resolveDealFunnelId(input: Record<string, unknown>) {
   return defaultFunnel?.id ?? null;
 }
 
-export async function listDeals(userId?: string, role?: string) {
-  return findDeals(ownership(role, userId));
+export async function listDeals(query: Record<string, unknown>, userId?: string, role?: string) {
+  const page = Math.max(1, Number(query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(query.limit) || 20));
+  const where = buildDealWhere(query, userId, role);
+
+  const [items, total] = await Promise.all([
+    findDeals(where, (page - 1) * limit, limit),
+    countDeals(where),
+  ]);
+
+  return { items, total, page, limit, hasMore: page * limit < total };
 }
 
 export async function addDeal(input: Record<string, unknown>, userId?: string) {

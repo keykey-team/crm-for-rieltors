@@ -1,4 +1,6 @@
 import PDFDocument from 'pdfkit';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { customAlphabet } from 'nanoid';
 import { badRequest, forbidden } from '../../../common/shared-kernel/errors';
 import { isAdminRole } from '../../../common/shared-kernel/roles';
@@ -23,6 +25,12 @@ export interface CreateSelectionOptions {
   message?: string;
   expiresAt?: string | null;
   agencyId?: string;
+}
+
+export interface UpdateSelectionItemOptions {
+  agentComment?: string | null;
+  clientReaction?: ClientReaction | null;
+  clientNote?: string | null;
 }
 
 export interface SelectionsDependencies {
@@ -91,10 +99,29 @@ function buildReactionContent(reaction: ClientReaction, note?: string) {
   return note ? `${label}: ${note}` : label;
 }
 
+function resolvePdfFontPath() {
+  const candidates = [
+    '/usr/share/fonts/TTF/DejaVuSans.ttf',
+    '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+    '/usr/share/fonts/dejavu/DejaVuSans.ttf',
+    'C:/Windows/Fonts/arial.ttf',
+    'C:/Windows/Fonts/segoeui.ttf',
+    join(process.cwd(), 'node_modules', 'pdfkit', 'js', 'data', 'Helvetica.afm'),
+  ];
+
+  return candidates.find((item) => existsSync(item));
+}
+
 export function createSelectionsService(deps: SelectionsDependencies = defaultDeps) {
   return {
     async listSelections(userId: string, leadId?: string) {
       return deps.listSelectionsByUser(userId, leadId);
+    },
+
+    async getSelection(selectionId: string, userId?: string, role?: string) {
+      const selection = await deps.findSelectionById(selectionId);
+      assertSelectionAccess(selection, userId, role);
+      return selection;
     },
 
     async createSelection(userId: string, leadId: string, propertyIds: string[], options: CreateSelectionOptions = {}) {
@@ -151,10 +178,16 @@ export function createSelectionsService(deps: SelectionsDependencies = defaultDe
       return deps.findSelectionById(selectionId);
     },
 
-    async updateItemComment(selectionId: string, itemId: string, agentComment: string | null, userId?: string, role?: string) {
+    async updateItem(selectionId: string, itemId: string, changes: UpdateSelectionItemOptions, userId?: string, role?: string) {
       const selection = await deps.findSelectionById(selectionId);
       assertSelectionAccess(selection, userId, role);
-      await deps.updateSelectionItem(itemId, { agentComment: agentComment || null });
+      const hasReaction = changes.clientReaction !== undefined;
+      await deps.updateSelectionItem(itemId, {
+        ...(changes.agentComment !== undefined ? { agentComment: changes.agentComment || null } : {}),
+        ...(hasReaction ? { clientReaction: changes.clientReaction || null } : {}),
+        ...(changes.clientNote !== undefined ? { clientNote: changes.clientNote || null } : {}),
+        ...(hasReaction ? { reactedAt: changes.clientReaction ? new Date() : null } : {}),
+      });
       return deps.findSelectionById(selectionId);
     },
 
@@ -177,6 +210,13 @@ export function createSelectionsService(deps: SelectionsDependencies = defaultDe
     },
 
     async getBySlug(slug: string) {
+      const selection = await deps.findSelectionBySlug(slug);
+      if (!selection) throw badRequest('Selection not found');
+      if (selection.expiresAt && new Date(selection.expiresAt).getTime() < Date.now()) throw badRequest('Selection expired');
+      return selection;
+    },
+
+    async recordView(slug: string) {
       const selection = await deps.findSelectionBySlug(slug);
       if (!selection) throw badRequest('Selection not found');
       if (selection.expiresAt && new Date(selection.expiresAt).getTime() < Date.now()) throw badRequest('Selection expired');
@@ -203,6 +243,7 @@ export function createSelectionsService(deps: SelectionsDependencies = defaultDe
         direction: 'inbound',
         content: buildReactionContent(reaction, clientNote),
         userId: null,
+        agencyId: selection.agencyId,
       });
 
       return deps.findSelectionBySlug(slug);
@@ -214,8 +255,11 @@ export function createSelectionsService(deps: SelectionsDependencies = defaultDe
       const safeSelection = selection as NonNullable<typeof selection>;
 
       const doc = new PDFDocument({ margin: 40, size: 'A4' });
+      const fontPath = resolvePdfFontPath();
       const chunks: Buffer[] = [];
       doc.on('data', (chunk) => chunks.push(chunk));
+
+      if (fontPath) doc.font(fontPath);
 
       const title = safeSelection.title || `Selection #${safeSelection.id}`;
       doc.fontSize(18).text(title);

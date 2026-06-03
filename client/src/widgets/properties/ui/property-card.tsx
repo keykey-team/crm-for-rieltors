@@ -1,27 +1,40 @@
 'use client';
 import { useTranslation } from '@/shared/lib/i18n/context';
-import { Building, MapPin, Maximize, Layers, Edit2, Trash2, Grid3X3, BedDouble, ArrowUpRight } from 'lucide-react';
+import { Building, MapPin, Maximize, Layers, Edit2, Trash2, Grid3X3, BedDouble, ArrowUpRight, RadioTower } from 'lucide-react';
 import { formatPrice } from '@/shared/lib/format';
-import { PROPERTY_TYPES, PROPERTY_STATUSES } from '@/shared/lib/constants';
-import type { Property } from '@/entities/property';
+import type { Property, PropertyOption } from '@/entities/property';
 import { PropertyStatusBadge, PropertyTypeBadge } from '@/entities/property';
 import { PriceHistoryBadge } from '@/entities/property-price-history';
 import { cn } from '@/shared/lib/utils';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu';
 
 interface Props {
   property: Property;
   view: 'grid' | 'list';
+  ownership: 'my' | 'potential';
+  typeOptions: PropertyOption[];
+  statusOptions: PropertyOption[];
+  dealTypeOptions: PropertyOption[];
+  publicationChannelOptions: PropertyOption[];
+  onOwnershipChange: (next: 'my' | 'potential') => void;
   onEdit: () => void;
   onDelete: () => void;
   onChessGrid?: () => void;
 }
 
-export function PropertyCard({ property: p, view, onEdit, onDelete, onChessGrid }: Props) {
+export function PropertyCard({ property: p, view, ownership, typeOptions, statusOptions, dealTypeOptions, publicationChannelOptions, onOwnershipChange, onEdit, onDelete, onChessGrid }: Props) {
   const { t } = useTranslation();
-  const typeLbl = t(`const.propertyType.${p?.type}`) || PROPERTY_TYPES.find((pt: any) => pt.value === p?.type)?.label || p?.type;
-  const st = PROPERTY_STATUSES.find((s: any) => s.value === p?.status);
+  const typeLbl = typeOptions.find((pt) => pt.value === p?.type)?.label || t(`const.propertyType.${p?.type}`) || p?.type;
+  const st = statusOptions.find((s) => s.value === p?.status);
   const statusColor = st?.color ?? '#72BF78';
-  const getDealTypeLabel = (value: string) => value === 'sale' ? t('leads.dialog.needSell') : value === 'rent' ? t('leads.dialog.needRent') : value;
+  const getDealTypeLabel = (value: string) => dealTypeOptions.find((item) => item.value === value)?.label || value;
+  const publicationLabels = (p?.publications ?? []).map((publication) => publicationChannelOptions.find((item) => item.value === publication.channel)?.label || publication.channel);
+  const publicationPreview = publicationLabels.slice(0, 2);
+  const hiddenPublicationCount = Math.max(0, publicationLabels.length - publicationPreview.length);
+  const ownershipBadgeClass = ownership === 'my'
+    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+    : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30';
+  const ownershipLabel = ownership === 'my' ? t('properties.segment.my') : t('properties.segment.potential');
 
   if (view === 'list') {
     return (
@@ -46,12 +59,40 @@ export function PropertyCard({ property: p, view, onEdit, onDelete, onChessGrid 
             {p?.area && <span className="flex items-center gap-1"><Maximize className="w-3.5 h-3.5" />{p.area} м²</span>}
             {p?.rooms && <span className="flex items-center gap-1"><BedDouble className="w-3.5 h-3.5" />{p.rooms}</span>}
             {p?.dealTypes?.length ? <span>{p.dealTypes.map(getDealTypeLabel).join(', ')}</span> : null}
+            {publicationPreview.length ? (
+              <span className="flex items-center gap-1.5 max-w-[220px] truncate">
+                <RadioTower className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate">
+                  {publicationPreview.join(', ')}
+                  {hiddenPublicationCount ? ` +${hiddenPublicationCount}` : ''}
+                </span>
+              </span>
+            ) : null}
           </div>
           <div className="flex items-center gap-2">
             <span className="font-display font-bold text-sm text-primary">{formatPrice(p?.price, p?.currency ?? undefined)}</span>
             {p?.priceHistory?.length ? <PriceHistoryBadge items={p.priceHistory} t={t} /> : null}
           </div>
-          <PropertyStatusBadge status={p?.status} t={t} />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                onClick={(event) => event.stopPropagation()}
+                className={cn('text-[10px] px-2 py-0.5 rounded-full font-semibold transition-opacity hover:opacity-85', ownershipBadgeClass)}
+              >
+                {ownershipLabel}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" onClick={(event) => event.stopPropagation()}>
+              <DropdownMenuItem onSelect={() => onOwnershipChange('my')}>
+                {t('properties.segment.my')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onOwnershipChange('potential')}>
+                {t('properties.segment.potential')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <PropertyStatusBadge status={p?.status} t={t} options={statusOptions} />
           <div className="flex gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity">
             {onChessGrid && <button onClick={onChessGrid} className="p-2 rounded-xl hover:bg-[#073B34]/10 transition"><Grid3X3 className="w-4 h-4 text-[#073B34] dark:text-emerald-400" /></button>}
             <button onClick={onEdit} className="p-2 rounded-xl hover:bg-muted transition"><Edit2 className="w-4 h-4 text-muted-foreground" /></button>
@@ -79,9 +120,30 @@ export function PropertyCard({ property: p, view, onEdit, onDelete, onChessGrid 
             {t(`const.propertyStatus.${p?.status}`) || st?.label || p?.status}
           </span>
         </div>
+        <div className="absolute top-12 left-3">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                onClick={(event) => event.stopPropagation()}
+                className={cn('px-2.5 py-1 rounded-full text-[11px] font-semibold backdrop-blur-md transition-opacity hover:opacity-85', ownershipBadgeClass)}
+              >
+                {ownershipLabel}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" onClick={(event) => event.stopPropagation()}>
+              <DropdownMenuItem onSelect={() => onOwnershipChange('my')}>
+                {t('properties.segment.my')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onOwnershipChange('potential')}>
+                {t('properties.segment.potential')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
         {/* Type badge */}
         <div className="absolute top-3 right-3">
-          <PropertyTypeBadge type={p?.type} t={t} />
+          <PropertyTypeBadge type={p?.type} t={t} options={typeOptions} />
         </div>
         {/* Hover actions */}
         <div className="absolute bottom-3 right-3 flex gap-1.5 opacity-0 group-hover/card:opacity-100 translate-y-2 group-hover/card:translate-y-0 transition-all duration-200" onClick={e => e.stopPropagation()}>
@@ -127,6 +189,24 @@ export function PropertyCard({ property: p, view, onEdit, onDelete, onChessGrid 
                 {getDealTypeLabel(dealType)}
               </span>
             ))}
+          </div>
+        ) : null}
+        {publicationPreview.length ? (
+          <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-muted-foreground mr-1">
+              <RadioTower className="w-3 h-3" />
+              {t('properties.publications.shortLabel')}
+            </span>
+            {publicationPreview.map((label) => (
+              <span key={label} className="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-muted/60 text-foreground/80">
+                {label}
+              </span>
+            ))}
+            {hiddenPublicationCount ? (
+              <span className="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-muted/60 text-muted-foreground">
+                +{hiddenPublicationCount}
+              </span>
+            ) : null}
           </div>
         ) : null}
         {/* Price */}

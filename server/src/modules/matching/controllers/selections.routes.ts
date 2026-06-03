@@ -17,6 +17,10 @@ router.get('/selections', validateQuery(listSelectionsSchema), async (req, res) 
   res.json(await selectionsService.listSelections(req.user!.id, leadId));
 });
 
+router.get('/selections/:id', async (req, res) => {
+  res.json(await selectionsService.getSelection(req.params.id, req.user?.id, req.user?.role));
+});
+
 router.post('/selections', validateBody(createSelectionSchema), async (req, res) => {
   const selection = await selectionsService.createSelection(req.user!.id, req.body.leadId, req.body.propertyIds, {
     title: req.body.title,
@@ -48,7 +52,11 @@ router.put('/selections/:id/items/reorder', validateBody(reorderSelectionItemsSc
 });
 
 router.put('/selections/:id/items/:itemId', validateBody(updateSelectionItemSchema), async (req, res) => {
-  res.json(await selectionsService.updateItemComment(req.params.id, req.params.itemId, req.body.agentComment ?? null, req.user?.id, req.user?.role));
+  res.json(await selectionsService.updateItem(req.params.id, req.params.itemId, {
+    agentComment: req.body.agentComment,
+    clientReaction: req.body.clientReaction,
+    clientNote: req.body.clientNote,
+  }, req.user?.id, req.user?.role));
 });
 
 router.get('/selections/:id/pdf', async (req, res) => {

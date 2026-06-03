@@ -1,25 +1,45 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { Plus, Search, Building, LayoutGrid, List, X, MapPin, Maximize, Layers, DollarSign, Edit2, Grid3X3, Trash2, BedDouble } from 'lucide-react';
 import { PropertyCard } from '@/widgets/properties/ui/property-card';
 import { PropertyDialog } from '@/widgets/properties/ui/property-dialog';
 import { ChessGrid } from '@/widgets/properties/ui/chess-grid';
 import { PropertyPriceHistoryWidget } from '@/widgets/property-price-history';
 import { AddPricePointModal } from '@/features/add-price-point';
-import { PROPERTY_DEAL_TYPES, PROPERTY_TYPES, PROPERTY_STATUSES } from '@/shared/lib/constants';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/lib/i18n/context';
 import { HintTooltip } from '@/shared/ui/hint-tooltip';
 import { formatPrice } from '@/shared/lib/format';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { usePropertiesPage } from '@/widgets/properties/model/use-properties-page';
+import { getPropertyProfile, usePropertyOptions } from '@/entities/property';
+import type { PropertyProfile } from '@/entities/property';
+
+function startOfDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function getActivityActionLabel(action: string, t: (key: string) => string) {
+  const normalized = action.toLowerCase();
+  if (normalized === 'price_change') return t('properties.preview.activity.priceChange');
+  if (normalized === 'create') return t('properties.preview.activity.create');
+  if (normalized === 'update') return t('properties.preview.activity.update');
+  if (normalized === 'delete') return t('properties.preview.activity.delete');
+  return t('properties.preview.activity.other');
+}
 
 export function PropertiesClient() {
   const { t } = useTranslation();
   const [addPointPropertyId, setAddPointPropertyId] = useState<string | null>(null);
-  const getDealTypeLabel = (value: string) => value === 'sale' ? t('leads.dialog.needSell') : value === 'rent' ? t('leads.dialog.needRent') : value;
+  const [previewProfile, setPreviewProfile] = useState<PropertyProfile | null>(null);
+  const [previewProfileLoading, setPreviewProfileLoading] = useState(false);
+  const { typeOptions, statusOptions, dealTypeOptions, publicationChannelOptions, publicationStatusOptions } = usePropertyOptions(t);
+  const getDealTypeLabel = (value: string) => dealTypeOptions.find((item) => item.value === value)?.label || value;
   const {
     properties,
+    ownershipSegment,
+    setOwnershipSegment,
     loading,
     search,
     setSearch,
@@ -46,7 +66,76 @@ export function PropertiesClient() {
     fetchProps,
     handleSave,
     handleDelete,
+    handleOwnershipChange,
   } = usePropertiesPage(t);
+
+  const isPotentialProperty = (status?: string | null) => status === 'inactive';
+
+  useEffect(() => {
+    if (!previewProp?.id) {
+      setPreviewProfile(null);
+      return;
+    }
+
+    let active = true;
+    setPreviewProfileLoading(true);
+    getPropertyProfile(previewProp.id)
+      .then((data) => {
+        if (active) setPreviewProfile(data);
+      })
+      .catch(() => {
+        if (active) setPreviewProfile(null);
+      })
+      .finally(() => {
+        if (active) setPreviewProfileLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [previewProp?.id]);
+
+  const previewProfileResolved = previewProp && previewProfile?.id === previewProp.id ? previewProfile : null;
+  const previewProfileDeals = previewProfileResolved?.deals ?? [];
+  const previewProfileShowings = previewProfileResolved?.showings ?? [];
+  const previewProfileActivity = previewProfileResolved?.activity;
+  const previewPriceStats = previewProfileResolved?.priceStats ?? null;
+  const previewMetrics = previewProfileResolved?.metrics ?? null;
+
+  const groupedActivity = useMemo(() => {
+    const today = startOfDay(new Date());
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+
+    return (previewProfileActivity ?? [])
+      .slice()
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .reduce<Array<{ label: string; items: NonNullable<typeof previewProfileActivity> }>>((acc, item) => {
+        const current = new Date(item.createdAt);
+        const currentDay = startOfDay(current);
+        let label = current.toLocaleDateString();
+        if (currentDay.getTime() === today.getTime()) label = t('properties.preview.today');
+        if (currentDay.getTime() === yesterday.getTime()) label = t('properties.preview.yesterday');
+
+        const bucket = acc.find((entry) => entry.label === label);
+        if (bucket) {
+          bucket.items.push(item);
+        } else {
+          acc.push({ label, items: [item] });
+        }
+        return acc;
+      }, []);
+  }, [previewProfileActivity, t]);
+
+  const previewPublicationEntries = useMemo(
+    () =>
+      (previewProfileResolved?.publications ?? []).map((publication) => ({
+        ...publication,
+        channelLabel: publicationChannelOptions.find((item) => item.value === publication.channel)?.label || publication.channel,
+        statusLabel: publicationStatusOptions.find((item) => item.value === publication.status)?.label || publication.status,
+      })),
+    [previewProfileResolved?.publications, publicationChannelOptions, publicationStatusOptions],
+  );
 
   return (
     <div className="space-y-6">
@@ -71,6 +160,30 @@ export function PropertiesClient() {
 
       {/* Filters */}
       <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setOwnershipSegment('my')}
+            className={cn(
+              'px-3 py-2 rounded-xl text-sm font-semibold border transition-all',
+              ownershipSegment === 'my'
+                ? 'border-primary bg-primary/10 text-primary shadow-sm'
+                : 'border-border/60 dark:border-border/40 bg-card text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {t('properties.segment.my')}
+          </button>
+          <button
+            onClick={() => setOwnershipSegment('potential')}
+            className={cn(
+              'px-3 py-2 rounded-xl text-sm font-semibold border transition-all',
+              ownershipSegment === 'potential'
+                ? 'border-amber-300 bg-amber-500/10 text-amber-700 dark:text-amber-300 shadow-sm'
+                : 'border-border/60 dark:border-border/40 bg-card text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {t('properties.segment.potential')}
+          </button>
+        </div>
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
@@ -81,17 +194,17 @@ export function PropertiesClient() {
           <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}
             className="px-3 py-2 rounded-xl border border-border/60 dark:border-border/40 bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 flex-shrink-0">
             <option value="">{t('common.allTypes')}</option>
-            {PROPERTY_TYPES.map((tp: any) => <option key={tp.value} value={tp.value}>{tp.label}</option>)}
+            {typeOptions.map((tp) => <option key={tp.value} value={tp.value}>{tp.label}</option>)}
           </select>
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
             className="px-3 py-2 rounded-xl border border-border/60 dark:border-border/40 bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 flex-shrink-0">
             <option value="">{t('common.allStatuses')}</option>
-            {PROPERTY_STATUSES.map((s: any) => <option key={s.value} value={s.value}>{s.label}</option>)}
+            {statusOptions.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
           <select value={dealTypeFilter} onChange={(e) => setDealTypeFilter(e.target.value)}
             className="px-3 py-2 rounded-xl border border-border/60 dark:border-border/40 bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 flex-shrink-0">
             <option value="">{t('common.allDealTypes')}</option>
-            {PROPERTY_DEAL_TYPES.map((item) => <option key={item.value} value={item.value}>{getDealTypeLabel(item.value)}</option>)}
+            {dealTypeOptions.map((item) => <option key={item.value} value={item.value}>{getDealTypeLabel(item.value)}</option>)}
           </select>
           <div className="flex bg-card rounded-xl border border-border/60 dark:border-border/40 p-0.5 flex-shrink-0 ml-auto">
             <button onClick={() => setView('grid')} className={cn('p-2 rounded-lg transition-all', view === 'grid' ? 'bg-primary/10 text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground')}>
@@ -120,6 +233,12 @@ export function PropertiesClient() {
         <div className={view === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-3'}>
           {(properties ?? []).map((p: any) => (
             <PropertyCard key={p?.id} property={p} view={view}
+              ownership={isPotentialProperty(p?.status) ? 'potential' : 'my'}
+              typeOptions={typeOptions}
+              statusOptions={statusOptions}
+              dealTypeOptions={dealTypeOptions}
+              publicationChannelOptions={publicationChannelOptions}
+              onOwnershipChange={(target) => handleOwnershipChange(p, target)}
               onEdit={() => setPreviewProp(p)}
               onDelete={() => handleDelete(p?.id)}
               onChessGrid={() => { setChessGridPropId(p?.id); setChessGridFloors(p?.totalFloors || 10); setChessGridTitle(p?.title || ''); }} />
@@ -132,8 +251,8 @@ export function PropertiesClient() {
       {/* Quick Preview Modal — Apple Sheet style */}
       {previewProp && (() => {
         const p = previewProp;
-        const tp = PROPERTY_TYPES.find((x: any) => x.value === p.type);
-        const st = PROPERTY_STATUSES.find((x: any) => x.value === p.status);
+        const tp = typeOptions.find((x) => x.value === p.type);
+        const st = statusOptions.find((x) => x.value === p.status);
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setPreviewProp(null)}>
             <div className="bg-card rounded-3xl border border-border/60 dark:border-border/40 w-full max-w-lg mx-4 overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
@@ -163,8 +282,8 @@ export function PropertiesClient() {
               {/* Details */}
               <div className="p-5 space-y-4">
                  <div className="flex items-center gap-2 flex-wrap">
-                  {tp && <span className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary font-semibold">{t(`const.propertyType.${p.type}`) || tp.label}</span>}
-                  {st && <span className="text-xs px-2.5 py-1 rounded-full font-semibold" style={{ backgroundColor: st.color + '15', color: st.color }}>{t(`const.propertyStatus.${p.status}`) || st.label}</span>}
+                  {tp && <span className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary font-semibold">{tp.label}</span>}
+                  {st && <span className="text-xs px-2.5 py-1 rounded-full font-semibold" style={{ backgroundColor: (st.color ?? '#72BF78') + '15', color: st.color ?? '#72BF78' }}>{st.label}</span>}
                   {p.dealTypes?.map((dealType: string) => (
                     <span key={dealType} className="text-xs px-2.5 py-1 rounded-full bg-muted text-muted-foreground font-semibold">
                       {getDealTypeLabel(dealType)}
@@ -172,9 +291,11 @@ export function PropertiesClient() {
                   ))}
                 </div>
                 <Tabs defaultValue="details">
-                  <TabsList className="grid w-full grid-cols-2">
+                  <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="details">{t('common.details')}</TabsTrigger>
                     <TabsTrigger value="priceHistory">{t('priceHistory.tabTitle')}</TabsTrigger>
+                    <TabsTrigger value="relations">{t('properties.preview.relationsTab')}</TabsTrigger>
+                    <TabsTrigger value="activity">{t('properties.preview.activityTab')}</TabsTrigger>
                   </TabsList>
                   <TabsContent value="details" className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
@@ -211,13 +332,137 @@ export function PropertiesClient() {
                     {p.description && (
                       <p className="text-sm text-muted-foreground leading-relaxed">{p.description}</p>
                     )}
+                    {previewPublicationEntries.length ? (
+                      <div className="rounded-2xl border border-border/60 dark:border-border/40 p-3 space-y-2">
+                        <p className="text-xs font-semibold text-muted-foreground">{t('properties.preview.publications')}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {previewPublicationEntries.slice(0, 3).map((publication) => (
+                            <span key={publication.id ?? `${publication.channel}-${publication.status}-${publication.url ?? ''}`} className="inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium">
+                              <span>{publication.channelLabel}</span>
+                              <span className="text-muted-foreground">{publication.statusLabel}</span>
+                            </span>
+                          ))}
+                          {previewPublicationEntries.length > 3 ? (
+                            <span className="inline-flex items-center rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+                              +{previewPublicationEntries.length - 3}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : null}
                   </TabsContent>
                   <TabsContent value="priceHistory">
                     <PropertyPriceHistoryWidget propertyId={p.id} t={t} />
                   </TabsContent>
+                  <TabsContent value="relations" className="space-y-3">
+                    {previewProfileLoading ? (
+                      <div className="text-sm text-muted-foreground">{t('common.loading')}</div>
+                    ) : (
+                      <>
+                        {previewPriceStats ? (
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="rounded-xl border border-border/60 dark:border-border/40 px-3 py-2">
+                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('properties.preview.currentPrice')}</p>
+                              <p className="font-semibold text-sm">{formatPrice(previewPriceStats.current, previewPriceStats.currency)}</p>
+                            </div>
+                            <div className="rounded-xl border border-border/60 dark:border-border/40 px-3 py-2">
+                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('properties.preview.priceChanges')}</p>
+                              <p className="font-semibold text-sm">{previewPriceStats.changesCount}</p>
+                            </div>
+                          </div>
+                        ) : null}
+
+                        {previewMetrics ? (
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="rounded-xl border border-border/60 dark:border-border/40 px-3 py-2">
+                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('properties.preview.dealsTotal')}</p>
+                              <p className="font-semibold text-sm">{previewMetrics.dealsTotal}</p>
+                            </div>
+                            <div className="rounded-xl border border-border/60 dark:border-border/40 px-3 py-2">
+                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('properties.preview.dealsVolume')}</p>
+                              <p className="font-semibold text-sm">{formatPrice(previewMetrics.dealsAmountSum, p.currency ?? 'USD')}</p>
+                            </div>
+                            <div className="rounded-xl border border-border/60 dark:border-border/40 px-3 py-2">
+                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('properties.preview.showingsUpcoming')}</p>
+                              <p className="font-semibold text-sm">{previewMetrics.showingsUpcoming}</p>
+                            </div>
+                            <div className="rounded-xl border border-border/60 dark:border-border/40 px-3 py-2">
+                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('properties.preview.showingsCompleted')}</p>
+                              <p className="font-semibold text-sm">{previewMetrics.showingsCompleted}</p>
+                            </div>
+                          </div>
+                        ) : null}
+
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground mb-2">{t('properties.preview.deals')}</p>
+                          {previewProfileDeals.length ? (
+                            <div className="space-y-1.5">
+                              {previewProfileDeals.slice(0, 5).map((deal) => (
+                                <div key={deal.id} className="rounded-lg border border-border/60 dark:border-border/40 px-3 py-2 text-xs">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="font-medium truncate">{deal.title}</span>
+                                    <span className="text-muted-foreground">{deal.stage || '-'}</span>
+                                  </div>
+                                  {deal.amount ? <p className="text-muted-foreground mt-0.5">{formatPrice(deal.amount, deal.currency ?? 'USD')}</p> : null}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">{t('properties.preview.emptyDeals')}</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground mb-2">{t('properties.preview.showings')}</p>
+                          {previewProfileShowings.length ? (
+                            <div className="space-y-1.5">
+                              {previewProfileShowings.slice(0, 5).map((showing) => (
+                                <div key={showing.id} className="rounded-lg border border-border/60 dark:border-border/40 px-3 py-2 text-xs">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="font-medium">{new Date(showing.scheduledAt).toLocaleString()}</span>
+                                    <span className="text-muted-foreground">{showing.status}</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">{t('properties.preview.emptyShowings')}</p>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </TabsContent>
+                  <TabsContent value="activity" className="space-y-2">
+                    {previewProfileLoading ? (
+                      <div className="text-sm text-muted-foreground">{t('common.loading')}</div>
+                    ) : groupedActivity.length ? (
+                      groupedActivity.map((group) => (
+                        <div key={group.label} className="space-y-1.5">
+                          <p className="text-[11px] uppercase tracking-wide text-muted-foreground px-1">{group.label}</p>
+                          {group.items.slice(0, 8).map((item) => (
+                            <div key={item.id} className="rounded-lg border border-border/60 dark:border-border/40 px-3 py-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-xs font-medium">{getActivityActionLabel(item.action, t)}</p>
+                                <p className="text-[11px] text-muted-foreground">{new Date(item.createdAt).toLocaleTimeString()}</p>
+                              </div>
+                              {item.details ? <p className="text-xs text-muted-foreground mt-1">{item.details}</p> : null}
+                            </div>
+                          ))}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-muted-foreground">{t('properties.preview.emptyActivity')}</p>
+                    )}
+                  </TabsContent>
                 </Tabs>
                 {/* Actions */}
                 <div className="flex items-center gap-2 px-4 sm:px-5 py-3 sm:py-4 border-t border-border/60 dark:border-border/40">
+                  <Link
+                    href={`/properties/${p.id}`}
+                    className="flex items-center gap-2 px-3 sm:px-5 py-2.5 bg-card border border-border/60 dark:border-border/40 rounded-xl text-sm font-semibold hover:bg-muted transition active:scale-95"
+                  >
+                    {t('properties.preview.openProfile')}
+                  </Link>
                   <button onClick={() => { setPreviewProp(null); setEditProp(p); setDialogOpen(true); }}
                     className="flex items-center gap-2 px-3 sm:px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:opacity-90 transition shadow-sm active:scale-95">
                     <Edit2 className="w-3.5 h-3.5" /> {t('common.edit')}

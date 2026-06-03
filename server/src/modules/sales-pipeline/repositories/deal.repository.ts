@@ -1,16 +1,21 @@
 import { prisma } from '../../../common/infrastructure/db/prisma';
 
-export async function findDeals(where: Record<string, unknown>) {
+export async function findDeals(where: Record<string, unknown>, skip = 0, take = 200) {
   return prisma.deal.findMany({
     where: where as any,
     orderBy: { createdAt: 'desc' },
-    take: 200,
+    skip,
+    take,
     include: {
       lead: { select: { id: true, firstName: true, lastName: true, phone: true } },
       property: { select: { id: true, title: true, address: true } },
       assignedTo: { select: { id: true, name: true, avatar: true } },
     },
   });
+}
+
+export async function countDeals(where: Record<string, unknown>) {
+  return prisma.deal.count({ where: where as any });
 }
 
 export async function createDeal(data: Record<string, unknown>) {

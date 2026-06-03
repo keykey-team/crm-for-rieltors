@@ -7,6 +7,9 @@ import {
   createPropertyUnit,
   deleteProperty,
   deletePropertyUnit,
+  findPropertyActivity,
+  findPropertyProfileMetrics,
+  findPropertyProfile,
   findPropertyPriceHistory,
   findPropertyPriceStats,
   findProperties,
@@ -14,6 +17,18 @@ import {
   updatePropertyWithPriceHistory,
   updatePropertyUnit,
 } from '../repositories/property.repository';
+import {
+  buildCreateDocumentsRelation,
+  buildCreateMediaLinksRelation,
+  buildCreatePhotosRelation,
+  buildCreatePublicationsRelation,
+  buildUpdateDocumentsRelation,
+  buildUpdateMediaLinksRelation,
+  buildUpdatePhotosRelation,
+  buildUpdatePublicationsRelation,
+  withResolvedPhotoUrls,
+  withResolvedPhotoUrlsList,
+} from './property-photos';
 
 function getRequiredId(value: unknown, field = 'id'): string {
   const id = String(value ?? '').trim();
@@ -35,8 +50,18 @@ function parseNullableFloat(value: unknown): number | null | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+function normalizeStringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+}
+
+function parseBoolean(value: unknown): boolean | undefined {
+  if (typeof value === 'boolean') return value;
+  return undefined;
+}
+
 function normalizePropertyPayload(input: PropertyPayload) {
-  const { priceHistoryReason, priceHistoryNote, ...rest } = input;
+  const { priceHistoryReason, priceHistoryNote, photos, documents, mediaLinks, publications, ...rest } = input;
   void priceHistoryReason;
   void priceHistoryNote;
   const dealTypes = Array.isArray(input.dealTypes)
@@ -45,14 +70,47 @@ function normalizePropertyPayload(input: PropertyPayload) {
 
   return {
     ...rest,
+    ownerName: input.ownerName === '' ? null : input.ownerName,
+    ownerPhone: input.ownerPhone === '' ? null : input.ownerPhone,
+    developerName: input.developerName === '' ? null : input.developerName,
+    developerContact: input.developerContact === '' ? null : input.developerContact,
     rooms: parseNullableInt(input.rooms),
+    bedrooms: parseNullableInt(input.bedrooms),
+    bathrooms: parseNullableInt(input.bathrooms),
     area: parseNullableFloat(input.area),
+    landArea: parseNullableFloat(input.landArea),
     floor: parseNullableInt(input.floor),
     totalFloors: parseNullableInt(input.totalFloors),
     price: parseNullableFloat(input.price),
     dealTypes,
+    paymentCondition: input.paymentCondition === '' ? null : input.paymentCondition,
+    communicationTypes: normalizeStringArray(input.communicationTypes),
+    tags: normalizeStringArray(input.tags),
+    isPublished: parseBoolean(input.isPublished),
+    isFeatured: parseBoolean(input.isFeatured),
+    publicationNotes: input.publicationNotes === '' ? null : input.publicationNotes,
+    internalCode: input.internalCode === '' ? null : input.internalCode,
+    source: input.source === '' ? null : input.source,
     district: input.district === '' ? null : input.district,
+    city: input.city === '' ? null : input.city,
+    layoutType: input.layoutType === '' ? null : input.layoutType,
+    repairType: input.repairType === '' ? null : input.repairType,
+    heatingType: input.heatingType === '' ? null : input.heatingType,
+    wallType: input.wallType === '' ? null : input.wallType,
+    realEstateClass: input.realEstateClass === '' ? null : input.realEstateClass,
+    commercialPurpose: input.commercialPurpose === '' ? null : input.commercialPurpose,
+    parkingType: input.parkingType === '' ? null : input.parkingType,
+    parkingSpaces: parseNullableInt(input.parkingSpaces),
+    yearBuilt: parseNullableInt(input.yearBuilt),
+    ceilingHeight: parseNullableFloat(input.ceilingHeight),
+    managerComment: input.managerComment === '' ? null : input.managerComment,
+    internalDescription: input.internalDescription === '' ? null : input.internalDescription,
+    publicDescription: input.publicDescription === '' ? null : input.publicDescription,
     description: input.description === '' ? null : input.description,
+    mediaLinks,
+    publications,
+    documents,
+    photos,
   };
 }
 
@@ -79,7 +137,7 @@ export async function listProperties(query: PropertyQuery) {
       { address: { contains: query.search, mode: 'insensitive' } },
     ];
   }
-  return findProperties(where);
+  return withResolvedPhotoUrlsList(await findProperties(where));
 }
 
 export async function addProperty(input: PropertyPayload, userId?: string) {
@@ -87,14 +145,51 @@ export async function addProperty(input: PropertyPayload, userId?: string) {
   if (payload.price === undefined || payload.price === null) throw badRequest('price is required');
   const reason = normalizeText(input.priceHistoryReason) ?? 'manual';
   const note = normalizeText(input.priceHistoryNote);
-  return createPropertyWithInitialPrice(payload, userId, reason, note);
+  const { photos, documents, mediaLinks, publications, ...rest } = payload;
+  const photoRelation = buildCreatePhotosRelation(photos);
+  const documentRelation = buildCreateDocumentsRelation(documents);
+  const mediaLinksRelation = buildCreateMediaLinksRelation(mediaLinks);
+  const publicationsRelation = buildCreatePublicationsRelation(publications);
+  return withResolvedPhotoUrls(
+    await createPropertyWithInitialPrice(
+      {
+        ...rest,
+        ...(publicationsRelation ? { publications: publicationsRelation } : {}),
+        ...(mediaLinksRelation ? { mediaLinks: mediaLinksRelation } : {}),
+        ...(documentRelation ? { documents: documentRelation } : {}),
+        ...(photoRelation ? { photos: photoRelation } : {}),
+      },
+      userId,
+      reason,
+      note,
+    ),
+  );
 }
 
 export async function changeProperty(id: string, input: PropertyPayload, userId?: string) {
   const payload = normalizePropertyPayload(input);
   const reason = normalizeText(input.priceHistoryReason) ?? 'manual';
   const note = normalizeText(input.priceHistoryNote);
-  return updatePropertyWithPriceHistory(id, payload, userId, reason, note);
+  const { photos, documents, mediaLinks, publications, ...rest } = payload;
+  const photoRelation = buildUpdatePhotosRelation(photos);
+  const documentRelation = buildUpdateDocumentsRelation(documents);
+  const mediaLinksRelation = buildUpdateMediaLinksRelation(mediaLinks);
+  const publicationsRelation = buildUpdatePublicationsRelation(publications);
+  return withResolvedPhotoUrls(
+    await updatePropertyWithPriceHistory(
+      id,
+      {
+        ...rest,
+        ...(publicationsRelation ? { publications: publicationsRelation } : {}),
+        ...(mediaLinksRelation ? { mediaLinks: mediaLinksRelation } : {}),
+        ...(documentRelation ? { documents: documentRelation } : {}),
+        ...(photoRelation ? { photos: photoRelation } : {}),
+      },
+      userId,
+      reason,
+      note,
+    ),
+  );
 }
 
 export async function removeProperty(id: string) {
@@ -164,4 +259,23 @@ export async function getPropertyPriceStats(propertyIdInput: unknown) {
   const stats = await findPropertyPriceStats(propertyId);
   if (!stats) throw badRequest('Not found');
   return stats;
+}
+
+export async function getPropertyProfile(propertyIdInput: unknown) {
+  const propertyId = getRequiredId(propertyIdInput, 'propertyId');
+  const profile = await findPropertyProfile(propertyId);
+  if (!profile) throw badRequest('Not found');
+
+  const [priceStats, activity, metrics] = await Promise.all([
+    findPropertyPriceStats(propertyId),
+    findPropertyActivity(propertyId, profile.agencyId),
+    findPropertyProfileMetrics(propertyId),
+  ]);
+
+  return {
+    ...profile,
+    priceStats,
+    activity,
+    metrics,
+  };
 }

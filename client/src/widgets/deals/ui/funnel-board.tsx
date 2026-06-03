@@ -6,25 +6,29 @@ import { useRouter } from 'next/navigation';
 import { GripVertical, Edit2, Trash2, User, Building, ExternalLink, Workflow } from 'lucide-react';
 
 import { useTranslation } from '@/shared/lib/i18n/context';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip';
 import type { Deal } from '@/entities/deal';
 import type { Funnel, FunnelStage } from '@/entities/settings';
 import { formatPrice, getInitials } from '@/shared/lib/format';
 import { useFunnelBoardUi } from '@/features/update-deal-stage';
 
-
 interface Props {
-  deals: Deal[];
   loading: boolean;
   stages: FunnelStage[];
   funnels: Funnel[];
   selectedFunnelId: string | null;
+  stageDeals: Record<string, Deal[]>;
+  stageTotals: Record<string, number>;
+  stageHasMore: Record<string, boolean>;
+  loadingMoreStages: Record<string, boolean>;
+  onLoadMoreStage: (stage: string) => void;
   onStageChange: (dealId: string, newStage: string) => void;
   onFunnelChange: (dealId: string, funnelId: string) => void | Promise<void>;
   onEdit: (deal: Deal) => void;
   onDelete: (id: string) => void;
 }
 
-export function FunnelBoard({ deals, loading, stages, funnels, selectedFunnelId, onStageChange, onFunnelChange, onEdit, onDelete }: Props) {
+export function FunnelBoard({ loading, stages, funnels, selectedFunnelId, stageDeals, stageTotals, stageHasMore, loadingMoreStages, onLoadMoreStage, onStageChange, onFunnelChange, onEdit, onDelete }: Props) {
   const { t } = useTranslation();
   const router = useRouter();
   const { dragItem, setDragItem, dragOver, setDragOver, wasDragged } = useFunnelBoardUi();
@@ -39,13 +43,17 @@ export function FunnelBoard({ deals, loading, stages, funnels, selectedFunnelId,
   }
 
   return (
-    <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 snap-x-mandatory" style={{ minHeight: '60vh' }}>
+    <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 snap-x-mandatory items-start" style={{ minHeight: '60vh' }}>
       {stages.map((stage) => {
-        const stageDeals = deals.filter((d) => d.stage === stage.value);
+        const items = stageDeals[stage.value] ?? [];
+        const translated = t(`const.dealStage.${stage.value}`);
+        const stageLabel = translated && !translated.startsWith('const.') ? translated : stage.label || stage.value;
+        const totalCount = stageTotals[stage.value] ?? items.length;
+
         return (
           <div
             key={stage.value}
-            className={`min-w-[75vw] sm:min-w-[220px] flex-1 rounded-2xl p-3 transition-all border ${dragOver === stage.value ? 'ring-2 ring-primary/30 bg-primary/5 border-primary/20' : 'bg-muted/30 dark:bg-muted/15 border-border/40 dark:border-border/30'}`}
+            className={`min-w-[75vw] sm:min-w-[240px] w-[260px] max-h-[70vh] flex-shrink-0 rounded-2xl p-3 transition-all border ${dragOver === stage.value ? 'ring-2 ring-primary/30 bg-primary/5 border-primary/20' : 'bg-muted/30 dark:bg-muted/15 border-border/40 dark:border-border/30'}`}
             onDragOver={(e) => { e.preventDefault(); setDragOver(stage.value); }}
             onDragLeave={() => setDragOver(null)}
             onDrop={(e) => {
@@ -57,12 +65,19 @@ export function FunnelBoard({ deals, loading, stages, funnels, selectedFunnelId,
             <div className="mb-3 px-1">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: stage.color }} />
-                <span className="text-sm font-medium truncate">{(() => { const translated = t(`const.dealStage.${stage.value}`); return translated && !translated.startsWith('const.') ? translated : stage.label; })()}</span>
-                <span className="text-xs text-muted-foreground ml-auto bg-muted px-1.5 py-0.5 rounded-md">{stageDeals.length}</span>
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="min-w-0 flex-1 text-sm font-medium truncate cursor-default" title={stageLabel}>{stageLabel}</span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-72 whitespace-normal">{stageLabel}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <span className="text-xs text-muted-foreground ml-auto bg-muted px-1.5 py-0.5 rounded-md">{totalCount}</span>
               </div>
-              {stageDeals.length > 0 && (() => {
+              {items.length > 0 && (() => {
                 const byCurrency: Record<string, number> = {};
-                stageDeals.forEach((d) => {
+                items.forEach((d) => {
                   const currency = d.currency || 'USD';
                   byCurrency[currency] = (byCurrency[currency] || 0) + (d.amount ?? 0);
                 });
@@ -70,8 +85,17 @@ export function FunnelBoard({ deals, loading, stages, funnels, selectedFunnelId,
                 return entries.length > 0 ? <p className="text-[11px] font-mono font-semibold text-muted-foreground mt-1 pl-5">{entries.map(([currency, value]) => formatPrice(value, currency)).join(' · ')}</p> : null;
               })()}
             </div>
-            <div className="space-y-2">
-              {stageDeals.map((deal) => (
+
+            <div
+              className="space-y-2 max-h-[calc(70vh-5rem)] overflow-y-auto pr-1"
+              onScroll={(event) => {
+                const target = event.currentTarget;
+                if (target.scrollTop + target.clientHeight >= target.scrollHeight - 120 && stageHasMore[stage.value] && !loadingMoreStages[stage.value]) {
+                  onLoadMoreStage(stage.value);
+                }
+              }}
+            >
+              {items.map((deal) => (
                 <div
                   key={deal.id}
                   draggable
@@ -143,6 +167,8 @@ export function FunnelBoard({ deals, loading, stages, funnels, selectedFunnelId,
                   </div>
                 </div>
               ))}
+              {loadingMoreStages[stage.value] ? <div className="rounded-2xl border border-dashed border-border/60 px-3 py-4 text-center text-xs text-muted-foreground">{t('common.loading')}</div> : null}
+              {!loadingMoreStages[stage.value] && stageHasMore[stage.value] ? <div className="h-8" /> : null}
             </div>
           </div>
         );

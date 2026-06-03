@@ -54,7 +54,7 @@ export function useLeadsPage() {
   }, [t]);
 
   useEffect(() => {
-    if (searchParams.get('create') === '1') {
+    if (searchParams?.get('create') === '1') {
       setEditing(null);
       setShowDialog(true);
     }

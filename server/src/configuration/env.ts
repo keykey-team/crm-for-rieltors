@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const defaultClientUrls = ['http://localhost:3000', 'http://localhost:3001'];
+const defaultClientUrls = ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'];
 const nodeEnv = process.env.NODE_ENV ?? 'development';
 
 function getRequired(name: string): string {

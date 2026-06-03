@@ -43,7 +43,7 @@ export function HelperChat() {
 
   // Hide on auth pages
   const hiddenPaths = ['/login', '/signup'];
-  const isHidden = hiddenPaths.some(p => pathname.startsWith(p));
+  const isHidden = hiddenPaths.some(p => (pathname ?? '').startsWith(p));
 
   // Load chat history & usage on open
   const loadUsage = useCallback(async () => {

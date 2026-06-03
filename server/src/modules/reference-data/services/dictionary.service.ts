@@ -2,7 +2,8 @@ import { badRequest } from '../../../common/shared-kernel/errors';
 import {
   createDictionary,
   deactivateDictionary,
-  findActiveDictionaries,
+  ensureDefaultDictionaries,
+  findDictionaries,
   updateDictionary,
   updateDictionaryOrder,
 } from '../repositories/dictionary.repository';
@@ -13,8 +14,9 @@ function getId(value: unknown): string {
   return id;
 }
 
-export async function listDictionaries(category?: string) {
-  return findActiveDictionaries(category);
+export async function listDictionaries(agencyId: string, category?: string, includeInactive = false) {
+  await ensureDefaultDictionaries(agencyId, category ? [category] : undefined);
+  return findDictionaries(category, includeInactive);
 }
 
 export async function addDictionary(data: Record<string, unknown>) {

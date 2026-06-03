@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Edit2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from '@/shared/lib/i18n/context';
-import { deleteShowing, type Showing, useShowings } from '@/entities/showing';
+import { deleteShowing, type Showing, useShowingStatusOptions, useShowings } from '@/entities/showing';
 import { CreateShowingDialog } from '@/features/create-showing';
 import { UpdateShowingDialog } from '@/features/update-showing';
 import { ShowingStatusBadge } from '@/entities/showing';
@@ -15,8 +16,12 @@ import { getUsers } from '@/entities/user';
 
 export function ShowingsClient() {
   const { t, locale } = useTranslation();
+  const statusOptions = useShowingStatusOptions(t);
+  const searchParams = useSearchParams();
+  const initialPropertyId = searchParams?.get('propertyId') || '';
   const [status, setStatus] = useState('');
   const [agentId, setAgentId] = useState('');
+  const [propertyId, setPropertyId] = useState(initialPropertyId);
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [agents, setAgents] = useState<any[]>([]);
@@ -27,8 +32,13 @@ export function ShowingsClient() {
   const toEndOfDay = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) ? `${s}T23:59:59` : s;
 
   const query = useMemo(
-    () => ({ status: status || undefined, agentId: agentId || undefined, from: from || undefined, to: to ? toEndOfDay(to) : undefined, limit: 100 }),
-    [agentId, from, status, to],
+    () => ({ propertyId: propertyId || undefined, status: status || undefined, agentId: agentId || undefined, from: from || undefined, to: to ? toEndOfDay(to) : undefined, limit: 100 }),
+    [agentId, from, propertyId, status, to],
+  );
+
+  const statusLabelMap = useMemo(
+    () => new Map(statusOptions.map((item) => [item.value, item.label])),
+    [statusOptions],
   );
 
   const { items, loading, reload } = useShowings(query);
@@ -92,7 +102,8 @@ export function ShowingsClient() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <input value={propertyId} onChange={(e) => setPropertyId(e.target.value)} placeholder={t('showings.filterPropertyId')} className="px-3 py-2.5 rounded-xl border border-border bg-card text-sm" />
         <select value={agentId} onChange={(e) => setAgentId(e.target.value)} className="px-3 py-2.5 rounded-xl border border-border bg-card text-sm">
           <option value="">{t('showings.allAgents')}</option>
           {agents.map((agent) => (
@@ -101,8 +112,8 @@ export function ShowingsClient() {
         </select>
         <select value={status} onChange={(e) => setStatus(e.target.value)} className="px-3 py-2.5 rounded-xl border border-border bg-card text-sm">
           <option value="">{t('common.all')}</option>
-          {['scheduled', 'completed', 'cancelled', 'no_show'].map((item) => (
-            <option key={item} value={item}>{t(`showings.status.${item}`)}</option>
+          {statusOptions.map((item) => (
+            <option key={item.value} value={item.value}>{item.label}</option>
           ))}
         </select>
         <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="px-3 py-2.5 rounded-xl border border-border bg-card text-sm" />
@@ -149,7 +160,7 @@ export function ShowingsClient() {
               <div className="col-span-2 truncate">{item.lead ? `${item.lead.firstName || ''} ${item.lead.lastName || ''}`.trim() : '—'}</div>
               <div className="col-span-2 truncate">{item.agent?.name || item.agent?.email || '—'}</div>
               <div className="col-span-2 truncate">{formatDateTime(item.scheduledAt, locale)}</div>
-              <div className="col-span-1"><ShowingStatusBadge status={item.status} label={t(`showings.status.${item.status}`)} /></div>
+              <div className="col-span-1"><ShowingStatusBadge status={item.status} label={statusLabelMap.get(item.status) || item.status} /></div>
               <div className="col-span-2 flex items-center justify-end gap-1">
                 {item.dealId && (
                   <Link className="text-primary hover:underline px-1" href={`/deals/${item.dealId}`} title={t('common.open')}>↗</Link>

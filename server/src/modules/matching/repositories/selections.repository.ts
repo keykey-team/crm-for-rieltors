@@ -67,7 +67,19 @@ export async function listSelectionsByUser(createdById: string, leadId?: string)
     },
     include: {
       lead: { select: { id: true, firstName: true, lastName: true, phone: true } },
-      items: { include: { property: true }, orderBy: { order: 'asc' } },
+      items: {
+        include: {
+          property: {
+            include: {
+              photos: {
+                where: { isPublic: true },
+                orderBy: { order: 'asc' },
+              },
+            },
+          },
+        },
+        orderBy: { order: 'asc' },
+      },
     },
     orderBy: { createdAt: 'desc' },
     take: 200,

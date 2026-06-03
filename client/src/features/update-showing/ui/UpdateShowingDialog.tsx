@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from '@/shared/lib/i18n/context';
-import { updateShowing } from '@/entities/showing';
+import { updateShowing, useShowingStatusOptions } from '@/entities/showing';
 import type { Showing } from '@/entities/showing';
 
 type Props = {
@@ -15,6 +15,7 @@ type Props = {
 
 export function UpdateShowingDialog({ showing, onClose, onSaved }: Props) {
   const { t } = useTranslation();
+  const statusOptions = useShowingStatusOptions(t);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState(showing.status);
   const [feedback, setFeedback] = useState(showing.feedback || '');
@@ -51,8 +52,8 @@ export function UpdateShowingDialog({ showing, onClose, onSaved }: Props) {
           <div>
             <label className="text-sm font-medium mb-1 block">{t('showings.status')}</label>
             <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm">
-              {['scheduled', 'completed', 'cancelled', 'no_show'].map((item) => (
-                <option key={item} value={item}>{t(`showings.status.${item}`)}</option>
+              {statusOptions.map((item) => (
+                <option key={item.value} value={item.value}>{item.label}</option>
               ))}
             </select>
           </div>

@@ -7,7 +7,9 @@ import { selectionsService } from '../services/selections.service';
 const router = createAsyncRouter();
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const REACTION_LIMIT = 30;
+const VIEW_DEDUP_WINDOW_MS = 15_000;
 const reactionCounter = new Map<string, number[]>();
+const viewCounter = new Map<string, number>();
 let requestsSinceCleanup = 0;
 
 function readIp(req: Request) {
@@ -35,8 +37,26 @@ function isReactionRateLimited(req: Request) {
   return false;
 }
 
+function shouldCountView(req: Request) {
+  const now = Date.now();
+  const key = `${readIp(req)}:${req.params.slug}`;
+  const lastView = viewCounter.get(key) ?? 0;
+
+  if (requestsSinceCleanup >= 200) {
+    for (const [mapKey, value] of viewCounter.entries()) {
+      if (now - value >= VIEW_DEDUP_WINDOW_MS) viewCounter.delete(mapKey);
+    }
+  }
+
+  if (now - lastView < VIEW_DEDUP_WINDOW_MS) return false;
+  viewCounter.set(key, now);
+  return true;
+}
+
 router.get('/public/selections/:slug', async (req, res) => {
-  res.json(await selectionsService.getBySlug(req.params.slug));
+  res.json(await (shouldCountView(req)
+    ? selectionsService.recordView(req.params.slug)
+    : selectionsService.getBySlug(req.params.slug)));
 });
 
 router.post('/public/selections/:slug/items/:itemId/reaction', validateBody(reactionSchema), async (req, res) => {

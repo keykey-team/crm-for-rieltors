@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Phone, MessageSquare, Edit2 } from 'lucide-react';
 
 import { useTranslation } from '@/shared/lib/i18n/context';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip';
 import { LEAD_SOURCES } from '@/shared/lib/constants';
 import { formatDate, formatPrice } from '@/shared/lib/format';
 import type { Lead } from '@/entities/lead';
@@ -45,6 +46,8 @@ export function LeadKanban({ leads, loading, onEdit, onStatusChange, onCall, onM
     <div className="flex gap-4 overflow-x-auto pb-4">
       {leadStatuses.map((status) => {
         const statusLeads = byStatus(leads, status.value);
+        const translated = t(`const.dealStage.${status.value}`);
+        const statusLabel = translated && !translated.startsWith('const.') ? translated : status.label || status.value;
         return (
           <div
             key={status.value}
@@ -54,7 +57,14 @@ export function LeadKanban({ leads, loading, onEdit, onStatusChange, onCall, onM
           >
             <div className="flex items-center gap-2 mb-3 px-1">
               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: status.color }} />
-              <h3 className="text-sm font-semibold">{status.label || t(`const.dealStage.${status.value}`) || status.value}</h3>
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <h3 className="min-w-0 flex-1 text-sm font-semibold truncate cursor-default" title={statusLabel}>{statusLabel}</h3>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-72 whitespace-normal">{statusLabel}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <span className="text-xs text-muted-foreground ml-auto">{statusLeads.length}</span>
             </div>
 

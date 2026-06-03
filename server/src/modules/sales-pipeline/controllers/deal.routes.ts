@@ -35,7 +35,7 @@ router.post('/deals/:id/checklist', validateBody(addChecklistItemSchema), async 
 router.put('/deals/:id/checklist', validateBody(updateChecklistItemSchema), async (req, res) => res.json(await changeDealChecklistItem(req.body)));
 router.delete('/deals/:id/checklist/:itemId', async (req, res) => res.json(await removeDealChecklistItem(req.params.itemId)));
 
-router.get('/deals', async (req, res) => res.json(await listDeals(req.user?.id, req.user?.role)));
+router.get('/deals', async (req, res) => res.json(await listDeals(req.query, req.user?.id, req.user?.role)));
 router.post('/deals', validateBody(createDealSchema), async (req, res) => res.status(201).json(await addDeal(req.body, req.user?.id)));
 router.get('/deals/:id', async (req, res) => res.json(await getDeal(req.params.id)));
 router.put('/deals/:id', validateBody(updateDealSchema), async (req, res) => res.json(await changeDeal(req.params.id, req.body)));

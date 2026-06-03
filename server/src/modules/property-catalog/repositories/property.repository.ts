@@ -1,17 +1,188 @@
 import { prisma } from '../../../common/infrastructure/db/prisma';
 
+const propertyInclude = {
+  documents: {
+    orderBy: { createdAt: 'desc' },
+    take: 10,
+  },
+  mediaLinks: {
+    orderBy: { createdAt: 'desc' },
+    take: 10,
+  },
+  publications: {
+    orderBy: { createdAt: 'desc' },
+    take: 10,
+  },
+  priceHistory: {
+    orderBy: { createdAt: 'desc' },
+    take: 2,
+  },
+  photos: {
+    where: { isPublic: true },
+    orderBy: { order: 'asc' },
+  },
+};
+
 export async function findProperties(where: Record<string, unknown>) {
   return prisma.property.findMany({
     where: where as any,
     orderBy: { createdAt: 'desc' },
     take: 200,
+    include: propertyInclude as any,
+  });
+}
+
+export async function findPropertyProfile(id: string) {
+  return prisma.property.findUnique({
+    where: { id },
     include: {
+      documents: {
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      },
+      mediaLinks: {
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      },
+      publications: {
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      },
+      photos: {
+        where: { isPublic: true },
+        orderBy: { order: 'asc' },
+      },
       priceHistory: {
         orderBy: { createdAt: 'desc' },
-        take: 2,
+        take: 20,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      },
+      deals: {
+        orderBy: { createdAt: 'desc' },
+        take: 12,
+        select: {
+          id: true,
+          title: true,
+          stage: true,
+          amount: true,
+          currency: true,
+          dealType: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      },
+      showings: {
+        orderBy: { scheduledAt: 'desc' },
+        take: 12,
+        select: {
+          id: true,
+          scheduledAt: true,
+          status: true,
+          durationMin: true,
+          createdAt: true,
+          lead: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          agent: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          deal: {
+            select: {
+              id: true,
+              title: true,
+              stage: true,
+            },
+          },
+        },
       },
     },
   });
+}
+
+export async function findPropertyActivity(entityId: string, agencyId: string) {
+  return prisma.activityLog.findMany({
+    where: {
+      entityType: 'property',
+      entityId,
+      agencyId,
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 20,
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+  });
+}
+
+export interface PropertyProfileMetrics {
+  dealsTotal: number;
+  dealsWithAmount: number;
+  dealsAmountSum: number;
+  showingsTotal: number;
+  showingsScheduled: number;
+  showingsCompleted: number;
+  showingsCancelled: number;
+  showingsNoShow: number;
+  showingsUpcoming: number;
+}
+
+export async function findPropertyProfileMetrics(propertyId: string): Promise<PropertyProfileMetrics> {
+  const now = new Date();
+  const [
+    dealsTotal,
+    dealsWithAmount,
+    dealsAmount,
+    showingsTotal,
+    showingsScheduled,
+    showingsCompleted,
+    showingsCancelled,
+    showingsNoShow,
+    showingsUpcoming,
+  ] = await Promise.all([
+    prisma.deal.count({ where: { propertyId } }),
+    prisma.deal.count({ where: { propertyId, amount: { not: null } } }),
+    prisma.deal.aggregate({ where: { propertyId }, _sum: { amount: true } }),
+    prisma.showing.count({ where: { propertyId } }),
+    prisma.showing.count({ where: { propertyId, status: 'scheduled' } }),
+    prisma.showing.count({ where: { propertyId, status: 'completed' } }),
+    prisma.showing.count({ where: { propertyId, status: 'cancelled' } }),
+    prisma.showing.count({ where: { propertyId, status: 'no_show' } }),
+    prisma.showing.count({ where: { propertyId, status: 'scheduled', scheduledAt: { gte: now } } }),
+  ]);
+
+  return {
+    dealsTotal,
+    dealsWithAmount,
+    dealsAmountSum: dealsAmount._sum.amount ?? 0,
+    showingsTotal,
+    showingsScheduled,
+    showingsCompleted,
+    showingsCancelled,
+    showingsNoShow,
+    showingsUpcoming,
+  };
 }
 
 export async function createProperty(data: Record<string, unknown>) {
@@ -63,7 +234,7 @@ export async function createPropertyWithInitialPrice(
   note?: string,
 ) {
   return prisma.$transaction(async (tx) => {
-    const property = await tx.property.create({ data: data as any });
+    const property = await tx.property.create({ data: data as any, include: propertyInclude as any });
     await tx.propertyPriceHistory.create({
       data: {
         propertyId: property.id,
@@ -102,7 +273,7 @@ export async function updatePropertyWithPriceHistory(
       where: { id },
       select: { price: true, currency: true },
     });
-    const property = await tx.property.update({ where: { id }, data: data as any });
+    const property = await tx.property.update({ where: { id }, data: data as any, include: propertyInclude as any });
     if (!previous) return property;
     const priceChanged = previous.price !== property.price;
     const currencyChanged = previous.currency !== property.currency;

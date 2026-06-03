@@ -7,7 +7,10 @@ const router = createAsyncRouter();
 
 router.get('/dictionaries', async (req, res) => {
   const category = typeof req.query.category === 'string' ? req.query.category : undefined;
-  res.json(await listDictionaries(category));
+  const includeInactive =
+    req.query.includeInactive === '1' ||
+    req.query.includeInactive === 'true';
+  res.json(await listDictionaries(req.agency!.agencyId, category, includeInactive));
 });
 
 router.post('/dictionaries', validateBody(createDictionarySchema), async (req, res) => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import { toast } from 'sonner';
@@ -20,14 +20,30 @@ type DealFilters = {
   currency: string;
 };
 
+type StageBucket = {
+  items: Deal[];
+  page: number;
+  total: number;
+  hasMore: boolean;
+  loadingMore: boolean;
+};
+
+const DEALS_PAGE_SIZE = 12;
+
+function mergeDealsById(currentItems: Deal[], nextItems: Deal[]) {
+  const uniqueDeals = new Map(currentItems.map((deal) => [deal.id, deal]));
+  nextItems.forEach((deal) => uniqueDeals.set(deal.id, deal));
+  return Array.from(uniqueDeals.values());
+}
+
 export function useDealsPage() {
   const { t } = useTranslation();
   const searchParams = useSearchParams();
 
-  const [deals, setDeals] = useState<Deal[]>([]);
   const [funnels, setFunnels] = useState<Funnel[]>([]);
   const [selectedFunnelId, setSelectedFunnelId] = useState<string | null>(null);
   const [stagesByFunnel, setStagesByFunnel] = useState<Record<string, FunnelStage[]>>({});
+  const [stageBuckets, setStageBuckets] = useState<Record<string, StageBucket>>({});
   const [managers, setManagers] = useState<User[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState<DealFilters>({ query: '', stage: '', managerId: '', currency: '' });
@@ -35,19 +51,20 @@ export function useDealsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDeal, setEditDeal] = useState<Deal | null>(null);
 
+  const boardKey = useMemo(() => [selectedFunnelId, filters.query, filters.stage, filters.managerId, filters.currency].join('|'), [filters.currency, filters.managerId, filters.query, filters.stage, selectedFunnelId]);
+  const boardKeyRef = useRef(boardKey);
+  const refreshIdRef = useRef(0);
+
   useEffect(() => {
-    if (searchParams.get('create') === '1') {
+    boardKeyRef.current = boardKey;
+  }, [boardKey]);
+
+  useEffect(() => {
+    if (searchParams?.get('create') === '1') {
       setEditDeal(null);
       setDialogOpen(true);
     }
   }, [searchParams]);
-
-  const fetchDeals = useCallback(async () => {
-    setLoading(true);
-    const data = await getDeals();
-    setDeals(data);
-    setLoading(false);
-  }, []);
 
   const fetchFunnelsMeta = useCallback(async () => {
     const [funnelItems, userItems] = await Promise.all([
@@ -66,50 +83,76 @@ export function useDealsPage() {
   }, []);
 
   useEffect(() => {
-    fetchDeals();
-    fetchFunnelsMeta();
-  }, [fetchDeals, fetchFunnelsMeta]);
+    void fetchFunnelsMeta();
+  }, [fetchFunnelsMeta]);
 
   const selectedStages = useMemo(() => {
     if (!selectedFunnelId) return [];
     return stagesByFunnel[selectedFunnelId] ?? [];
   }, [selectedFunnelId, stagesByFunnel]);
 
-  const filteredDeals = useMemo(() => {
-    return deals.filter((deal) => {
-      if (selectedFunnelId && deal.funnelId !== selectedFunnelId) return false;
-      if (filters.stage && deal.stage !== filters.stage) return false;
-      if (filters.managerId && deal.assignedToId !== filters.managerId) return false;
-      if (filters.currency && (deal.currency ?? '') !== filters.currency) return false;
-      if (filters.query) {
-        const query = filters.query.toLowerCase();
-        const haystack = [
-          deal.title,
-          deal.lead?.firstName,
-          deal.lead?.lastName,
-          deal.property?.title,
-        ].filter(Boolean).join(' ').toLowerCase();
-        if (!haystack.includes(query)) return false;
-      }
-      return true;
-    });
-  }, [deals, filters, selectedFunnelId]);
+  const refreshBoard = useCallback(async () => {
+    const currentKey = ++refreshIdRef.current;
+    const funnelId = selectedFunnelId;
+
+    if (!funnelId) {
+      setStageBuckets({});
+      setLoading(false);
+      return;
+    }
+
+    const funnelStages = stagesByFunnel[funnelId] ?? [];
+    if (funnelStages.length === 0) {
+      setStageBuckets({});
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    const stagesToLoad = filters.stage ? funnelStages.filter((stage) => stage.value === filters.stage) : funnelStages;
+    const responsePairs = await Promise.all(stagesToLoad.map(async (stage) => {
+      const response = await getDeals({
+        page: 1,
+        limit: DEALS_PAGE_SIZE,
+        funnelId,
+        stage: stage.value,
+        managerId: filters.managerId || undefined,
+        currency: filters.currency || undefined,
+        query: filters.query || undefined,
+      }).catch(() => ({ items: [], total: 0, page: 1, limit: DEALS_PAGE_SIZE, hasMore: false }));
+
+      return [stage.value, {
+        items: response.items,
+        page: response.page,
+        total: response.total,
+        hasMore: response.hasMore,
+        loadingMore: false,
+      }] as const;
+    }));
+
+    if (boardKeyRef.current !== [funnelId, filters.query, filters.stage, filters.managerId, filters.currency].join('|') || currentKey !== refreshIdRef.current) return;
+    setStageBuckets(Object.fromEntries(responsePairs));
+    setLoading(false);
+  }, [filters.currency, filters.managerId, filters.query, filters.stage, selectedFunnelId, stagesByFunnel]);
+
+  useEffect(() => {
+    void refreshBoard();
+  }, [refreshBoard]);
 
   const activeFilterCount = [filters.query, filters.stage, filters.managerId, filters.currency].filter(Boolean).length;
 
   const handleStageChange = async (dealId: string, newStage: string) => {
     const result = await updateDeal(dealId, { stage: newStage });
-    setDeals((prev) => prev.map((deal) => (deal.id === dealId ? { ...deal, stage: newStage } : deal)));
     if (result._affectedCount && result._affectedCount > 0) {
-      await fetchDeals();
       toast.info(`${result._affectedCount} угод автоматично переведено в "Об'єкт скасовано"`, {
         duration: 5000,
       });
     }
+    await refreshBoard();
   };
 
   const handleFunnelChange = async (dealId: string, funnelId: string) => {
-    const deal = deals.find((item) => item.id === dealId);
+    const deal = Object.values(stageBuckets).flatMap((bucket) => bucket.items).find((item) => item.id === dealId);
     if (!deal) return;
 
     const targetStages = stagesByFunnel[funnelId] ?? await getFunnelStages(funnelId).catch(() => []);
@@ -122,7 +165,7 @@ export function useDealsPage() {
       : targetStages[0]?.value ?? deal.stage;
 
     await updateDeal(dealId, { funnelId, stage: nextStage });
-    setDeals((prev) => prev.map((item) => (item.id === dealId ? { ...item, funnelId, stage: nextStage } : item)));
+    await refreshBoard();
   };
 
   const handleSave = async (data: DealUpsertInput) => {
@@ -131,15 +174,52 @@ export function useDealsPage() {
     else await createDeal(payload);
     setDialogOpen(false);
     setEditDeal(null);
-    fetchDeals();
+    await refreshBoard();
   };
 
   const handleDelete = async (id: string) => {
     const ok = await confirmAction(t('deals.deleteDeal'), { confirm: t('common.delete'), cancel: t('common.cancel') });
     if (!ok) return;
     await deleteDeal(id);
-    fetchDeals();
+    await refreshBoard();
   };
+
+  const loadMoreStage = useCallback(async (stageValue: string) => {
+    const funnelId = selectedFunnelId;
+    if (!funnelId) return;
+
+    const bucket = stageBuckets[stageValue];
+    if (!bucket || bucket.loadingMore || !bucket.hasMore) return;
+
+    const requestKey = boardKeyRef.current;
+    setStageBuckets((prev) => ({
+      ...prev,
+      [stageValue]: { ...prev[stageValue], loadingMore: true },
+    }));
+
+    const response = await getDeals({
+      page: bucket.page + 1,
+      limit: DEALS_PAGE_SIZE,
+      funnelId,
+      stage: stageValue,
+      managerId: filters.managerId || undefined,
+      currency: filters.currency || undefined,
+      query: filters.query || undefined,
+    }).catch(() => ({ items: [], total: bucket.total, page: bucket.page + 1, limit: DEALS_PAGE_SIZE, hasMore: false }));
+
+    if (requestKey !== boardKeyRef.current) return;
+
+    setStageBuckets((prev) => ({
+      ...prev,
+      [stageValue]: {
+        items: mergeDealsById(prev[stageValue]?.items ?? [], response.items),
+        page: response.page,
+        total: response.total,
+        hasMore: response.hasMore,
+        loadingMore: false,
+      },
+    }));
+  }, [filters.currency, filters.managerId, filters.query, selectedFunnelId, stageBuckets]);
 
   const openCreateDialog = () => {
     setEditDeal(null);
@@ -157,8 +237,6 @@ export function useDealsPage() {
   };
 
   return {
-    deals: filteredDeals,
-    rawDeals: deals,
     funnels,
     selectedFunnelId,
     setSelectedFunnelId,
@@ -172,6 +250,8 @@ export function useDealsPage() {
     loading,
     dialogOpen,
     editDeal,
+    stageBuckets,
+    loadMoreStage,
     handleStageChange,
     handleFunnelChange,
     handleSave,

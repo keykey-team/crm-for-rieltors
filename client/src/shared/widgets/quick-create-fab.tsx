@@ -34,7 +34,7 @@ export function QuickCreateFab() {
 
   // Hide on detail/login/signup pages
   const hiddenPaths = ['/login', '/signup', '/settings', '/pricing', '/capabilities'];
-  if (hiddenPaths.some(p => pathname.startsWith(p))) return null;
+  if (hiddenPaths.some(p => (pathname ?? '').startsWith(p))) return null;
 
   return (
     <div ref={ref} className="fixed bottom-[100px] right-6 z-50 flex flex-col items-end gap-2">

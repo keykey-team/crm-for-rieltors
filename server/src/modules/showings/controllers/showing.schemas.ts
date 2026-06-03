@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { noteText, optionalCuid } from '../../../common/validation/common';
 
-const SHOWING_STATUSES = ['scheduled', 'completed', 'cancelled', 'no_show'] as const;
+const statusValue = z.string().trim().min(1).max(80);
 
 function emptyStringToUndefined(value: unknown) {
   if (value === null || value === undefined) return undefined;
@@ -32,7 +32,7 @@ export const listShowingsQuerySchema = z.object({
   propertyId: optionalId,
   leadId: optionalId,
   agentId: optionalId,
-  status: z.enum(SHOWING_STATUSES).optional(),
+  status: statusValue.optional(),
   from: optionalDate,
   to: optionalDate,
   page: optionalInt,
@@ -50,7 +50,7 @@ export const createShowingSchema = z.object({
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : value;
   }, z.number().int().min(5).max(1440).default(30)),
-  status: z.enum(SHOWING_STATUSES).optional(),
+  status: statusValue.optional(),
   feedback: noteText(),
   clientRating: z.preprocess((value) => {
     if (value === undefined || value === null || value === '') return undefined;
@@ -73,7 +73,7 @@ export const updateShowingSchema = z.object({
     const parsed = Number(normalized);
     return Number.isFinite(parsed) ? parsed : normalized;
   }, z.number().int().min(5).max(1440).optional()),
-  status: z.enum(SHOWING_STATUSES).optional(),
+  status: statusValue.optional(),
   feedback: noteText(),
   clientRating: z.preprocess((value) => {
     if (value === undefined || value === null || value === '') return undefined;
@@ -88,4 +88,4 @@ export const duplicatesQuerySchema = z.object({
   leadId: z.string().trim().min(1, 'Required'),
 }).strict();
 
-export type ShowingStatus = (typeof SHOWING_STATUSES)[number];
+export type ShowingStatus = string;

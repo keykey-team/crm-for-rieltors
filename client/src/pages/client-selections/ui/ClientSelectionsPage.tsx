@@ -1,7 +1,7 @@
 'use client';
 
-import { ClientSelectionsScreen } from '@/screens/client-selections';
+import { ClientSelectionsWorkspace } from '@/widgets/client-selections';
 
 export function ClientSelectionsPage() {
-  return <ClientSelectionsScreen />;
+  return <ClientSelectionsWorkspace />;
 }

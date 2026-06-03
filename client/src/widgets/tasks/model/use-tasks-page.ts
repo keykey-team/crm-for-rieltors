@@ -16,7 +16,7 @@ export function useTasksPage(t: (k: string) => string) {
   const [dragId, setDragId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (searchParams.get('create') === '1') {
+    if (searchParams?.get('create') === '1') {
       setEditTask(null);
       setDialogOpen(true);
     }

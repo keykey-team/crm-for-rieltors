@@ -94,8 +94,31 @@ export const propertySchema = z
       .number({ required_error: 'Цена обязательна', invalid_type_error: 'Цена должна быть числом' })
       .min(0, 'Цена не может быть отрицательной'),
     dealTypes: z
-      .array(z.enum(['sale', 'rent']))
+      .array(z.string().trim().min(1).max(80))
       .min(1, 'Выберите тип сделки'),
+    bedrooms: z.number({ invalid_type_error: 'Количество спален должно быть числом' }).int().optional(),
+    bathrooms: z.number({ invalid_type_error: 'Количество санузлов должно быть числом' }).int().optional(),
+    parkingSpaces: z.number({ invalid_type_error: 'Количество паркомест должно быть числом' }).int().optional(),
+    yearBuilt: z.number({ invalid_type_error: 'Год постройки должен быть числом' }).int().optional(),
+    ceilingHeight: z.number({ invalid_type_error: 'Высота потолка должна быть числом' }).min(0).optional(),
+    landArea: z.number({ invalid_type_error: 'Площадь участка должна быть числом' }).min(0).optional(),
+    mediaLinks: z
+      .array(
+        z.object({
+          title: z.string().trim().min(1, 'Название материала обязательно').max(255, 'Название материала слишком длинное'),
+          url: z.string().trim().url('Ссылка на материал должна быть валидным URL'),
+        }),
+      )
+      .optional(),
+    publications: z
+      .array(
+        z.object({
+          channel: z.string().trim().min(1, 'Канал публикации обязателен').max(80),
+          status: z.string().trim().min(1, 'Статус публикации обязателен').max(80),
+          url: z.string().trim().url('Ссылка публикации должна быть валидным URL').optional().or(z.literal('')),
+        }),
+      )
+      .optional(),
     floor: z.number({ invalid_type_error: 'Этаж должен быть числом' }).int().optional(),
     totalFloors: z
       .number({ invalid_type_error: 'Этажность должна быть числом' })

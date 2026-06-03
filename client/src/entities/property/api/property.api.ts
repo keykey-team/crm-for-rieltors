@@ -1,4 +1,13 @@
-import type { Property, PropertyUpsertInput, PropertiesQuery } from '../model/types';
+import type {
+  Property,
+  PropertyDocumentInput,
+  PropertyMediaLinkInput,
+  PropertyPhotoInput,
+  PropertyPublicationInput,
+  PropertyProfile,
+  PropertyUpsertInput,
+  PropertiesQuery,
+} from '../model/types';
 
 function normalizeText(value: string | undefined): string | undefined {
   if (typeof value !== 'string') return value;
@@ -15,10 +24,69 @@ function normalizeNumber(value: string | number | undefined): number | undefined
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+function normalizePhotos(value: PropertyUpsertInput['photos']): PropertyPhotoInput[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value
+    .filter((photo): photo is PropertyPhotoInput => Boolean(photo?.cloudStoragePath))
+    .map((photo) => ({
+      cloudStoragePath: photo.cloudStoragePath.trim(),
+      isPublic: photo.isPublic !== false,
+    }))
+    .filter((photo) => photo.cloudStoragePath.length > 0);
+}
+
+function normalizeDocuments(value: PropertyUpsertInput['documents']): PropertyDocumentInput[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value
+    .filter((document): document is PropertyDocumentInput => Boolean(document?.cloudStoragePath && document?.title))
+    .map((document) => ({
+      title: document.title.trim(),
+      cloudStoragePath: document.cloudStoragePath.trim(),
+      documentType: normalizeText(document.documentType),
+    }))
+    .filter((document) => document.cloudStoragePath.length > 0 && document.title.length > 0);
+}
+
+function normalizeMediaLinks(value: PropertyUpsertInput['mediaLinks']): PropertyMediaLinkInput[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value
+    .filter((media): media is PropertyMediaLinkInput => Boolean(media?.title && media?.url))
+    .map((media) => ({
+      title: media.title.trim(),
+      mediaType: normalizeText(media.mediaType),
+      url: media.url.trim(),
+    }))
+    .filter((media) => media.title.length > 0 && media.url.length > 0);
+}
+
+function normalizePublications(value: PropertyUpsertInput['publications']): PropertyPublicationInput[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value
+    .filter((publication): publication is PropertyPublicationInput => Boolean(publication?.channel && publication?.status))
+    .map((publication) => ({
+      channel: publication.channel.trim(),
+      status: publication.status.trim(),
+      url: normalizeText(publication.url),
+      note: normalizeText(publication.note),
+    }))
+    .filter((publication) => publication.channel.length > 0 && publication.status.length > 0);
+}
+
+function normalizeStringArray(value: string[] | undefined): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+}
+
 function normalizePropertyPayload(payload: Partial<PropertyUpsertInput>): Partial<PropertyUpsertInput> {
   return {
     title: normalizeText(payload.title),
+    internalCode: normalizeText(payload.internalCode),
     type: normalizeText(payload.type),
+    source: normalizeText(payload.source),
+    ownerName: normalizeText(payload.ownerName),
+    ownerPhone: normalizeText(payload.ownerPhone),
+    developerName: normalizeText(payload.developerName),
+    developerContact: normalizeText(payload.developerContact),
     status: normalizeText(payload.status),
     dealTypes: Array.isArray(payload.dealTypes)
       ? payload.dealTypes.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
@@ -27,12 +95,38 @@ function normalizePropertyPayload(payload: Partial<PropertyUpsertInput>): Partia
     district: normalizeText(payload.district),
     city: normalizeText(payload.city),
     rooms: normalizeNumber(payload.rooms),
+    bedrooms: normalizeNumber(payload.bedrooms),
+    bathrooms: normalizeNumber(payload.bathrooms),
     area: normalizeNumber(payload.area),
+    landArea: normalizeNumber(payload.landArea),
     floor: normalizeNumber(payload.floor),
     totalFloors: normalizeNumber(payload.totalFloors),
     price: normalizeNumber(payload.price),
     currency: normalizeText(payload.currency),
+    paymentCondition: normalizeText(payload.paymentCondition),
+    communicationTypes: normalizeStringArray(payload.communicationTypes),
+    tags: normalizeStringArray(payload.tags),
+    isPublished: typeof payload.isPublished === 'boolean' ? payload.isPublished : undefined,
+    isFeatured: typeof payload.isFeatured === 'boolean' ? payload.isFeatured : undefined,
+    publicationNotes: normalizeText(payload.publicationNotes),
+    publications: normalizePublications(payload.publications),
+    layoutType: normalizeText(payload.layoutType),
+    repairType: normalizeText(payload.repairType),
+    heatingType: normalizeText(payload.heatingType),
+    wallType: normalizeText(payload.wallType),
+    realEstateClass: normalizeText(payload.realEstateClass),
+    commercialPurpose: normalizeText(payload.commercialPurpose),
+    parkingType: normalizeText(payload.parkingType),
+    parkingSpaces: normalizeNumber(payload.parkingSpaces),
+    yearBuilt: normalizeNumber(payload.yearBuilt),
+    ceilingHeight: normalizeNumber(payload.ceilingHeight),
+    managerComment: normalizeText(payload.managerComment),
+    internalDescription: normalizeText(payload.internalDescription),
+    publicDescription: normalizeText(payload.publicDescription),
     description: normalizeText(payload.description),
+    documents: normalizeDocuments(payload.documents),
+    mediaLinks: normalizeMediaLinks(payload.mediaLinks),
+    photos: normalizePhotos(payload.photos),
     priceHistoryReason: normalizeText(payload.priceHistoryReason),
     priceHistoryNote: normalizeText(payload.priceHistoryNote),
   };
@@ -83,4 +177,9 @@ export async function updateProperty(id: string, payload: Partial<PropertyUpsert
 export async function deleteProperty(id: string): Promise<void> {
   const res = await fetch(`/api/properties/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Failed to delete property');
+}
+
+export async function getPropertyProfile(id: string): Promise<PropertyProfile> {
+  const res = await fetch(`/api/properties/${id}/profile`);
+  return parseJson<PropertyProfile>(res);
 }

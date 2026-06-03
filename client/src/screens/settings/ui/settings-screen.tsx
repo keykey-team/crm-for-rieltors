@@ -37,6 +37,7 @@ import {
   updateFunnel,
   updateFunnelStage,
   updateProfileSettings,
+  updateDictionaryItem,
   upsertAftercarePlan,
   upsertDistributionRule,
   getUploadPresigned,
@@ -49,7 +50,7 @@ import {
 } from '@/entities/settings';
 import type { Funnel } from '@/entities/settings';
 
-type TabKey = 'profile' | 'users' | 'funnel' | 'customFields' | 'dictionaries' | 'distribution' | 'aftercare' | 'branding';
+type TabKey = 'profile' | 'users' | 'funnel' | 'customFields' | 'properties' | 'dictionaries' | 'distribution' | 'aftercare' | 'branding';
 
 export function SettingsClient() {
   const { t } = useTranslation();
@@ -85,6 +86,13 @@ export function SettingsClient() {
   const [dictCategory, setDictCategory] = useState('district');
   const [dicts, setDicts] = useState<any[]>([]);
   const [newDict, setNewDict] = useState({ value: '', label: '' });
+  const [propertyDictCategory, setPropertyDictCategory] = useState('property_type');
+  const [propertyDicts, setPropertyDicts] = useState<any[]>([]);
+  const [newPropertyDict, setNewPropertyDict] = useState({ value: '', label: '' });
+  const [editingDictId, setEditingDictId] = useState<string | null>(null);
+  const [editingDictDraft, setEditingDictDraft] = useState({ label: '', value: '' });
+  const [editingPropertyDictId, setEditingPropertyDictId] = useState<string | null>(null);
+  const [editingPropertyDictDraft, setEditingPropertyDictDraft] = useState({ label: '', value: '' });
   const [distRules, setDistRules] = useState<any[]>([]);
   const [showDistDialog, setShowDistDialog] = useState(false);
   const [editingDist, setEditingDist] = useState<any>(null);
@@ -132,14 +140,16 @@ export function SettingsClient() {
     } else if (activeTab === 'customFields') {
       getDealCustomFields().then(setCustomFields).catch(() => {});
     } else if (activeTab === 'dictionaries') {
-      getDictionaries(dictCategory).then(setDicts).catch(() => {});
+      getDictionaries(dictCategory, true).then(setDicts).catch(() => {});
+    } else if (activeTab === 'properties') {
+      getDictionaries(propertyDictCategory, true).then(setPropertyDicts).catch(() => {});
     } else if (activeTab === 'distribution') {
       getDistributionRules().then(setDistRules).catch(() => {});
       getTeamUsers().then(setUsers).catch(() => {});
     } else if (activeTab === 'aftercare') {
       getAftercarePlans().then(setAftercarePlans).catch(() => {});
     }
-  }, [activeTab, dictCategory, fetchFunnels]);
+  }, [activeTab, dictCategory, fetchFunnels, propertyDictCategory]);
 
   useEffect(() => { fetchTabData(); }, [fetchTabData]);
 
@@ -306,6 +316,67 @@ export function SettingsClient() {
     await deleteDictionary(id); fetchTabData();
   };
 
+  const startEditDictItem = (item: any) => {
+    setEditingDictId(item.id);
+    setEditingDictDraft({ label: item.label ?? '', value: item.value ?? '' });
+  };
+
+  const saveEditDictItem = async () => {
+    if (!editingDictId) return;
+    if (!editingDictDraft.label.trim() || !editingDictDraft.value.trim()) return;
+    await updateDictionaryItem({
+      id: editingDictId,
+      label: editingDictDraft.label.trim(),
+      value: editingDictDraft.value.trim(),
+    });
+    setEditingDictId(null);
+    fetchTabData();
+    toast.success(t('settings.saved'));
+  };
+
+  const toggleDictActive = async (item: any) => {
+    await updateDictionaryItem({ id: item.id, isActive: !item.isActive });
+    fetchTabData();
+    toast.success(t('settings.saved'));
+  };
+
+  const addPropertyDictItem = async () => {
+    if (!newPropertyDict.value || !newPropertyDict.label) { toast.error(t('settings.fillFields')); return; }
+    await createDictionary({ ...newPropertyDict, category: propertyDictCategory });
+    setNewPropertyDict({ value: '', label: '' });
+    fetchTabData();
+    toast.success(t('settings.addedDict'));
+  };
+
+  const deletePropertyDictItem = async (id: string) => {
+    await deleteDictionary(id);
+    fetchTabData();
+  };
+
+  const startEditPropertyDictItem = (item: any) => {
+    setEditingPropertyDictId(item.id);
+    setEditingPropertyDictDraft({ label: item.label ?? '', value: item.value ?? '' });
+  };
+
+  const saveEditPropertyDictItem = async () => {
+    if (!editingPropertyDictId) return;
+    if (!editingPropertyDictDraft.label.trim() || !editingPropertyDictDraft.value.trim()) return;
+    await updateDictionaryItem({
+      id: editingPropertyDictId,
+      label: editingPropertyDictDraft.label.trim(),
+      value: editingPropertyDictDraft.value.trim(),
+    });
+    setEditingPropertyDictId(null);
+    fetchTabData();
+    toast.success(t('settings.saved'));
+  };
+
+  const togglePropertyDictActive = async (item: any) => {
+    await updateDictionaryItem({ id: item.id, isActive: !item.isActive });
+    fetchTabData();
+    toast.success(t('settings.saved'));
+  };
+
   const saveDistRule = async (data: any) => {
     const body = editingDist ? { ...data, id: editingDist.id } : data;
     await upsertDistributionRule(body, !!editingDist);
@@ -435,7 +506,28 @@ export function SettingsClient() {
 
   const isAdmin = profile?.role === 'admin';
   const DICT_CATS = [
-    {v:'district',l:t('settings.districts')},{v:'property_type',l:t('settings.propertyTypes')},{v:'lead_source',l:t('settings.leadSources')}
+    { v: 'district', l: t('settings.districts') },
+    { v: 'lead_source', l: t('settings.leadSources') },
+    { v: 'showing_status', l: t('settings.showingStatuses') },
+    { v: 'rejection_reason', l: t('settings.rejectionReasons') },
+    { v: 'document_type', l: t('settings.documentTypes') },
+    { v: 'currency', l: t('settings.currencies') },
+  ];
+  const PROPERTY_DICT_CATS = [
+    { v: 'property_type', l: t('settings.propertyTypes') },
+    { v: 'property_status', l: t('settings.propertyStatuses') },
+    { v: 'property_deal_type', l: t('settings.propertyDealTypes') },
+    { v: 'operation_type', l: t('settings.operationTypes') },
+    { v: 'layout_type', l: t('settings.layoutTypes') },
+    { v: 'repair_type', l: t('settings.repairTypes') },
+    { v: 'wall_type', l: t('settings.wallTypes') },
+    { v: 'heating_type', l: t('settings.heatingTypes') },
+    { v: 'payment_condition', l: t('settings.paymentConditions') },
+    { v: 'communication_type', l: t('settings.communicationTypes') },
+    { v: 'media_type', l: t('settings.mediaTypes') },
+    { v: 'publication_channel', l: t('settings.publicationChannels') },
+    { v: 'publication_status', l: t('settings.publicationStatuses') },
+    { v: 'tag', l: t('settings.tags') },
   ];
 
   return (
@@ -893,6 +985,91 @@ export function SettingsClient() {
         </div>
       )}
 
+      {/* PROPERTIES TAB */}
+      {activeTab === 'properties' && isAdmin && (
+        <div className="space-y-4">
+          <div className="flex gap-2 mb-4 flex-wrap">
+            {PROPERTY_DICT_CATS.map((c) => (
+              <button
+                key={c.v}
+                onClick={() => setPropertyDictCategory(c.v)}
+                className={cn(
+                  'px-4 py-2 rounded-xl text-sm font-medium transition',
+                  propertyDictCategory === c.v ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {c.l}
+              </button>
+            ))}
+          </div>
+          <div className="bg-card rounded-xl border border-border p-6" style={{ boxShadow: 'var(--shadow-sm)' }}>
+            <h2 className="font-semibold mb-4">{t('settings.objects')}</h2>
+            <div className="space-y-2 mb-4">
+              {propertyDicts.map((item) => (
+                <div key={item.id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl">
+                  {editingPropertyDictId === item.id ? (
+                    <>
+                      <input
+                        value={editingPropertyDictDraft.label}
+                        onChange={(e) => setEditingPropertyDictDraft((prev) => ({ ...prev, label: e.target.value }))}
+                        className="flex-1 px-2 py-1.5 rounded-lg border border-border bg-background text-sm"
+                      />
+                      <input
+                        value={editingPropertyDictDraft.value}
+                        onChange={(e) => setEditingPropertyDictDraft((prev) => ({ ...prev, value: e.target.value }))}
+                        className="w-44 px-2 py-1.5 rounded-lg border border-border bg-background text-xs font-mono"
+                      />
+                      <button onClick={saveEditPropertyDictItem} className="p-1 hover:bg-primary/10 rounded-lg" title={t('common.save')}>
+                        <Check className="w-3.5 h-3.5 text-primary" />
+                      </button>
+                      <button onClick={() => setEditingPropertyDictId(null)} className="p-1 hover:bg-muted rounded-lg" title={t('common.cancel')}>
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-sm font-medium flex-1">{item.label}</span>
+                      <span className="text-xs text-muted-foreground font-mono">{item.value}</span>
+                      <span className={cn('text-[10px] px-2 py-1 rounded-full border', item.isActive ? 'text-emerald-700 border-emerald-300 bg-emerald-500/10' : 'text-amber-700 border-amber-300 bg-amber-500/10')}>
+                        {item.isActive ? t('settings.active') : t('settings.inactive')}
+                      </span>
+                      <span className="text-[10px] px-2 py-1 rounded-full border border-border text-muted-foreground">
+                        {t('settings.usage')}: {item.usageCount ?? 0}
+                      </span>
+                      <button onClick={() => startEditPropertyDictItem(item)} className="p-1 hover:bg-muted rounded-lg" title={t('common.edit')}>
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => togglePropertyDictActive(item)} className="p-1 hover:bg-muted rounded-lg" title={item.isActive ? t('settings.deactivate') : t('settings.activate')}>
+                        {item.isActive ? <Lock className="w-3.5 h-3.5 text-amber-600" /> : <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />}
+                      </button>
+                      <button onClick={() => deletePropertyDictItem(item.id)} className="p-1 hover:bg-destructive/10 rounded-lg" title={t('settings.deactivate')}>
+                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              ))}
+              {propertyDicts.length === 0 ? <p className="text-sm text-muted-foreground py-4 text-center">{t('settings.empty')}</p> : null}
+            </div>
+            <div className="flex gap-2">
+              <input
+                value={newPropertyDict.label}
+                onChange={(e) => setNewPropertyDict({
+                  ...newPropertyDict,
+                  label: e.target.value,
+                  value: e.target.value.toLowerCase().replace(/[^a-zA-Zа-яА-Я0-9]/g, '_'),
+                })}
+                placeholder={t('settings.dictName')}
+                className="flex-1 px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+              <button onClick={addPropertyDictItem} className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition">
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* DICTIONARIES TAB */}
       {activeTab === 'dictionaries' && isAdmin && (
         <div className="space-y-4">
@@ -920,11 +1097,46 @@ export function SettingsClient() {
                   )}
                 >
                   <GripVertical className="w-4 h-4 text-muted-foreground/50 cursor-grab active:cursor-grabbing flex-shrink-0" />
-                  <span className="text-sm font-medium flex-1">{d.label}</span>
-                  <span className="text-xs text-muted-foreground font-mono">{d.value}</span>
-                  <button onClick={() => deleteDictItem(d.id)} className="p-1 hover:bg-destructive/10 rounded-lg">
-                    <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                  </button>
+                  {editingDictId === d.id ? (
+                    <>
+                      <input
+                        value={editingDictDraft.label}
+                        onChange={(e) => setEditingDictDraft((prev) => ({ ...prev, label: e.target.value }))}
+                        className="flex-1 px-2 py-1.5 rounded-lg border border-border bg-background text-sm"
+                      />
+                      <input
+                        value={editingDictDraft.value}
+                        onChange={(e) => setEditingDictDraft((prev) => ({ ...prev, value: e.target.value }))}
+                        className="w-44 px-2 py-1.5 rounded-lg border border-border bg-background text-xs font-mono"
+                      />
+                      <button onClick={saveEditDictItem} className="p-1 hover:bg-primary/10 rounded-lg" title={t('common.save')}>
+                        <Check className="w-3.5 h-3.5 text-primary" />
+                      </button>
+                      <button onClick={() => setEditingDictId(null)} className="p-1 hover:bg-muted rounded-lg" title={t('common.cancel')}>
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-sm font-medium flex-1">{d.label}</span>
+                      <span className="text-xs text-muted-foreground font-mono">{d.value}</span>
+                      <span className={cn('text-[10px] px-2 py-1 rounded-full border', d.isActive ? 'text-emerald-700 border-emerald-300 bg-emerald-500/10' : 'text-amber-700 border-amber-300 bg-amber-500/10')}>
+                        {d.isActive ? t('settings.active') : t('settings.inactive')}
+                      </span>
+                      <span className="text-[10px] px-2 py-1 rounded-full border border-border text-muted-foreground">
+                        {t('settings.usage')}: {d.usageCount ?? 0}
+                      </span>
+                      <button onClick={() => startEditDictItem(d)} className="p-1 hover:bg-muted rounded-lg" title={t('common.edit')}>
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => toggleDictActive(d)} className="p-1 hover:bg-muted rounded-lg" title={d.isActive ? t('settings.deactivate') : t('settings.activate')}>
+                        {d.isActive ? <Lock className="w-3.5 h-3.5 text-amber-600" /> : <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />}
+                      </button>
+                      <button onClick={() => deleteDictItem(d.id)} className="p-1 hover:bg-destructive/10 rounded-lg" title={t('settings.deactivate')}>
+                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                      </button>
+                    </>
+                  )}
                 </div>
               ))}
               {dicts.length === 0 && <p className="text-sm text-muted-foreground py-4 text-center">{t('settings.empty')}</p>}

@@ -47,6 +47,9 @@ export interface DictionaryItem {
   category: string;
   value: string;
   label: string;
+  order?: number;
+  isActive?: boolean;
+  usageCount?: number;
 }
 
 export interface DistributionRule {

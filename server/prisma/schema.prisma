@@ -146,23 +146,54 @@ model Lead {
 model Property {
   id          String          @id @default(cuid())
   title       String
+  internalCode String?
   type        String          @default("apartment")
+  source      String?
+  ownerName   String?
+  ownerPhone  String?
+  developerName String?
+  developerContact String?
   address     String
   district    String?
   city        String          @default("Киев")
   rooms       Int?
+  bedrooms    Int?
+  bathrooms   Int?
   area        Float?
+  landArea    Float?
   floor       Int?
   totalFloors Int?
   price       Float
   currency    String          @default("USD")
   status      String          @default("active")
   dealTypes   String[]        @default([])
+  paymentCondition String?
+  communicationTypes String[] @default([])
+  tags        String[]        @default([])
+  isPublished Boolean         @default(false)
+  isFeatured  Boolean         @default(false)
+  publicationNotes String?
+  layoutType  String?
+  repairType  String?
+  heatingType String?
+  wallType    String?
+  realEstateClass String?
+  commercialPurpose String?
+  parkingType String?
+  parkingSpaces Int?
+  yearBuilt   Int?
+  ceilingHeight Float?
+  managerComment String?
+  internalDescription String?
+  publicDescription String?
   description String?
   agencyId    String
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
   deals       Deal[]
+  documents   PropertyDocument[]
+  mediaLinks  PropertyMediaLink[]
+  publications PropertyPublication[]
   photos      PropertyPhoto[]
   showings    Showing[]
   units       PropertyUnit[]
@@ -203,6 +234,43 @@ model PropertyPhoto {
   order            Int      @default(0)
   createdAt        DateTime @default(now())
   property         Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+}
+
+model PropertyDocument {
+  id               String   @id @default(cuid())
+  propertyId       String
+  documentType     String?
+  title            String
+  cloudStoragePath String
+  createdAt        DateTime @default(now())
+  property         Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+}
+
+model PropertyMediaLink {
+  id         String   @id @default(cuid())
+  propertyId String
+  mediaType  String?
+  title      String
+  url        String
+  createdAt  DateTime @default(now())
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+}
+
+model PropertyPublication {
+  id         String   @id @default(cuid())
+  propertyId String
+  channel    String
+  status     String
+  url        String?
+  note       String?
+  createdAt  DateTime @default(now())
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
   @@index([propertyId])
 }
