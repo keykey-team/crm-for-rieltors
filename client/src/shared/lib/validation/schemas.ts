@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+const optionalDateTimeString = z.preprocess(
+  (value) => (value === '' ? undefined : value),
+  z.string().trim().refine((value) => !Number.isNaN(new Date(value).getTime()), 'Дата и время должны быть валидными').optional(),
+);
+
 export const loginSchema = z.object({
   email: z
     .string({ required_error: 'Email обязателен' })
@@ -116,6 +121,9 @@ export const propertySchema = z
           channel: z.string().trim().min(1, 'Канал публикации обязателен').max(80),
           status: z.string().trim().min(1, 'Статус публикации обязателен').max(80),
           url: z.string().trim().url('Ссылка публикации должна быть валидным URL').optional().or(z.literal('')),
+          note: z.string().trim().max(500, 'Комментарий публикации слишком длинный').optional(),
+          publishedAt: optionalDateTimeString,
+          lastSyncedAt: optionalDateTimeString,
         }),
       )
       .optional(),

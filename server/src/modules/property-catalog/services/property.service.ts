@@ -131,6 +131,14 @@ export async function listProperties(query: PropertyQuery) {
   if (query.status) where.status = query.status;
   if (query.type) where.type = query.type;
   if (query.dealType) where.dealTypes = { has: query.dealType };
+  if (query.publicationChannel || query.publicationStatus) {
+    where.publications = {
+      some: {
+        ...(query.publicationChannel ? { channel: query.publicationChannel } : {}),
+        ...(query.publicationStatus ? { status: query.publicationStatus } : {}),
+      },
+    };
+  }
   if (query.search) {
     where.OR = [
       { title: { contains: query.search, mode: 'insensitive' } },

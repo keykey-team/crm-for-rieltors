@@ -3,6 +3,8 @@ export interface PropertyQuery {
   status?: string;
   type?: string;
   dealType?: string;
+  publicationChannel?: string;
+  publicationStatus?: string;
 }
 
 export interface PropertyPayload {

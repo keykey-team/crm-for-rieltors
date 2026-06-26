@@ -28,6 +28,8 @@ type PropertyPublicationRecord = {
   status: string;
   url?: string | null;
   note?: string | null;
+  publishedAt?: Date | null;
+  lastSyncedAt?: Date | null;
   createdAt?: Date;
 };
 
@@ -135,6 +137,12 @@ export function buildUpdateMediaLinksRelation(value: unknown) {
   };
 }
 
+function parseOptionalDate(value: unknown) {
+  if (value === null || value === undefined || value === '') return undefined;
+  const parsed = value instanceof Date ? value : new Date(String(value));
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
 export function normalizePropertyPublications(value: unknown) {
   if (!Array.isArray(value)) return undefined;
 
@@ -145,15 +153,19 @@ export function normalizePropertyPublications(value: unknown) {
       const status = typeof publication?.status === 'string' ? publication.status.trim() : '';
       const url = typeof publication?.url === 'string' ? publication.url.trim() : '';
       const note = typeof publication?.note === 'string' ? publication.note.trim() : '';
+      const publishedAt = parseOptionalDate(publication?.publishedAt);
+      const lastSyncedAt = parseOptionalDate(publication?.lastSyncedAt);
       if (!channel || !status) return null;
       return {
         channel,
         status,
         ...(url ? { url } : {}),
         ...(note ? { note } : {}),
+        ...(publishedAt ? { publishedAt } : {}),
+        ...(lastSyncedAt ? { lastSyncedAt } : {}),
       };
     })
-    .filter((publication): publication is { channel: string; status: string; url?: string; note?: string } => publication !== null);
+    .filter((publication): publication is { channel: string; status: string; url?: string; note?: string; publishedAt?: Date; lastSyncedAt?: Date } => publication !== null);
 }
 
 export function buildCreatePublicationsRelation(value: unknown) {

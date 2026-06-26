@@ -31,6 +31,8 @@ router.get('/properties', async (req, res) => {
       status: typeof req.query.status === 'string' ? req.query.status : '',
       type: typeof req.query.type === 'string' ? req.query.type : '',
       dealType: typeof req.query.dealType === 'string' ? req.query.dealType : '',
+      publicationChannel: typeof req.query.publicationChannel === 'string' ? req.query.publicationChannel : '',
+      publicationStatus: typeof req.query.publicationStatus === 'string' ? req.query.publicationStatus : '',
     }),
   );
 });

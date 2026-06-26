@@ -322,6 +322,8 @@ export function PropertyProfilePage({ propertyId }: { propertyId: string }) {
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{publication.channelLabel}</p>
                         <p className="text-xs text-muted-foreground mt-1">{publication.statusLabel}</p>
+                        {publication.publishedAt ? <p className="text-xs text-muted-foreground mt-1">{t('properties.publications.publishedAt')}: {new Date(publication.publishedAt).toLocaleString()}</p> : null}
+                        {publication.lastSyncedAt ? <p className="text-xs text-muted-foreground mt-1">{t('properties.publications.lastSyncedAt')}: {new Date(publication.lastSyncedAt).toLocaleString()}</p> : null}
                         {publication.note ? <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">{publication.note}</p> : null}
                       </div>
                       {publication.url ? (

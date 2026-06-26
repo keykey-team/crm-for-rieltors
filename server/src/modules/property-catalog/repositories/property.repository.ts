@@ -247,15 +247,25 @@ export async function createPropertyWithInitialPrice(
         createdAt: property.createdAt,
       },
     });
-    await tx.activityLog.create({
-      data: {
-        entityType: 'property',
-        entityId: property.id,
-        agencyId: property.agencyId,
-        action: 'price_change',
-        details: `Initial price ${property.price} ${property.currency}`,
-        userId: changedBy ?? null,
-      },
+    await tx.activityLog.createMany({
+      data: [
+        {
+          entityType: 'property',
+          entityId: property.id,
+          agencyId: property.agencyId,
+          action: 'create',
+          details: property.title ?? null,
+          userId: changedBy ?? null,
+        },
+        {
+          entityType: 'property',
+          entityId: property.id,
+          agencyId: property.agencyId,
+          action: 'price_change',
+          details: `Initial price ${property.price} ${property.currency}`,
+          userId: changedBy ?? null,
+        },
+      ],
     });
     return property;
   });
@@ -274,6 +284,16 @@ export async function updatePropertyWithPriceHistory(
       select: { price: true, currency: true },
     });
     const property = await tx.property.update({ where: { id }, data: data as any, include: propertyInclude as any });
+    await tx.activityLog.create({
+      data: {
+        entityType: 'property',
+        entityId: id,
+        agencyId: property.agencyId,
+        action: 'update',
+        details: property.title ?? null,
+        userId: changedBy ?? null,
+      },
+    });
     if (!previous) return property;
     const priceChanged = previous.price !== property.price;
     const currencyChanged = previous.currency !== property.currency;

@@ -10,6 +10,7 @@
 - [x] В схему добавлен relation `PropertyDocument` для документов объекта
 - [x] В схему добавлен relation `PropertyMediaLink` для внешних медиа-материалов объекта
 - [x] В схему добавлен relation `PropertyPublication` для публикаций объекта по каналам
+- [x] В публикации по каналам добавлены служебные даты `publishedAt` и `lastSyncedAt`
 - [x] Prisma schema обновлена и Prisma Client пересобран под новые поля
 - [x] Создана Prisma migration `20260603094732_add_property_profile_publications` для накопленных изменений карточки объекта
 - [x] Валидация property API обновлена: валюта переведена с жесткого enum на dictionary-backed значение
@@ -32,7 +33,15 @@
 - [x] В профиль объекта добавлен блок документов объекта со ссылками на открытие файлов
 - [x] В профиль объекта добавлены publication badges, теги, коммуникации и блок медиа-материалов
 - [x] В профиль объекта добавлен блок каналов размещения со статусами и ссылками
+- [x] В профиль и quick preview объекта добавены даты публикации и последней синхронизации по каналам
 - [x] В списке объектов и quick preview добавлен компактный summary по каналам публикации
+- [x] В список объектов добавлен фильтр по каналу публикации с протяжкой в backend query
+- [x] В список объектов добавлен фильтр по статусу публикации с протяжкой в backend query
+- [x] Для фильтров списка объектов добавлены активные chips и быстрый сброс
+- [x] Empty state списка объектов учитывает активные фильтры и предлагает очистить их
+- [x] Фильтры и режим отображения списка объектов синхронизированы с URL страницы
+- [x] Create-диалог и quick preview объектов синхронизированы с URL страницы
+- [x] Edit-диалог объекта синхронизирован с URL страницы
 - [x] Добавлена приоритизация рисков (high/medium) в полном профиле
 - [x] Добавлены CTA-ссылки по рискам
 - [x] Добавлена фильтрация сделок по стадии на странице профиля
@@ -85,11 +94,44 @@
 - [x] В форму объекта добавлены type-specific характеристики: bedrooms, bathrooms, landArea, parkingSpaces, yearBuilt, ceilingHeight, realEstateClass, commercialPurpose, parkingType
 - [x] В форму объекта добавлены publication flags, условия оплаты, теги, коммуникации и внешние media links
 - [x] В форму объекта добавлен список публикаций по каналам с отдельными статусами, ссылками и заметками
+- [x] В форму объекта добавлены даты публикации и последней синхронизации для каждого канала
 - [x] Для редактирования старых значений добавлен fallback current value, если текущего значения уже нет в активных справочниках
+
+## Activity flow объекта
+
+- [x] В `createPropertyWithInitialPrice` добавлен лог `action: 'create'` (рядом с существующим `price_change`)
+- [x] В `updatePropertyWithPriceHistory` добавлен безусловный лог `action: 'update'` при каждом изменении объекта — теперь правки документов, media links и публикаций отражаются в ленте активности
+- [x] Клиентский `normalizeAction` в `PropertyProfilePage.tsx` уже обрабатывал `create` и `update` — отображение без изменений
+
+## Клиентские точечные тесты (lib/normalize)
+
+- [x] Функции `normalizeDateTime`, `normalizeDocuments`, `normalizeMediaLinks`, `normalizePublications` вынесены из `property.api.ts` в `entities/property/lib/normalize.ts` и экспортированы
+- [x] Создан `entities/property/lib/normalize.test.ts` (17 тестов, node:test runner) — покрывает: round-trip ISO, datetime-local→ISO, whitespace/empty/invalid → undefined, фильтрация невалидных записей, сохранение полей
+- [x] Все 17 тестов проходят; server `property-photos.test.ts` (5 тестов) также проходит
 
 ## Финальная проверка
 - [x] Серверная сборка: `npm run build` (server) — успешно
-- [x] Клиентский typecheck: `npm run typecheck` (client) — успешно
+- [x] Клиентский typecheck: `npm run typecheck` (client) — успешно (после рефактора lib/normalize)
+- [x] Серверный typecheck: `tsc --noEmit` (server) — успешно после изменений репозитория
 - [x] Точечный тест `property-photos.test.ts` расширен и проходит для нормализации документов и media links
 - [x] Точечный тест `property-photos.test.ts` расширен и проходит для нормализации публикаций по каналам
 - [x] Применение схемы к локальной Docker БД через `npm run db:push` выполнено успешно
+
+## Консистентность UI по датам публикаций
+
+- [x] `PropertyProfilePage.tsx` — отображает `publishedAt`/`lastSyncedAt` для каждой публикации
+- [x] `properties-screen.tsx` (quick preview) — отображает `publishedAt`/`lastSyncedAt` для каждой публикации
+- [x] `property-dialog.tsx` (форма) — datetime-local инпуты для `publishedAt`/`lastSyncedAt`, prefill из `formatDateTimeLocal()`
+
+---
+
+## Остаточные риски
+
+| # | Риск | Уровень | Комментарий |
+|---|------|---------|-------------|
+| R1 | `deleteMany {}` при update публикаций/документов/media links — полная замена без diff | medium | При каждом сохранении все дочерние записи пересоздаются. Потеря `id` в рамках одной сессии не проблема, но это неоптимально при частых авто-сохранениях. |
+| R2 | Pagination для `publications`/`documents`/`mediaLinks` ограничена `take: 10` в `propertyInclude` (список) и `take: 20` в `findPropertyProfile` | medium | Объект с >10 публикациями отдаст урезанный список в preview. Нет UI-пагинации. |
+| R3 | `withResolvedPhotoUrls` делает N параллельных запросов к S3 для фотографий и документов | medium | При большом кол-ве фотографий/документов на LIST (200 объектов × 10) — потенциальный bottleneck. |
+| R4 | Даты `publishedAt`/`lastSyncedAt` вводятся вручную пользователем; нет server-side авто-заполнения при смене статуса | low | Ожидаемо: синхронизация внешних платформ вне скоупа текущего спринта. |
+| R5 | Нет e2e/integration тестов для create/update flow с публикациями | low | Покрыто точечными unit-тестами нормализации. Полный сценарий можно проверить только runtime smoke через UI. |
+| R6 | `activityLog.createMany` в транзакции создания объекта — если Prisma не поддерживает `createMany` для данного провайдера в транзакции, упадёт с ошибкой | low | PostgreSQL поддерживает; проверено типами. |

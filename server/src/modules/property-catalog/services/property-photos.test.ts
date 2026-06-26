@@ -54,12 +54,26 @@ test('normalizePropertyMediaLinks filters invalid items and trims fields', () =>
 test('normalizePropertyPublications filters invalid items and trims fields', () => {
   assert.deepEqual(
     normalizePropertyPublications([
-      { channel: ' instagram ', status: ' published ', url: ' https://example.com/post ', note: ' primary ' },
+      {
+        channel: ' instagram ',
+        status: ' published ',
+        url: ' https://example.com/post ',
+        note: ' primary ',
+        publishedAt: '2026-06-03T09:15',
+        lastSyncedAt: '2026-06-03T12:45:00.000Z',
+      },
       { channel: '', status: 'draft' },
       { channel: 'olx', status: '' },
     ]),
     [
-      { channel: 'instagram', status: 'published', url: 'https://example.com/post', note: 'primary' },
+      {
+        channel: 'instagram',
+        status: 'published',
+        url: 'https://example.com/post',
+        note: 'primary',
+        publishedAt: new Date('2026-06-03T09:15'),
+        lastSyncedAt: new Date('2026-06-03T12:45:00.000Z'),
+      },
     ],
   );
 });

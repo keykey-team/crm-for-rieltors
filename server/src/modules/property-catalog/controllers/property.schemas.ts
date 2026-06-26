@@ -79,6 +79,17 @@ const propertyOptionalUrl = z.preprocess((value) => {
   return normalized;
 }, z.string().trim().url().max(2048).optional());
 
+const propertyOptionalDateTime = z.preprocess((value) => {
+  const normalized = emptyStringToUndefined(value);
+  if (normalized === undefined) return undefined;
+  if (normalized instanceof Date) return normalized;
+  if (typeof normalized === 'string') {
+    const parsed = new Date(normalized);
+    return Number.isNaN(parsed.getTime()) ? normalized : parsed;
+  }
+  return normalized;
+}, z.date().optional());
+
 const propertyPhotos = z.array(
   z.object({
     cloudStoragePath: z.string().trim().min(1).max(1024),
@@ -108,6 +119,8 @@ const propertyPublications = z.array(
     status: dictionaryValue,
     url: z.string().trim().url().max(2048).optional(),
     note: noteText(500).optional(),
+    publishedAt: propertyOptionalDateTime,
+    lastSyncedAt: propertyOptionalDateTime,
   }).strict(),
 ).optional();
 

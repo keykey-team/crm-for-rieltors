@@ -46,6 +46,8 @@ export interface PropertyPublication {
   status: string;
   url?: string | null;
   note?: string | null;
+  publishedAt?: string | null;
+  lastSyncedAt?: string | null;
   createdAt?: string;
 }
 
@@ -54,6 +56,8 @@ export interface PropertyPublicationInput {
   status: string;
   url?: string;
   note?: string;
+  publishedAt?: string;
+  lastSyncedAt?: string;
 }
 
 export interface Property {
@@ -171,6 +175,8 @@ export interface PropertiesQuery {
   type?: string;
   status?: string;
   dealType?: string;
+  publicationChannel?: string;
+  publicationStatus?: string;
 }
 
 export interface PropertyProfileDeal {

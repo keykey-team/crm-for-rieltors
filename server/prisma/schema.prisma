@@ -269,6 +269,8 @@ model PropertyPublication {
   status     String
   url        String?
   note       String?
+  publishedAt DateTime?
+  lastSyncedAt DateTime?
   createdAt  DateTime @default(now())
   property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 

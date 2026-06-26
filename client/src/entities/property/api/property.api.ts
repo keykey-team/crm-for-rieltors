@@ -1,13 +1,15 @@
 import type {
   Property,
-  PropertyDocumentInput,
-  PropertyMediaLinkInput,
   PropertyPhotoInput,
-  PropertyPublicationInput,
   PropertyProfile,
   PropertyUpsertInput,
   PropertiesQuery,
 } from '../model/types';
+import {
+  normalizeDocuments,
+  normalizeMediaLinks,
+  normalizePublications,
+} from '../lib/normalize';
 
 function normalizeText(value: string | undefined): string | undefined {
   if (typeof value !== 'string') return value;
@@ -33,43 +35,6 @@ function normalizePhotos(value: PropertyUpsertInput['photos']): PropertyPhotoInp
       isPublic: photo.isPublic !== false,
     }))
     .filter((photo) => photo.cloudStoragePath.length > 0);
-}
-
-function normalizeDocuments(value: PropertyUpsertInput['documents']): PropertyDocumentInput[] | undefined {
-  if (!Array.isArray(value)) return undefined;
-  return value
-    .filter((document): document is PropertyDocumentInput => Boolean(document?.cloudStoragePath && document?.title))
-    .map((document) => ({
-      title: document.title.trim(),
-      cloudStoragePath: document.cloudStoragePath.trim(),
-      documentType: normalizeText(document.documentType),
-    }))
-    .filter((document) => document.cloudStoragePath.length > 0 && document.title.length > 0);
-}
-
-function normalizeMediaLinks(value: PropertyUpsertInput['mediaLinks']): PropertyMediaLinkInput[] | undefined {
-  if (!Array.isArray(value)) return undefined;
-  return value
-    .filter((media): media is PropertyMediaLinkInput => Boolean(media?.title && media?.url))
-    .map((media) => ({
-      title: media.title.trim(),
-      mediaType: normalizeText(media.mediaType),
-      url: media.url.trim(),
-    }))
-    .filter((media) => media.title.length > 0 && media.url.length > 0);
-}
-
-function normalizePublications(value: PropertyUpsertInput['publications']): PropertyPublicationInput[] | undefined {
-  if (!Array.isArray(value)) return undefined;
-  return value
-    .filter((publication): publication is PropertyPublicationInput => Boolean(publication?.channel && publication?.status))
-    .map((publication) => ({
-      channel: publication.channel.trim(),
-      status: publication.status.trim(),
-      url: normalizeText(publication.url),
-      note: normalizeText(publication.note),
-    }))
-    .filter((publication) => publication.channel.length > 0 && publication.status.length > 0);
 }
 
 function normalizeStringArray(value: string[] | undefined): string[] | undefined {
@@ -162,6 +127,8 @@ export async function getProperties(query: PropertiesQuery = {}): Promise<Proper
   if (query.type) params.set('type', query.type);
   if (query.status) params.set('status', query.status);
   if (query.dealType) params.set('dealType', query.dealType);
+  if (query.publicationChannel) params.set('publicationChannel', query.publicationChannel);
+  if (query.publicationStatus) params.set('publicationStatus', query.publicationStatus);
   const suffix = params.toString();
   const res = await fetch(`/api/properties${suffix ? `?${suffix}` : ''}`);
   const data = await parseJson<unknown>(res);

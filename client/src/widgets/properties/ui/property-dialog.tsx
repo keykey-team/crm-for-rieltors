@@ -47,6 +47,8 @@ type PropertyPublicationDraft = {
   status: string;
   url: string;
   note: string;
+  publishedAt: string;
+  lastSyncedAt: string;
 };
 
 type PropertyFormState = {
@@ -178,7 +180,19 @@ function createInitialPublications(property: Property | null): PropertyPublicati
     status: publication.status,
     url: publication.url ?? '',
     note: publication.note ?? '',
+    publishedAt: formatDateTimeLocal(publication.publishedAt),
+    lastSyncedAt: formatDateTimeLocal(publication.lastSyncedAt),
   })).filter((publication) => publication.channel && publication.status);
+}
+
+function formatDateTimeLocal(value?: string | null) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const pad = (part: number) => String(part).padStart(2, '0');
+
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 function revokeObjectUrl(photo: PropertyPhotoDraft) {
@@ -411,11 +425,19 @@ export function PropertyDialog({ property, onSave, onClose }: { property: Proper
   const addPublication = () => {
     setPublications((previous) => [
       ...previous,
-      { key: `publication-${Date.now()}-${previous.length}`, channel: '', status: '', url: '', note: '' },
+      {
+        key: `publication-${Date.now()}-${previous.length}`,
+        channel: '',
+        status: '',
+        url: '',
+        note: '',
+        publishedAt: '',
+        lastSyncedAt: '',
+      },
     ]);
   };
 
-  const updatePublicationField = (key: string, field: 'channel' | 'status' | 'url' | 'note', value: string) => {
+  const updatePublicationField = (key: string, field: 'channel' | 'status' | 'url' | 'note' | 'publishedAt' | 'lastSyncedAt', value: string) => {
     setPublications((previous) => previous.map((publication) => (publication.key === key ? { ...publication, [field]: value } : publication)));
     setSubmitError('');
   };
@@ -518,8 +540,15 @@ export function PropertyDialog({ property, onSave, onClose }: { property: Proper
       landArea: toNum(form.landArea),
       mediaLinks: mediaLinks.filter((media) => media.title.trim() || media.url.trim()).map((media) => ({ title: media.title, url: media.url })),
       publications: publications
-        .filter((publication) => publication.channel.trim() || publication.status.trim() || publication.url.trim() || publication.note.trim())
-        .map((publication) => ({ channel: publication.channel, status: publication.status, url: publication.url })),
+        .filter((publication) => publication.channel.trim() || publication.status.trim() || publication.url.trim() || publication.note.trim() || publication.publishedAt.trim() || publication.lastSyncedAt.trim())
+        .map((publication) => ({
+          channel: publication.channel,
+          status: publication.status,
+          url: publication.url,
+          note: publication.note,
+          publishedAt: publication.publishedAt,
+          lastSyncedAt: publication.lastSyncedAt,
+        })),
       floor: toNum(form.floor),
       totalFloors: toNum(form.totalFloors),
     });
@@ -777,6 +806,14 @@ export function PropertyDialog({ property, onSave, onClose }: { property: Proper
                       <div>
                         <label className="text-sm font-medium mb-1 block">{t('properties.publications.note')}</label>
                         <input value={publication.note} onChange={(e) => updatePublicationField(publication.key, 'note', e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">{t('properties.publications.publishedAt')}</label>
+                        <input type="datetime-local" value={publication.publishedAt} onChange={(e) => updatePublicationField(publication.key, 'publishedAt', e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">{t('properties.publications.lastSyncedAt')}</label>
+                        <input type="datetime-local" value={publication.lastSyncedAt} onChange={(e) => updatePublicationField(publication.key, 'lastSyncedAt', e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
                       </div>
                     </div>
                   </div>
