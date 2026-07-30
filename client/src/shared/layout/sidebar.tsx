@@ -33,6 +33,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/properties', labelKey: 'nav.properties', icon: Building },
       { href: '/tasks', labelKey: 'nav.tasks', icon: CheckSquare },
       { href: '/calendar', labelKey: 'nav.calendar', icon: CalendarDays },
+      { href: '/showings', labelKey: 'nav.showings', icon: Building2 },
     ],
   },
   {
